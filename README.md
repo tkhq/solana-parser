@@ -16,4 +16,6 @@ cargo run parse <your unsigned Solana transaction>
 
 ## Examples
 
+See tests for examples using transactions from various scenarios.
+
 ## Future considerations
