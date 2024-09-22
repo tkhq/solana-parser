@@ -10,6 +10,7 @@ use solana_sdk::{
     pubkey::Pubkey,
     system_instruction::SystemInstruction,
 };
+use super::structs::{SolTransfer, SolanaAccount, SolanaAddressTableLookup, SolanaInstruction, SolanaMetadata, SolanaParseResponse, SolanaParsedTransaction, SolanaParsedTransactionPayload, SolanaSingleAddressTableLookup};
 
 // Length of a solana signature in bytes (64 bytes long)
 pub const LEN_SOL_SIG_BYTES: usize = 64;
@@ -359,6 +360,11 @@ fn parse_compact_array_of_bytes<'a>(
     ))
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub struct SolanaTransaction {
+    message: VersionedMessage,
+}
+
 impl SolanaTransaction {
     pub fn new(hex_tx: &str) -> Result<Self, Box<dyn Error>> {
         let message = parse_solana_transaction(hex_tx)?;
@@ -551,71 +557,4 @@ impl SolanaTransaction {
             transfers,
         })
     }
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub struct SolanaTransaction {
-    message: VersionedMessage,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct SolanaMetadata {
-    pub account_keys: Vec<String>,
-    pub program_keys: Vec<String>,
-    pub instructions: Vec<SolanaInstruction>,
-    pub transfers: Vec<SolTransfer>,
-    pub recent_blockhash: String,
-    pub address_table_lookups: Vec<SolanaAddressTableLookup>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct SolanaInstruction {
-    pub program_key: String,
-    pub accounts: Vec<SolanaAccount>,
-    pub instruction_data_hex: String,
-    pub address_table_lookups: Vec<SolanaSingleAddressTableLookup>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct SolanaAccount {
-    pub account_key: String,
-    pub signer: bool,
-    pub writable: bool,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct SolanaSingleAddressTableLookup {
-    pub address_table_key: String,
-    pub index: i32,
-    pub writable: bool,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct SolTransfer {
-    pub from: String,
-    pub to: String,
-    pub amount: String,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct SolanaAddressTableLookup {
-    pub address_table_key: String,
-    pub writable_indexes: Vec<i32>,
-    pub readonly_indexes: Vec<i32>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct SolanaParsedTransactionPayload {
-    pub transaction_metadata: Option<SolanaMetadata>,
-    pub unsigned_payload: String,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct SolanaParsedTransaction {
-    pub payload: Option<SolanaParsedTransactionPayload>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct SolanaParseResponse {
-    pub solana_parsed_transaction: SolanaParsedTransaction,
 }

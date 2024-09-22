@@ -1,6 +1,8 @@
-use solana::{SolanaTransaction, SOL_SYSTEM_PROGRAM_KEY, SolanaInstruction, SolanaAccount, SolanaAddressTableLookup, SolanaSingleAddressTableLookup, SolTransfer};
-
 use super::*;
+use solana::SOL_SYSTEM_PROGRAM_KEY;
+use crate::solana::structs::{SolanaInstruction, SolanaAccount, SolanaAddressTableLookup, SolanaSingleAddressTableLookup, SolTransfer};
+use crate::solana::solana::SolanaTransaction;
+
 
     #[test]
     fn parses_valid_legacy_transactions() {
