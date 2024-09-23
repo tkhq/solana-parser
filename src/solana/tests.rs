@@ -1,7 +1,7 @@
 use super::*;
-use solana::SOL_SYSTEM_PROGRAM_KEY;
+use parser::SOL_SYSTEM_PROGRAM_KEY;
 use crate::solana::structs::{SolanaInstruction, SolanaAccount, SolanaAddressTableLookup, SolanaSingleAddressTableLookup, SolTransfer};
-use crate::solana::solana::SolanaTransaction;
+use crate::solana::parser::SolanaTransaction;
 
 
     #[test]
