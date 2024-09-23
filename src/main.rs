@@ -2,7 +2,8 @@ use std::env;
 
 mod solana;
 
-use crate::solana::solana::{parse_transaction, SolanaParsedTransactionPayload};
+use crate::solana::solana::parse_transaction;
+use crate::solana::structs::SolanaParsedTransactionPayload;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
