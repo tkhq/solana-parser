@@ -14,7 +14,7 @@ The solana transaction parsers accepts hex string inputs of two types:
 - Messages: the "message" portion of the Solana transaction, which is the payload that gets signed by signers, NOT including the compact array of Signatures that comes at the beginning of a full Solana transaction
 - Full transactions: this includes both the message, as well as the compact array of signatures (or a placeholder array with zero-signatures) at the beginning
 
-To use the parser include the hex string of EITHER a solana transaction message or a full solana transaction. You MUST also include the corresponding flag: --message or --transaction. You must include exactly one of these flags.
+To use the parser include the hex string of EITHER a Solana transaction message or a full Solana transaction. You MUST also include the corresponding flag: --message or --transaction. You must include exactly one of these flags.
 
 ```sh
 # Example for parsing a solana transaction message
