@@ -563,10 +563,10 @@ impl SolanaTransaction {
     }
 
     fn signatures(&self) -> Result<Vec<String>, Box<dyn Error>> {
-        self.signatures
+        Ok(self.signatures
             .iter()
-            .map(|b| String::from_utf8(b.clone()).map_err(|e| e.into()))
-            .collect()
+            .map(|sig| sig.iter().map(|b| format!("{:02x}", b)).collect::<String>())
+            .collect())
     }
 
     pub fn transaction_metadata(&self) -> Result<SolanaMetadata, Box<dyn Error>> {
