@@ -8,8 +8,8 @@ use crate::solana::structs::SolanaParsedTransactionPayload;
 fn main() {
     let args: Vec<String> = env::args().collect();
     
-    if args.len() != 3 {
-        println!("Usage: `cargo run parse <unsigned transaction>`");
+    if args.len() != 4 {
+        println!("Usage: `cargo run parse <unsigned transaction> --message OR cargo run parse <unsinged transaction> --transaction`");
         return;
     }
 
@@ -17,12 +17,29 @@ fn main() {
         match command.as_str() {
             "parse" => {
                 let unsigned_tx = &args[2];
-                let result = parse_transaction(unsigned_tx.to_string());
-                match result {
-                    Ok(response) => {
-                        print_parsed_transaction(response.solana_parsed_transaction.payload.unwrap());
-                    },
-                    Err(e) => println!("Error: {}", e),
+                let flag = if args.len() > 3 { Some(&args[3]) } else { None };
+                match flag {
+                    Some(flag) if flag == "--message" => {
+                        let result = parse_transaction(unsigned_tx.to_string(), false);
+                        match result {
+                            Ok(response) => {
+                                print_parsed_transaction(response.solana_parsed_transaction.payload.unwrap());
+                            },
+                            Err(e) => println!("Error: {}", e),
+                        }
+                    }
+                    Some(flag) if flag == "--transaction" => {
+                        let result = parse_transaction(unsigned_tx.to_string(), true);
+                        match result {
+                            Ok(response) => {
+                                print_parsed_transaction(response.solana_parsed_transaction.payload.unwrap());
+                            },
+                            Err(e) => println!("Error: {}", e),
+                        }
+                    }
+                    _ => {
+                        println!("Invalid or missing flag. Use either --message or --transaction.");
+                    }
                 }
             }
             _ => println!("Unknown command: {}", command),

@@ -13,7 +13,7 @@ use solana_sdk::{
 use super::structs::{SolTransfer, SolanaAccount, SolanaAddressTableLookup, SolanaInstruction, SolanaMetadata, SolanaParseResponse, SolanaParsedTransaction, SolanaParsedTransactionPayload, SolanaSingleAddressTableLookup};
 
 // Length of a solana signature in bytes (64 bytes long)
-pub const LEN_SOL_SIG_BYTES: usize = 64;
+pub const LEN_SOL_SIGNATURE_BYTES: usize = 64;
 // Length of a solana account key in bytes (32 bytes long)
 pub const LEN_SOL_ACCOUNT_KEY_BYTES: usize = 32;
 // This is the length of the header of a compact array -- a pattern used multiple times in solana transactions (length of header is 1 byte)
@@ -22,17 +22,16 @@ pub const LEN_ARRAY_HEADER_BYTES: usize = 1;
 pub const LEN_MESSAGE_HEADER_BYTES: usize = 3;
 // This is a string representation of the account address of the Solana System Program -- the main native program that "owns" user accounts and is in charge of facilitating basic SOL transfers among other things
 pub const SOL_SYSTEM_PROGRAM_KEY: &str = "11111111111111111111111111111111";
+// Versioned transactions have a prefix of 0x80
+const V0_TRANSACTION_INDICATOR: u8 = 0x80;
 
 // Entrypoint to parsing
-pub fn parse_transaction(unsigned_tx: String) -> Result<SolanaParseResponse, Box<dyn Error>> {
-    //let test_transaction = "010d31220a2a006ae386c11710f471e5b626fd356d86aad3cc3298482d7426f8ab45afdb4c95e18df8e3e8fb37d41871dbbc3bb2bd65692ece097c73d8e4d5b60f010001033576ba544d2d11541cfbce704ed3f5849f12792e1b8f4908794d2fd18742e2bfdecd7749fc61324afc2807e3d6e74461f3eea4c6d176deb4da60ae4ade29f9c60000000000000000000000000000000000000000000000000000000000000000f48a6f99c5aee4ca7e5aa1291270f79e13e28e7661d87033638f2ade245c6e0f01020200010c0200000000ca9a3b00000000";
-    // let test_msg = "010001033576ba544d2d11541cfbce704ed3f5849f12792e1b8f4908794d2fd18742e2bfdecd7749fc61324afc2807e3d6e74461f3eea4c6d176deb4da60ae4ade29f9c60000000000000000000000000000000000000000000000000000000000000000f48a6f99c5aee4ca7e5aa1291270f79e13e28e7661d87033638f2ade245c6e0f01020200010c0200000000ca9a3b00000000";
-
+pub fn parse_transaction(unsigned_tx: String, full_transaction: bool) -> Result<SolanaParseResponse, Box<dyn Error>> {
     if unsigned_tx.is_empty() {
         return Err("Transaction is empty".into());
     }
 
-    let tx = SolanaTransaction::new(&unsigned_tx).map_err(|e| {
+    let tx = SolanaTransaction::new(&unsigned_tx, full_transaction).map_err(|e| {
         Box::<dyn std::error::Error>::from(format!("Unable to parse transaction: {}", e))
     })?;
 
@@ -54,7 +53,8 @@ Parse Solana Transaction
 */
 fn parse_solana_transaction(
     unsigned_tx: &str,
-) -> Result<VersionedMessage, Box<dyn std::error::Error>> {
+    full_transaction: bool,
+) -> Result<SolanaTransaction, Box<dyn std::error::Error>> {
     if unsigned_tx.len() % 2 != 0 {
         return Err("unsigned transaction provided is invalid when converted to bytes".into());
     }
@@ -63,12 +63,21 @@ fn parse_solana_transaction(
         .map(|i| u8::from_str_radix(&unsigned_tx[i..i + 2], 16))
         .collect::<Result<Vec<u8>, _>>()
         .map_err(|_| "unsigned transaction provided is invalid when converted to bytes")?;
-    let tx_body = remove_signature_placeholder(unsigned_tx_bytes)?;
-    let message = match tx_body[0] {
-        0x80 => parse_solana_v0_transaction(&tx_body[LEN_ARRAY_HEADER_BYTES..tx_body.len()])?,
-        _ => parse_solana_legacy_transaction(tx_body)?,
-    };
-    Ok(message)
+
+    if full_transaction {
+        let (signatures, tx_body) = parse_signatures(unsigned_tx_bytes)?;
+        let message = match tx_body[0] {
+            V0_TRANSACTION_INDICATOR => parse_solana_v0_transaction(&tx_body[LEN_ARRAY_HEADER_BYTES..tx_body.len()])?,
+            _ => parse_solana_legacy_transaction(tx_body)?,
+        };
+        return Ok(SolanaTransaction{ message, signatures });
+    } else {
+        let message = match unsigned_tx_bytes[0] {
+            V0_TRANSACTION_INDICATOR => parse_solana_v0_transaction(&unsigned_tx_bytes[LEN_ARRAY_HEADER_BYTES..unsigned_tx_bytes.len()])?,
+            _ => parse_solana_legacy_transaction(unsigned_tx_bytes)?,
+        };
+        return Ok(SolanaTransaction{ message, signatures: vec![] });
+    }
 }
 
 /*
@@ -151,18 +160,23 @@ Remove Signature Placeholder
 - Context: Unsigned solana transactions contain a placeholder array of 0's at the beginning with enough space for all required signatures
 - This function removes this section as it is not relevant for parsed unsigned transactions
 */
-fn remove_signature_placeholder(
+fn parse_signatures(
     unsigned_tx_bytes: &[u8],
-) -> Result<&[u8], Box<dyn std::error::Error>> {
+) -> Result<(Vec<Signature>, &[u8]), Box<dyn std::error::Error>> {
     validate_length(
         unsigned_tx_bytes,
         LEN_ARRAY_HEADER_BYTES,
         "Signature Array Header",
     )?;
-    let sigs_num = unsigned_tx_bytes[0] as usize;
-    let parse_len = 1 + (sigs_num * LEN_SOL_SIG_BYTES);
+    let num_signatures = unsigned_tx_bytes[0] as usize;
+    let parse_len = 1 + (num_signatures * LEN_SOL_SIGNATURE_BYTES);
     validate_length(unsigned_tx_bytes, parse_len, "Signatures")?;
-    Ok(&unsigned_tx_bytes[parse_len..unsigned_tx_bytes.len()])
+    let signatures: Vec<Signature> = unsigned_tx_bytes[1..]
+        .chunks_exact(LEN_SOL_SIGNATURE_BYTES)
+        .take(num_signatures)
+        .map(<[u8]>::to_vec)
+        .collect();
+    Ok((signatures, &unsigned_tx_bytes[parse_len..unsigned_tx_bytes.len()]))
 }
 
 /*
@@ -360,15 +374,17 @@ fn parse_compact_array_of_bytes<'a>(
     ))
 }
 
+// Each signature is a Vec<u8> of 64 bytes
+pub type Signature = Vec<u8>;
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct SolanaTransaction {
     message: VersionedMessage,
+    signatures: Vec<Signature>,
 }
-
 impl SolanaTransaction {
-    pub fn new(hex_tx: &str) -> Result<Self, Box<dyn Error>> {
-        let message = parse_solana_transaction(hex_tx)?;
-        Ok(SolanaTransaction { message })
+    pub fn new(hex_tx: &str, full_transaction: bool) -> Result<Self, Box<dyn Error>> {
+        parse_solana_transaction(hex_tx, full_transaction)
     }
 
     fn all_account_key_strings(&self) -> Vec<String> {
@@ -546,9 +562,18 @@ impl SolanaTransaction {
         }
     }
 
+    fn signatures(&self) -> Result<Vec<String>, Box<dyn Error>> {
+        self.signatures
+            .iter()
+            .map(|b| String::from_utf8(b.clone()).map_err(|e| e.into()))
+            .collect()
+    }
+
     pub fn transaction_metadata(&self) -> Result<SolanaMetadata, Box<dyn Error>> {
         let (instructions, transfers) = self.all_instructions_and_transfers()?;
+        let signatures = self.signatures()?;
         Ok(SolanaMetadata {
+            signatures,
             account_keys: self.all_account_key_strings(),
             address_table_lookups: self.address_table_lookups(),
             recent_blockhash: self.recent_blockhash(),
