@@ -30,7 +30,7 @@ cargo run parse <your unsigned Solana transaction> --transaction
 
 See tests for examples using transactions from various scenarios. Here are the corresponding outputs:
 
-Command to parse Simple legacy transaction (message only NOT full transaction): 
+Command to parse simple legacy transaction messages: 
 
 ```
 cargo run parse 010001032b162ad640a79029d57fbe5dad39d5741066c4c65b22bd248c8677174c28a4630d42099a5e0aaeaad1d4ede263662787cb3f6291a6ede340c4aa7ca26249dbe3000000000000000000000000000000000000000000000000000000000000000021d594adba2b7fbd34a0383ded05e2ba526e907270d8394b47886805b880e73201020200010c020000006f00000000000000 --message
