@@ -10,7 +10,7 @@ cargo build
 
 ## Usage
 
-The solana transaction parsers accepts hex string inputs of two types: 
+The Solana transaction parsers accepts hex string inputs of two types: 
 - Messages: the "message" portion of the Solana transaction, which is the payload that gets signed by signers, NOT including the compact array of Signatures that comes at the beginning of a full Solana transaction
 - Full transactions: this includes both the message, as well as the compact array of signatures (or a placeholder array with zero-signatures) at the beginning
 
