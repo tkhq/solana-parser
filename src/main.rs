@@ -16,20 +16,12 @@ fn main() {
     let command = &args[1];
         match command.as_str() {
             "parse" => {
-                let unsigned_tx = &args[2];
-                let flag = if args.len() > 3 { Some(&args[3]) } else { None };
+                let unsigned_tx = &args[3];
+                let flag = if args.len() > 3 { Some(&args[2]) } else { None };
                 match flag {
-                    Some(flag) if flag == "--message" => {
-                        let result = parse_transaction(unsigned_tx.to_string(), false);
-                        match result {
-                            Ok(response) => {
-                                print_parsed_transaction(response.solana_parsed_transaction.payload.unwrap());
-                            },
-                            Err(e) => println!("Error: {}", e),
-                        }
-                    }
-                    Some(flag) if flag == "--transaction" => {
-                        let result = parse_transaction(unsigned_tx.to_string(), true);
+                    Some(flag) if flag == "--message" || flag == "--transaction" => {
+                        let is_transaction = flag == "--transaction";
+                        let result = parse_transaction(unsigned_tx.to_string(), is_transaction);
                         match result {
                             Ok(response) => {
                                 print_parsed_transaction(response.solana_parsed_transaction.payload.unwrap());
