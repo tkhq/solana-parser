@@ -7,7 +7,7 @@ use crate::solana::parser::SolanaTransaction;
     #[test]
     fn parses_valid_legacy_transactions() {
         let unsigned_payload = "0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010001032b162ad640a79029d57fbe5dad39d5741066c4c65b22bd248c8677174c28a4630d42099a5e0aaeaad1d4ede263662787cb3f6291a6ede340c4aa7ca26249dbe3000000000000000000000000000000000000000000000000000000000000000021d594adba2b7fbd34a0383ded05e2ba526e907270d8394b47886805b880e73201020200010c020000006f00000000000000".to_string();
-        let parsed_tx = SolanaTransaction::new(&unsigned_payload).unwrap();
+        let parsed_tx = SolanaTransaction::new(&unsigned_payload, true).unwrap();
         let tx_metadata = parsed_tx.transaction_metadata().unwrap();
 
         // All expected values
@@ -51,7 +51,7 @@ use crate::solana::parser::SolanaTransaction;
     fn parses_invalid_transactions() {
         // Invalid bytes, odd number length string
         let unsigned_payload = "0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010001032b162ad640a79029d57fbe5dad39d5741066c4c65b22bd248c8677174c28a4630d42099a5e0aaeaad1d4ede263662787cb3f6291a6ede340c4aa7ca26249dbe3000000000000000000000000000000000000000000000000000000000000000021d594adba2b7fbd34a0383ded05e2ba526e907270d8394b47886805b880e73201020200010c020000006f00000000000".to_string();
-        let parsed_tx = SolanaTransaction::new(&unsigned_payload);
+        let parsed_tx = SolanaTransaction::new(&unsigned_payload, true);
 
         let inst_error_message = parsed_tx.unwrap_err().to_string(); // Unwrap the error
         assert_eq!(
@@ -61,22 +61,22 @@ use crate::solana::parser::SolanaTransaction;
 
         // Invalid length for Instruction Data Array
         let unsigned_payload = "0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010001032b162ad640a79029d57fbe5dad39d5741066c4c65b22bd248c8677174c28a4630d42099a5e0aaeaad1d4ede263662787cb3f6291a6ede340c4aa7ca26249dbe3000000000000000000000000000000000000000000000000000000000000000021d594adba2b7fbd34a0383ded05e2ba526e907270d8394b47886805b880e73201020200010c020000006f000000000000".to_string();
-        let parsed_tx = SolanaTransaction::new(&unsigned_payload);
+        let parsed_tx = SolanaTransaction::new(&unsigned_payload, true);
 
         let inst_error_message = parsed_tx.unwrap_err().to_string(); // Convert to String
         assert_eq!(
     inst_error_message,
-    "Unsigned transaction provided is incorrectly formatted, error while parsing Instruction Data Array"
+    "Error parsing full transaction. If this is just a message instead of a full transaction, parse using the --message flag. Parsing Error: \"Unsigned transaction provided is incorrectly formatted, error while parsing Instruction Data Array\""
 );
 
         // Invalid length for Accounts Array
         let unsigned_payload = "0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010001192b162ad640a79029d57fbe5dad39d5741066c4c65b22bd248c8677174c28a4630d42099a5e0aaeaad1d4ede263662787cb3f6291a6ede340c4aa7ca26249dbe3000000000000000000000000000000000000000000000000000000000000000021d594adba2b7fbd34a0383ded05e2ba526e907270d8394b47886805b880e73201020200010c020000006f000000000000".to_string();
-        let parsed_tx = SolanaTransaction::new(&unsigned_payload);
+        let parsed_tx = SolanaTransaction::new(&unsigned_payload, true);
 
         let inst_error_message = parsed_tx.unwrap_err().to_string(); // Unwrap the error
         assert_eq!(
             inst_error_message,
-            "Unsigned transaction provided is incorrectly formatted, error while parsing Accounts"
+            "Error parsing full transaction. If this is just a message instead of a full transaction, parse using the --message flag. Parsing Error: \"Unsigned transaction provided is incorrectly formatted, error while parsing Accounts\""
         );
     }
     #[test]
@@ -88,7 +88,7 @@ use crate::solana::parser::SolanaTransaction;
 
         // Invalid bytes, odd number length string
         let unsigned_payload = "0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800100070ae05271368f77a2c5fefe77ce50e2b2f93ceb671eee8b172734c8d4df9d9eddc186a35856664b03306690c1c0fbd4b5821aea1c64ffb8c368a0422e47ae0d2895de288ba87b903021e6c8c2abf12c2484e98b040792b1fbb87091bc8e0dd76b6600000000000000000000000000000000000000000000000000000000000000000306466fe5211732ffecadba72c39be7bc8ce5bbc5f7126b2c439b3a400000000479d55bf231c06eee74c56ece681507fdb1b2dea3f48e5102b1cda256bc138f06ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a98c97258f4e2489f1bb3d1029148e0d830b5a1399daff1084048e7bd8dbe9f859b43ffa27f5d7f64a74c09b1f295879de4b09ab36dfc9dd514b321aa7b38ce5e8c6fa7af3bedbad3a3d65f36aabc97431b1bbe4c2d2f6e0e47ca60203452f5d616419cee70b839eb4eadd1411aa73eea6fd8700da5f0ea730136db1dd6fb2de660804000502c05c150004000903caa200000000000007060002000e03060101030200020c0200000080f0fa02000000000601020111070600010009030601010515060002010509050805100f0a0d01020b0c0011060524e517cb977ae3ad2a01000000120064000180f0fa02000000005d34700000000000320000060302000001090158b73fa66d1fb4a0562610136ebc84c7729542a8d792cb9bd2ad1bf75c30d5a404bdc2c1ba0497bcbbbf".to_string();
-        let parsed_tx = SolanaTransaction::new(&unsigned_payload).unwrap();
+        let parsed_tx = SolanaTransaction::new(&unsigned_payload, true).unwrap();
         let transaction_metadata = parsed_tx.transaction_metadata().unwrap();
 
         // All Expected accounts
