@@ -1,3 +1,5 @@
+use std::vec;
+
 use super::*;
 use parser::SOL_SYSTEM_PROGRAM_KEY;
 use crate::solana::structs::{SolanaInstruction, SolanaAccount, SolanaAddressTableLookup, SolanaSingleAddressTableLookup, SolTransfer};
@@ -8,6 +10,51 @@ use crate::solana::parser::SolanaTransaction;
     fn parses_valid_legacy_transactions() {
         let unsigned_payload = "0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010001032b162ad640a79029d57fbe5dad39d5741066c4c65b22bd248c8677174c28a4630d42099a5e0aaeaad1d4ede263662787cb3f6291a6ede340c4aa7ca26249dbe3000000000000000000000000000000000000000000000000000000000000000021d594adba2b7fbd34a0383ded05e2ba526e907270d8394b47886805b880e73201020200010c020000006f00000000000000".to_string();
         let parsed_tx = SolanaTransaction::new(&unsigned_payload, true).unwrap();
+        let tx_metadata = parsed_tx.transaction_metadata().unwrap();
+
+        // All expected values
+        let exp_signature = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+        let sender_account_key = "3uC8tBZQQA1RCKv9htCngTfYm4JK4ezuYx4M4nFsZQVp";
+        let recipient_account_key = "tkhqC9QX2gkqJtUFk2QKhBmQfFyyqZXSpr73VFRi35C";
+        let expected_account_keys = vec![
+            sender_account_key.to_string(),
+            recipient_account_key.to_string(),
+            SOL_SYSTEM_PROGRAM_KEY.to_string(),
+        ];
+        let expected_program_keys = vec![SOL_SYSTEM_PROGRAM_KEY.to_string()];
+        let expected_instruction_hex = "020000006f00000000000000";
+        let expected_amount_opt = Some("111".to_string());
+        let expected_amount = expected_amount_opt.clone().unwrap();
+
+        // All output checks
+        assert_eq!(tx_metadata.signatures, vec![exp_signature]);
+        assert_eq!(tx_metadata.account_keys, expected_account_keys);
+        assert_eq!(tx_metadata.program_keys, expected_program_keys);
+        assert_eq!(tx_metadata.instructions.len(), 1);
+
+        // Assert instructions array is correct
+        let inst = &tx_metadata.instructions[0];
+        assert_eq!(inst.program_key, SOL_SYSTEM_PROGRAM_KEY.to_string());
+        assert_eq!(inst.accounts.len(), 2);
+        assert_eq!(inst.accounts[0].account_key, sender_account_key);
+        assert!(inst.accounts[0].signer);
+        assert!(inst.accounts[0].writable);
+        assert_eq!(inst.accounts[1].account_key, recipient_account_key);
+        assert!(!inst.accounts[1].signer);
+        assert!(inst.accounts[1].writable);
+        assert_eq!(inst.instruction_data_hex, expected_instruction_hex);
+
+        // Assert transfers array is correct
+        assert_eq!(tx_metadata.transfers.len(), 1);
+        assert_eq!(tx_metadata.transfers[0].amount, expected_amount);
+        assert_eq!(tx_metadata.transfers[0].from, sender_account_key);
+        assert_eq!(tx_metadata.transfers[0].to, recipient_account_key);
+    }
+
+    #[test]
+    fn parses_valid_legacy_transaction_message_only() {
+        let unsigned_payload = "010001032b162ad640a79029d57fbe5dad39d5741066c4c65b22bd248c8677174c28a4630d42099a5e0aaeaad1d4ede263662787cb3f6291a6ede340c4aa7ca26249dbe3000000000000000000000000000000000000000000000000000000000000000021d594adba2b7fbd34a0383ded05e2ba526e907270d8394b47886805b880e73201020200010c020000006f00000000000000".to_string();
+        let parsed_tx = SolanaTransaction::new(&unsigned_payload, false).unwrap(); // check that a message is parsed correctly
         let tx_metadata = parsed_tx.transaction_metadata().unwrap();
 
         // All expected values
@@ -24,6 +71,7 @@ use crate::solana::parser::SolanaTransaction;
         let expected_amount = expected_amount_opt.clone().unwrap();
 
         // All output checks
+        assert_eq!(tx_metadata.signatures, vec![] as Vec<String>); // Check that there is an empty signature
         assert_eq!(tx_metadata.account_keys, expected_account_keys);
         assert_eq!(tx_metadata.program_keys, expected_program_keys);
         assert_eq!(tx_metadata.instructions.len(), 1);
