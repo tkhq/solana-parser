@@ -67,16 +67,16 @@ fn parse_solana_transaction(
     if full_transaction {
         let (signatures, tx_body) = parse_signatures(unsigned_tx_bytes)?;
         let message = match tx_body[0] {
-            V0_TRANSACTION_INDICATOR => parse_solana_v0_transaction(&tx_body[LEN_ARRAY_HEADER_BYTES..tx_body.len()])?,
-            _ => parse_solana_legacy_transaction(tx_body)?,
+            V0_TRANSACTION_INDICATOR => parse_solana_v0_transaction(&tx_body[LEN_ARRAY_HEADER_BYTES..tx_body.len()]).map_err(|e| format!("Error parsing full transaction. If this is just a message instead of a full transaction, parse using the --message flag. Parsing Error: {:#?}", e))?,
+            _ => parse_solana_legacy_transaction(tx_body).map_err(|e| format!("Error parsing full transaction. If this is just a message instead of a full transaction, parse using the --message flag. Parsing Error: {:#?}", e))?,
         };
         return Ok(SolanaTransaction{ message, signatures });
     } else {
         let message = match unsigned_tx_bytes[0] {
-            V0_TRANSACTION_INDICATOR => parse_solana_v0_transaction(&unsigned_tx_bytes[LEN_ARRAY_HEADER_BYTES..unsigned_tx_bytes.len()])?,
-            _ => parse_solana_legacy_transaction(unsigned_tx_bytes)?,
+            V0_TRANSACTION_INDICATOR => parse_solana_v0_transaction(&unsigned_tx_bytes[LEN_ARRAY_HEADER_BYTES..unsigned_tx_bytes.len()]).map_err(|e| format!("Error parsing message. If this is a full solana transaction with signatures or signature placeholders, parse using the --transaction flag. Parsing Error: {:#?}", e))?,
+            _ => parse_solana_legacy_transaction(unsigned_tx_bytes).map_err(|e| format!("Error parsing message. If this is a full solana transaction with signatures or signature placeholders, parse using the --transaction flag. Parsing Error: {:#?}", e))?,
         };
-        return Ok(SolanaTransaction{ message, signatures: vec![] });
+        return Ok(SolanaTransaction{ message, signatures: vec![] }); // Signatures array is empty when we are parsing a message (using --message) as opposed to a full transaction
     }
 }
 
@@ -156,9 +156,10 @@ fn validate_length(
 }
 
 /*
-Remove Signature Placeholder
-- Context: Unsigned solana transactions contain a placeholder array of 0's at the beginning with enough space for all required signatures
-- This function removes this section as it is not relevant for parsed unsigned transactions
+Parse Signatures
+- Context: Solana transactions contain a compact array of signatures at the beginning of a transaction 
+- This function parses these signatures.
+- NOTE: This is only relevant for when we are parsing FULL TRANSACTIONS (using the flag --transasction) not when we are parsing only the message (using --message)
 */
 fn parse_signatures(
     unsigned_tx_bytes: &[u8],
