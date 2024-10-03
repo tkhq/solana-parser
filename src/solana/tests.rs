@@ -140,7 +140,7 @@ use crate::solana::parser::SolanaTransaction;
         let parsed_tx = SolanaTransaction::new(&unsigned_payload, true).unwrap();
         let transaction_metadata = parsed_tx.transaction_metadata().unwrap();
 
-        // verify signatures array
+        // verify that the signatures array contains a single placeholder signature
         let exp_signature = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
         assert_eq!(transaction_metadata.signatures, vec![exp_signature]);
         
@@ -149,6 +149,7 @@ use crate::solana::parser::SolanaTransaction;
 
     #[test]
     fn parses_v0_transaction_message_only() {
+        // NOTE: This is the same transaction as above however only the message is included, without the signatures array
         // You can also ensure that the output of this transaction makes sense yourself using the below references
         // Transaction reference: https://solscan.io/tx/4tkFaZQPGNYTBag6sNTawpBnAodqiBNF494y86s2qBLohQucW1AHRaq9Mm3vWTSxFRaUTmtdYp67pbBRz5RDoAdr
         // Address Lookup Table Account key: https://explorer.solana.com/address/6yJwigBRYdkrpfDEsCRj7H5rrzdnAYv8LHzYbb5jRFKy/entries
