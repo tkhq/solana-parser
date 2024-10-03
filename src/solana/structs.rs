@@ -1,5 +1,6 @@
 #[derive(Debug, Clone, PartialEq)]
 pub struct SolanaMetadata {
+    pub signatures: Vec<String>,
     pub account_keys: Vec<String>,
     pub program_keys: Vec<String>,
     pub instructions: Vec<SolanaInstruction>,

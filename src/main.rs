@@ -8,21 +8,30 @@ use crate::solana::structs::SolanaParsedTransactionPayload;
 fn main() {
     let args: Vec<String> = env::args().collect();
     
-    if args.len() != 3 {
-        println!("Usage: `cargo run parse <unsigned transaction>`");
+    if args.len() != 4 {
+        println!("Usage: `cargo run parse <unsigned transaction> --message OR cargo run parse <unsinged transaction> --transaction`");
         return;
     }
 
     let command = &args[1];
         match command.as_str() {
             "parse" => {
-                let unsigned_tx = &args[2];
-                let result = parse_transaction(unsigned_tx.to_string());
-                match result {
-                    Ok(response) => {
-                        print_parsed_transaction(response.solana_parsed_transaction.payload.unwrap());
-                    },
-                    Err(e) => println!("Error: {}", e),
+                let unsigned_tx = &args[3];
+                let flag = if args.len() > 3 { Some(&args[2]) } else { None };
+                match flag {
+                    Some(flag) if flag == "--message" || flag == "--transaction" => {
+                        let is_transaction = flag == "--transaction";
+                        let result = parse_transaction(unsigned_tx.to_string(), is_transaction);
+                        match result {
+                            Ok(response) => {
+                                print_parsed_transaction(response.solana_parsed_transaction.payload.unwrap());
+                            },
+                            Err(e) => println!("Error: {}", e),
+                        }
+                    }
+                    _ => {
+                        println!("Invalid or missing flag. Use either --message or --transaction.");
+                    }
                 }
             }
             _ => println!("Unknown command: {}", command),
@@ -34,6 +43,7 @@ fn print_parsed_transaction(transaction_payload: SolanaParsedTransactionPayload)
     println!("  Unsigned Payload: {}", transaction_payload.unsigned_payload);
     if let Some(metadata) = transaction_payload.transaction_metadata {
         println!("  Transaction Metadata:");
+        println!("    Signatures: {:?}", metadata.signatures);
         println!("    Account Keys: {:?}", metadata.account_keys);
         println!("    Program Keys: {:?}", metadata.program_keys);
         println!("    Recent Blockhash: {}", metadata.recent_blockhash);
