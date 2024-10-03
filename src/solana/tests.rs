@@ -2,6 +2,7 @@ use std::vec;
 
 use super::*;
 use parser::SOL_SYSTEM_PROGRAM_KEY;
+use structs::SolanaMetadata;
 use crate::solana::structs::{SolanaInstruction, SolanaAccount, SolanaAddressTableLookup, SolanaSingleAddressTableLookup, SolTransfer};
 use crate::solana::parser::SolanaTransaction;
 
@@ -127,8 +128,8 @@ use crate::solana::parser::SolanaTransaction;
             "Error parsing full transaction. If this is just a message instead of a full transaction, parse using the --message flag. Parsing Error: \"Unsigned transaction provided is incorrectly formatted, error while parsing Accounts\""
         );
     }
+
     #[test]
-    #[allow(clippy::too_many_lines)]
     fn parses_v0_transactions() {
         // You can also ensure that the output of this transaction makes sense yourself using the below references
         // Transaction reference: https://solscan.io/tx/4tkFaZQPGNYTBag6sNTawpBnAodqiBNF494y86s2qBLohQucW1AHRaq9Mm3vWTSxFRaUTmtdYp67pbBRz5RDoAdr
@@ -139,6 +140,32 @@ use crate::solana::parser::SolanaTransaction;
         let parsed_tx = SolanaTransaction::new(&unsigned_payload, true).unwrap();
         let transaction_metadata = parsed_tx.transaction_metadata().unwrap();
 
+        // verify signatures array
+        let exp_signature = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+        assert_eq!(transaction_metadata.signatures, vec![exp_signature]);
+        
+        verify_jupiter_message(transaction_metadata)
+    }
+
+    #[test]
+    fn parses_v0_transaction_message_only() {
+        // You can also ensure that the output of this transaction makes sense yourself using the below references
+        // Transaction reference: https://solscan.io/tx/4tkFaZQPGNYTBag6sNTawpBnAodqiBNF494y86s2qBLohQucW1AHRaq9Mm3vWTSxFRaUTmtdYp67pbBRz5RDoAdr
+        // Address Lookup Table Account key: https://explorer.solana.com/address/6yJwigBRYdkrpfDEsCRj7H5rrzdnAYv8LHzYbb5jRFKy/entries
+
+        // Invalid bytes, odd number length string
+        let unsigned_payload = "800100070ae05271368f77a2c5fefe77ce50e2b2f93ceb671eee8b172734c8d4df9d9eddc186a35856664b03306690c1c0fbd4b5821aea1c64ffb8c368a0422e47ae0d2895de288ba87b903021e6c8c2abf12c2484e98b040792b1fbb87091bc8e0dd76b6600000000000000000000000000000000000000000000000000000000000000000306466fe5211732ffecadba72c39be7bc8ce5bbc5f7126b2c439b3a400000000479d55bf231c06eee74c56ece681507fdb1b2dea3f48e5102b1cda256bc138f06ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a98c97258f4e2489f1bb3d1029148e0d830b5a1399daff1084048e7bd8dbe9f859b43ffa27f5d7f64a74c09b1f295879de4b09ab36dfc9dd514b321aa7b38ce5e8c6fa7af3bedbad3a3d65f36aabc97431b1bbe4c2d2f6e0e47ca60203452f5d616419cee70b839eb4eadd1411aa73eea6fd8700da5f0ea730136db1dd6fb2de660804000502c05c150004000903caa200000000000007060002000e03060101030200020c0200000080f0fa02000000000601020111070600010009030601010515060002010509050805100f0a0d01020b0c0011060524e517cb977ae3ad2a01000000120064000180f0fa02000000005d34700000000000320000060302000001090158b73fa66d1fb4a0562610136ebc84c7729542a8d792cb9bd2ad1bf75c30d5a404bdc2c1ba0497bcbbbf".to_string();
+        let parsed_tx = SolanaTransaction::new(&unsigned_payload, false).unwrap();
+        let transaction_metadata = parsed_tx.transaction_metadata().unwrap();
+
+        // verify that the signatures array is empty
+        assert_eq!(transaction_metadata.signatures, vec![] as Vec<String>);
+        
+        verify_jupiter_message(transaction_metadata)
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn verify_jupiter_message(transaction_metadata: SolanaMetadata) {
         // All Expected accounts
         let signer_acct_key = "G6fEj2pt4YYAxLS8JAsY5BL6hea7Fpe8Xyqscg2e7pgp"; // Signer account key
         let usdc_mint_acct_key = "A4a6VbNvKA58AGpXBEMhp7bPNN9bDCFS9qze4qWDBBQ8"; // USDC Mint account key
