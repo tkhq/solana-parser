@@ -452,30 +452,30 @@ impl SolanaTransaction {
             }
             VersionedMessage::V0(message) => {
                 let lookup_index = index - message.account_keys.len();
-                let mut parsed_indexes = 0;
+                let mut num_parsed_indexes = 0;
 
                 // Go through writable indexes first
                 for l in message.address_table_lookups.clone() {
-                    if lookup_index < (parsed_indexes + l.writable_indexes.len()) {
+                    if lookup_index < (num_parsed_indexes + l.writable_indexes.len()) {
                         return Ok(SolanaSingleAddressTableLookup {
                             address_table_key: l.account_key.to_string(),
-                            index: i32::from(l.writable_indexes[lookup_index - parsed_indexes]),
+                            index: i32::from(l.writable_indexes[lookup_index - num_parsed_indexes]),
                             writable: true,
                         });
                     }
-                    parsed_indexes += l.writable_indexes.len();
+                    num_parsed_indexes += l.writable_indexes.len();
                 }
 
                 // Go through readable indexes next
                 for l in message.address_table_lookups.clone() {
-                    if lookup_index < (parsed_indexes + l.readonly_indexes.len()) {
+                    if lookup_index < (num_parsed_indexes + l.readonly_indexes.len()) {
                         return Ok(SolanaSingleAddressTableLookup {
                             address_table_key: l.account_key.to_string(),
-                            index: i32::from(l.readonly_indexes[lookup_index - parsed_indexes]),
+                            index: i32::from(l.readonly_indexes[lookup_index - num_parsed_indexes]),
                             writable: false,
                         });
                     }
-                    parsed_indexes += l.writable_indexes.len();
+                    num_parsed_indexes += l.readonly_indexes.len();
                 }
                 Err("Versioned transaction instruction account index out of bounds".into())
             }
