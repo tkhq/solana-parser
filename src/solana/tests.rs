@@ -386,3 +386,346 @@ use crate::solana::parser::SolanaTransaction;
         }];
         assert_eq!(exp_lookups, transaction_metadata.address_table_lookups);
     }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn parses_valid_v0_transaction_with_complex_address_table_lookups() {
+        // You can also ensure that the output of this transaction makes sense yourself using the below references
+        // Transaction reference: https://solscan.io/tx/5onMRTbaqb1xjotSedpvSzS4bzPzRSYFwoBb5Rc7qaVwYUy2o9nNE59j8p23zkMBDTd7JRZ4phMfkPz6VikDW32P
+        // Address Lookup Table Accounts:
+        // https://solscan.io/account/BkAbXZuNv1prbDh5q6HAQgkGgkX14UpBSfDnuLHKoQho
+        // https://solscan.io/account/3yg3PND9XDBd7VnZAoHXFRvyFfjPzR8RNb1G1AS9GwH6
+
+        let unsigned_transaction = "0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800100090fe05271368f77a2c5fefe77ce50e2b2f93ceb671eee8b172734c8d4df9d9eddc115376f3f97590a9c65d068b64e24a1f0f3ab9798c17fdddc38bf54d15ab56df477047a381c391538f7a3ba42bafe841d453f26d52e71a66443f6af1edd748afd86a35856664b03306690c1c0fbd4b5821aea1c64ffb8c368a0422e47ae0d2895de288ba87b903021e6c8c2abf12c2484e98b040792b1fbb87091bc8e0dd76b66e9d4488b07fe399b1a9155e5821b697d43016c0a3c4f3bbca2afb41d0163305700000000000000000000000000000000000000000000000000000000000000000306466fe5211732ffecadba72c39be7bc8ce5bbc5f7126b2c439b3a400000000479d55bf231c06eee74c56ece681507fdb1b2dea3f48e5102b1cda256bc138f069b8857feab8184fb687f634618c035dac439dc1aeb3b5598a0f0000000000106ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a98c97258f4e2489f1bb3d1029148e0d830b5a1399daff1084048e7bd8dbe9f859ac1ae3d087f29237062548f70c4c04aec2a995694986e7cbb467520621d38630b43ffa27f5d7f64a74c09b1f295879de4b09ab36dfc9dd514b321aa7b38ce5e8c6fa7af3bedbad3a3d65f36aabc97431b1bbe4c2d2f6e0e47ca60203452f5d61f0686da7719b0fd854cbc86dd72ec0c438b509b1e57ad61ea9dc8de9efbbcdba0707000502605f04000700090327530500000000000b0600040009060a0101060200040c0200000080969800000000000a0104011108280a0c0004020503090e08080d081d180201151117131614100f120c1c0a08081e1f190c01051a1b0a29c1209b3341d69c810502000000136400011c016401028096980000000000b2a31700000000006400000a030400000109029fa3b18857ed4adbd196e5fa77c76029c0ea1084a9671d2ad0643a027d29ad8a0a410104400705021103090214002c3c0b092d97db350aa90b53afe1d13d3a5b6ff46c97be630ca2779983794df503fbfeff02fdfc".to_string();
+        let parsed_tx = SolanaTransaction::new(&unsigned_transaction, true).unwrap();
+        let transaction_metadata = parsed_tx.transaction_metadata().unwrap();
+        let parsed_tx_sigs = transaction_metadata.signatures;
+        assert_eq!(1, parsed_tx_sigs.len());
+        assert_eq!("00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000".to_string(), parsed_tx_sigs[0]);
+
+        // All Expected accounts
+        let signer_acct_key = "G6fEj2pt4YYAxLS8JAsY5BL6hea7Fpe8Xyqscg2e7pgp"; // Signer account key
+        let pyth_intermediate_acct_key = "2Rpb7v4vNS6d4k936hVA3176BW3yxqvrpXx21C8tY9xw"; // PYTH account key
+        let wsol_intermediate_acct_key = "91bUbswo6Di8235jAPwim1At4cPZLbG2pkpneyqKg4NQ"; // WSOL account key
+        let usdc_destination_acct_key = "A4a6VbNvKA58AGpXBEMhp7bPNN9bDCFS9qze4qWDBBQ8"; // USDC account key
+        let wsol_mint_acct_key = "FxDNKZ14p3W7o1tpinH935oiwUo3YiZowzP1hUcUzUFw"; // WSOL Mint account key
+        let usdc_intermediate_acct_key = "Gjmjory7TWKJXD2Jc6hKzAG991wWutFhtbXudzJqgx3p"; // USDC account key
+        let compute_budget_acct_key = "ComputeBudget111111111111111111111111111111"; // compute budget program account key
+        let jupiter_program_acct_key = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"; // Jupiter program account key
+        let wsol_acct_key = "So11111111111111111111111111111111111111112"; // WSOL program account key
+        let token_acct_key = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"; // token program account key
+        let assoc_token_acct_key = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"; // associated token program account key
+        let jupiter_event_authority_key = "CapuXNQoDviLvU1PxFiizLgPNQCxrsag1uMeyk6zLVps"; // Jupiter aggregator event authority account key
+        let jupiter_aggregator_authority_key = "D8cy77BBepLMngZx6ZukaTff5hCt1HrWyKk3Hnd9oitf"; // Jupiter aggregator authority account key
+        let usdc_acct_key = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"; // USDC account key
+
+        // All expected static account keys
+        let expected_static_acct_keys = vec![
+            signer_acct_key,
+            pyth_intermediate_acct_key,
+            wsol_intermediate_acct_key,
+            usdc_destination_acct_key,
+            wsol_mint_acct_key,
+            usdc_intermediate_acct_key,
+            SOL_SYSTEM_PROGRAM_KEY,
+            compute_budget_acct_key,
+            jupiter_program_acct_key,
+            wsol_acct_key,
+            token_acct_key,
+            assoc_token_acct_key,
+            jupiter_event_authority_key,
+            jupiter_aggregator_authority_key,
+            usdc_acct_key,
+        ];
+        // all expected program account keys
+        let expected_program_keys = vec![
+            SOL_SYSTEM_PROGRAM_KEY,
+            compute_budget_acct_key,
+            jupiter_program_acct_key,
+            token_acct_key,
+            assoc_token_acct_key,
+        ];
+
+        // All expected full account objects
+        let signer_acct = SolanaAccount {
+            account_key: signer_acct_key.to_string(),
+            signer: true,
+            writable: true,
+        };
+        let usdc_destination_acct = SolanaAccount {
+            account_key: usdc_destination_acct_key.to_string(),
+            signer: false,
+            writable: true,
+        };
+        let system_program_acct = SolanaAccount {
+            account_key: SOL_SYSTEM_PROGRAM_KEY.to_string(),
+            signer: false,
+            writable: false,
+        };
+        let jupiter_program_acct = SolanaAccount {
+            account_key: jupiter_program_acct_key.to_string(),
+            signer: false,
+            writable: false,
+        };
+        let token_acct = SolanaAccount {
+            account_key: token_acct_key.to_string(),
+            signer: false,
+            writable: false,
+        };
+        let jupiter_event_authority_acct: SolanaAccount = SolanaAccount {
+            account_key: jupiter_event_authority_key.to_string(),
+            signer: false,
+            writable: false,
+        };
+        let jupiter_aggregator_authority_acct = SolanaAccount {
+            account_key: jupiter_aggregator_authority_key.to_string(),
+            signer: false,
+            writable: false,
+        };
+        let usdc_acct = SolanaAccount {
+            account_key: usdc_acct_key.to_string(),
+            signer: false,
+            writable: false,
+        };
+        let wsol_acct = SolanaAccount {
+            account_key: wsol_acct_key.to_string(),
+            signer: false,
+            writable: false,
+        };
+        let wsol_mint_acct = SolanaAccount {
+            account_key: wsol_mint_acct_key.to_string(),
+            signer: false,
+            writable: true,
+        };
+        let pyth_intermediate_acct = SolanaAccount {
+            account_key: pyth_intermediate_acct_key.to_string(),
+            signer: false,
+            writable: true,
+        };
+        let wsol_intermediate_acct = SolanaAccount {
+            account_key: wsol_intermediate_acct_key.to_string(),
+            signer: false,
+            writable: true,
+        };
+        let usdc_intermediate_acct = SolanaAccount {
+            account_key: usdc_intermediate_acct_key.to_string(),
+            signer: false,
+            writable: true,
+        };
+
+        let lookup_table_key_1 = "BkAbXZuNv1prbDh5q6HAQgkGgkX14UpBSfDnuLHKoQho";
+        let lookup_table_key_2 = "3yg3PND9XDBd7VnZAoHXFRvyFfjPzR8RNb1G1AS9GwH6";
+
+        // Assert that accounts and programs are correct
+        assert_eq!(expected_static_acct_keys, transaction_metadata.account_keys);
+        assert_eq!(expected_program_keys, transaction_metadata.program_keys);
+
+        // Assert ALL instructions as expected --> REFERENCE: https://solscan.io/tx/5onMRTbaqb1xjotSedpvSzS4bzPzRSYFwoBb5Rc7qaVwYUy2o9nNE59j8p23zkMBDTd7JRZ4phMfkPz6VikDW32P
+
+        // Assert expected number of instructions
+        assert_eq!(7, transaction_metadata.instructions.len());
+
+        // Instruction 1 -- SetComputeUnitLimit
+        let exp_instruction_1 = SolanaInstruction {
+            program_key: compute_budget_acct_key.to_string(),
+            accounts: vec![],
+            address_table_lookups: vec![],
+            instruction_data_hex: "02605f0400".to_string(),
+        };
+        assert_eq!(exp_instruction_1, transaction_metadata.instructions[0]);
+
+        // Instruction 2 -- SetComputeUnitPrice
+        let exp_instruction_2 = SolanaInstruction {
+            program_key: compute_budget_acct_key.to_string(),
+            accounts: vec![],
+            address_table_lookups: vec![],
+            instruction_data_hex: "032753050000000000".to_string(),
+        };
+        assert_eq!(exp_instruction_2, transaction_metadata.instructions[1]);
+
+        // Instruction 3 - CreateIdempotent
+        let exp_instruction_3 = SolanaInstruction {
+            program_key: assoc_token_acct_key.to_string(),
+            accounts: vec![
+                signer_acct.clone(),
+                wsol_mint_acct.clone(),
+                signer_acct.clone(),
+                wsol_acct.clone(),
+                system_program_acct.clone(),
+                token_acct.clone(),
+            ],
+            address_table_lookups: vec![],
+            instruction_data_hex: "01".to_string(),
+        };
+        assert_eq!(exp_instruction_3, transaction_metadata.instructions[2]);
+
+        // Instruction 4 -- This is a basic SOL transfer
+        let exp_instruction_4 = SolanaInstruction {
+            program_key: SOL_SYSTEM_PROGRAM_KEY.to_string(),
+            accounts: vec![signer_acct.clone(), wsol_mint_acct.clone()],
+            address_table_lookups: vec![],
+            instruction_data_hex: "020000008096980000000000".to_string(),
+        };
+        assert_eq!(exp_instruction_4, transaction_metadata.instructions[3]);
+
+        // Instruction 5 -- SyncNative
+        let exp_instruction_5 = SolanaInstruction {
+            program_key: token_acct_key.to_string(),
+            accounts: vec![wsol_mint_acct.clone()],
+            address_table_lookups: vec![],
+            instruction_data_hex: "11".to_string(),
+        };
+        assert_eq!(exp_instruction_5, transaction_metadata.instructions[4]);
+
+        // Instruction 6 -- Jupiter Aggregator v6: sharedAccountsRoute
+        let exp_instruction_6 = SolanaInstruction {
+            program_key: jupiter_program_acct_key.to_string(),
+            accounts: vec![
+                token_acct.clone(),
+                jupiter_event_authority_acct.clone(),
+                signer_acct.clone(),
+                wsol_mint_acct.clone(),
+                wsol_intermediate_acct.clone(),
+                usdc_intermediate_acct.clone(),
+                usdc_destination_acct.clone(),
+                wsol_acct.clone(),
+                usdc_acct.clone(),
+                jupiter_program_acct.clone(),
+                jupiter_program_acct.clone(),
+                jupiter_aggregator_authority_acct.clone(),
+                jupiter_program_acct.clone(),
+                wsol_intermediate_acct.clone(),
+                pyth_intermediate_acct.clone(),
+                jupiter_event_authority_acct.clone(),
+                token_acct.clone(),
+                jupiter_program_acct.clone(),
+                jupiter_program_acct.clone(),
+                jupiter_event_authority_acct.clone(),
+                pyth_intermediate_acct.clone(),
+                usdc_intermediate_acct.clone(),
+                token_acct.clone(),
+            ],
+            instruction_data_hex: "c1209b3341d69c810502000000136400011c016401028096980000000000b2a3170000000000640000"
+                .to_string(),
+            address_table_lookups: vec![
+                SolanaSingleAddressTableLookup {
+                    address_table_key: lookup_table_key_1.to_string(),
+                    index: 0,
+                    writable: false,
+                },
+                SolanaSingleAddressTableLookup {
+                    address_table_key: lookup_table_key_1.to_string(),
+                    index: 9,
+                    writable: true,
+                },
+                SolanaSingleAddressTableLookup {
+                    address_table_key: lookup_table_key_1.to_string(),
+                    index: 2,
+                    writable: true,
+                },
+                SolanaSingleAddressTableLookup {
+                    address_table_key: lookup_table_key_1.to_string(),
+                    index: 4,
+                    writable: true,
+                },
+                SolanaSingleAddressTableLookup {
+                    address_table_key: lookup_table_key_1.to_string(),
+                    index: 3,
+                    writable: true,
+                },
+                SolanaSingleAddressTableLookup {
+                    address_table_key: lookup_table_key_1.to_string(),
+                    index: 7,
+                    writable: true,
+                },
+                SolanaSingleAddressTableLookup {
+                    address_table_key: lookup_table_key_1.to_string(),
+                    index: 17,
+                    writable: true,
+                },
+                SolanaSingleAddressTableLookup {
+                    address_table_key: lookup_table_key_1.to_string(),
+                    index: 5,
+                    writable: true,
+                },
+                SolanaSingleAddressTableLookup {
+                    address_table_key: lookup_table_key_1.to_string(),
+                    index: 1,
+                    writable: true,
+                },
+                SolanaSingleAddressTableLookup {
+                    address_table_key: lookup_table_key_1.to_string(),
+                    index: 65,
+                    writable: true,
+                },
+                SolanaSingleAddressTableLookup {
+                    address_table_key: lookup_table_key_1.to_string(),
+                    index: 64,
+                    writable: true,
+                },
+                SolanaSingleAddressTableLookup {
+                    address_table_key: lookup_table_key_1.to_string(),
+                    index: 20,
+                    writable: false,
+                },
+                SolanaSingleAddressTableLookup {
+                    address_table_key: lookup_table_key_2.to_string(),
+                    index: 253,
+                    writable: false,
+                },
+                SolanaSingleAddressTableLookup {
+                    address_table_key: lookup_table_key_2.to_string(),
+                    index: 252,
+                    writable: false,
+                },
+                SolanaSingleAddressTableLookup {
+                    address_table_key: lookup_table_key_2.to_string(),
+                    index: 251,
+                    writable: true,
+                },
+                SolanaSingleAddressTableLookup {
+                    address_table_key: lookup_table_key_2.to_string(),
+                    index: 254,
+                    writable: true,
+                },
+                SolanaSingleAddressTableLookup {
+                    address_table_key: lookup_table_key_2.to_string(),
+                    index: 255,
+                    writable: true,
+                },
+            ],
+        };
+        assert_eq!(exp_instruction_6, transaction_metadata.instructions[5]);
+
+        // Instruction 7 -- Close Account
+        let exp_instruction_7: SolanaInstruction = SolanaInstruction {
+            program_key: token_acct_key.to_string(),
+            accounts: vec![wsol_mint_acct.clone(), signer_acct.clone(), signer_acct.clone()],
+            address_table_lookups: vec![],
+            instruction_data_hex: "09".to_string(),
+        };
+        assert_eq!(exp_instruction_7, transaction_metadata.instructions[6]);
+
+        // ASSERT top level transfers array
+        let exp_transf_arr: Vec<SolTransfer> = vec![SolTransfer {
+            amount: "10000000".to_string(),
+            to: wsol_mint_acct_key.to_string(),
+            from: signer_acct_key.to_string(),
+        }];
+        assert_eq!(exp_transf_arr, transaction_metadata.transfers);
+
+        // ASSERT Address table lookups
+        let exp_lookups: Vec<SolanaAddressTableLookup> = vec![
+            SolanaAddressTableLookup {
+                address_table_key: lookup_table_key_1.to_string(),
+                writable_indexes: vec![65, 1, 4, 64, 7, 5, 2, 17, 3, 9],
+                readonly_indexes: vec![20, 0],
+            },
+            SolanaAddressTableLookup {
+                address_table_key: lookup_table_key_2.to_string(),
+                writable_indexes: vec![251, 254, 255],
+                readonly_indexes: vec![253, 252],
+            },
+        ];
+        assert_eq!(exp_lookups, transaction_metadata.address_table_lookups);
+    }
