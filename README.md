@@ -125,6 +125,24 @@ Solana Parsed Transaction Payload:
     Address Table Lookups: [SolanaAddressTableLookup { address_table_key: "6yJwigBRYdkrpfDEsCRj7H5rrzdnAYv8LHzYbb5jRFKy", writable_indexes: [189, 194, 193, 186], readonly_indexes: [151, 188, 187, 191] }]
 ```
 
+## Further Context
+
+This area provides context on some areas of the parser output that are opinionated, custom abstractions. 
+
+### Top Level Transfers Array
+
+There is a top level array called "Transfers". This does not map 1 to 1 to an abstraction that exists in a Solana transaction, but is more of a custom abstraction for user-friendliness. Specifically it is an array representing all instructions within the instruction list that are simple SOL transfers (expressed in lamports) including the amount, the sender and the recipient of the transfer.
+
+### Address table lookups
+
+- Context: Versioned transactions in Solana (V0 transactions) include Address Table lookups which are basically references to a location on chain where address strings are stored to be included in the transaction. It is used to fit more addresses into a transaction.
+- Currently we do not resolve address table lookups in our versioned transaction parser output but instead have different abstractions to show where the lookup table addresses have been referenced. Specifically: 
+  - Top level Array – each top level address table lookup object here includes the key of the account where the addresses are stored and then arrays of all writable and read only indexes (two arrays total) used in the transaction
+  - Within-instruction array – each instruction contains an array of all addresses that are only lookups and not explicitly included (each object here is a table key + index) 
+
+For more on Address Table Lookups: https://solana.com/docs/advanced/lookup-tables
+
+
 ## Future considerations
 
-TODO
+- Resolve Address Table Look Ups: Currently address table lookups are only included as references. In the future we could resolve these to the actual addresses that they represent
