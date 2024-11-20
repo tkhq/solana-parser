@@ -366,10 +366,9 @@ fn parse_compact_array_of_bytes<'a>(
         &format!("{section} Array Header"),
     )?;
     let (length, tx_body_remainder) = read_compact_u16(&tx_body_remainder)?;
-    //let bytes_num = tx_body_remainder[0] as usize;
-    let parse_len = (length + 1) * LEN_ARRAY_HEADER_BYTES;
+    let parse_len = length * LEN_ARRAY_HEADER_BYTES;
     validate_length(tx_body_remainder, parse_len, &format!("{section} Array"))?;
-    let bytes: Vec<u8> = tx_body_remainder[LEN_ARRAY_HEADER_BYTES..parse_len].to_vec();
+    let bytes: Vec<u8> = tx_body_remainder[0..parse_len].to_vec();
     Ok((
         bytes,
         &tx_body_remainder[parse_len..tx_body_remainder.len()],
