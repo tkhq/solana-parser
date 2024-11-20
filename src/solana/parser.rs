@@ -365,14 +365,47 @@ fn parse_compact_array_of_bytes<'a>(
         LEN_ARRAY_HEADER_BYTES,
         &format!("{section} Array Header"),
     )?;
-    let bytes_num = tx_body_remainder[0] as usize;
-    let parse_len = (bytes_num + 1) * LEN_ARRAY_HEADER_BYTES;
+    let (length, tx_body_remainder) = read_compact_u16(&tx_body_remainder)?;
+    //let bytes_num = tx_body_remainder[0] as usize;
+    let parse_len = (length + 1) * LEN_ARRAY_HEADER_BYTES;
     validate_length(tx_body_remainder, parse_len, &format!("{section} Array"))?;
     let bytes: Vec<u8> = tx_body_remainder[LEN_ARRAY_HEADER_BYTES..parse_len].to_vec();
     Ok((
         bytes,
         &tx_body_remainder[parse_len..tx_body_remainder.len()],
     ))
+}
+
+fn read_compact_u16(tx_body_remainder: &[u8]) -> Result<(usize, &[u8]), Box<dyn std::error::Error>> {
+    let mut value = 0u16;
+    let mut shift = 0u16;
+    let mut bytes_read = 0;
+
+    loop {
+        // Check if there are enough bytes
+        if bytes_read >= tx_body_remainder.len() {
+            return Err(format!(
+                "Unsigned transaction provided is incorrectly formatted, error while parsing compact array header, not enough bytes"
+            )
+            .into());
+        }
+
+        let byte = tx_body_remainder[bytes_read];
+        bytes_read += 1;
+
+        value |= ((byte & 0x7f) as u16) << shift;
+        if byte & 0x80 == 0 {
+            return Ok((value as usize, &tx_body_remainder[bytes_read..tx_body_remainder.len()]));
+        }
+
+        shift += 7;
+        if shift >= 16 {
+            return Err(format!(
+                "Unsigned transaction provided is incorrectly formatted, error while parsing compact array header, invalid u16"
+            )
+            .into());
+        }
+    }
 }
 
 // Each signature is a Vec<u8> of 64 bytes
