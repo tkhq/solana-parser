@@ -365,14 +365,60 @@ fn parse_compact_array_of_bytes<'a>(
         LEN_ARRAY_HEADER_BYTES,
         &format!("{section} Array Header"),
     )?;
-    let bytes_num = tx_body_remainder[0] as usize;
-    let parse_len = (bytes_num + 1) * LEN_ARRAY_HEADER_BYTES;
+    let (length, tx_body_remainder) = read_compact_u16(&tx_body_remainder)?;
+    let parse_len = length * LEN_ARRAY_HEADER_BYTES;
     validate_length(tx_body_remainder, parse_len, &format!("{section} Array"))?;
-    let bytes: Vec<u8> = tx_body_remainder[LEN_ARRAY_HEADER_BYTES..parse_len].to_vec();
+    let bytes: Vec<u8> = tx_body_remainder[0..parse_len].to_vec();
     Ok((
         bytes,
         &tx_body_remainder[parse_len..tx_body_remainder.len()],
     ))
+}
+
+/*
+Read Compact u16
+- Context: compact arrays in Solana begin with a compact-u16 multi-byte header
+- A compact-u16 multibyte header consists of 1-3 bytes.
+- Each byte in compact-u16 (except the 3rd byte, if there is one) has its MOST SIGNIFICANT BIT set as a "continuation bit" where 1 = continue (as in there will be another byte) and 0 = don't continue
+- The remaining 7 bits are the data bits to be included in the bit representation of the final u16 number (except for the case in which there is a 3rd byte, in which case there is NO continuation bit and only 2 data bits, because 7 + 7 + 2 = 16)
+- In other words, while parsing a byte that is part of a compact-u16, if the first bit is 1, then there will be a next byte (unless it is the 3rd bit, then the first bit being a 1 is erroneous and malformatted)
+- FINALLY -- if the final format is zzyyyyyyyxxxxxxx it is represented in compactu16 as 1xxxxxxx1yyyyyyy000000zz
+- In a 3 byte representation, the first byte has the 7 least significant digits, and the 3rd byte has the two most significant digits of the final u16
+*/
+fn read_compact_u16(tx_body_remainder: &[u8]) -> Result<(usize, &[u8]), Box<dyn std::error::Error>> {
+    let mut value = 0u16;
+    let mut shift = 0;
+    let mut bytes_read = 0;
+
+    loop {
+        // Check if there are enough bytes
+        if bytes_read >= tx_body_remainder.len() {
+            return Err(format!(
+                "error parsing unsigned transaction: unable to parse compact array header, not enough bytes"
+            )
+            .into());
+        }
+
+        let byte = tx_body_remainder[bytes_read];
+        bytes_read += 1;
+
+        // if we're on the 3rd byte, and the any bits other than the two least significant bits are set, this is an error
+        if shift == 14 && (byte & 0xfc) != 0 {
+            return Err(format!(
+                "error parsing unsigned transaction: third byte in compact u16 has more than it's 2 least significant bits set",
+            )
+            .into());
+        }
+
+        // remove the continuation bit from the new byte and shift it over by the correct amount to put it in the final bit representation of the u16 number
+        value |= u16::from(byte & 0x7f) << shift;
+        if byte & 0x80 == 0 {
+            return Ok((value as usize, &tx_body_remainder[bytes_read..tx_body_remainder.len()]));
+        }
+
+        // increasing the shift of the digits in the next byte by 7 as in the description above this method
+        shift += 7;
+    }
 }
 
 // Each signature is a Vec<u8> of 64 bytes
@@ -582,5 +628,61 @@ impl SolanaTransaction {
             instructions,
             transfers,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn hex_to_vec(inp: &str) -> Result<Vec<u8>, Box<dyn Error>> {
+        let unsigned_tx_bytes: Vec<u8> = (0..inp.len())
+            .step_by(2)
+            .map(|i| u8::from_str_radix(&inp[i..i + 2], 16))
+            .collect::<Result<Vec<u8>, _>>()
+            .map_err(|_| "input provided is invalid when converted to bytes")?;
+        Ok(unsigned_tx_bytes)
+    }
+
+#[test]
+    fn test_read_compact_u16() {
+        // Test compact header with a single byte
+        let test_input_1 = "05FFFFFFFFFF";
+        let test_bytes_1 = hex_to_vec(test_input_1).unwrap();
+        let (len_1, rem_1) = read_compact_u16(&test_bytes_1).unwrap();
+        assert_eq!(len_1, 5);
+        assert_eq!(rem_1, vec![0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+
+        // Test compact header with two bytes
+        let test_input_2 = "8001FFFFFFFFFF";
+        let test_bytes_2 = hex_to_vec(test_input_2).unwrap();
+        let (len_2, rem_2) = read_compact_u16(&test_bytes_2).unwrap();
+        assert_eq!(len_2, 128);
+        assert_eq!(rem_2, vec![0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+
+        // Test compact header with 3 bytes (VALID)
+        let test_input_3 = "808003FFFFFFFFFF";
+        let test_bytes_3 = hex_to_vec(test_input_3).unwrap();
+        let (len_3, rem_3) = read_compact_u16(&test_bytes_3).unwrap();
+        assert_eq!(len_3, 49152);
+        assert_eq!(rem_3, vec![0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+
+        // Test compact header with 3 bytes (INVALID, last byte has more than the 2 least significant digits populated since 0x04 == 0000 0100)
+        let test_input_4 = "808004FFFFFFFFFF";
+        let test_bytes_4 = hex_to_vec(test_input_4).unwrap();
+        let decoding_err_1 = read_compact_u16(&test_bytes_4).unwrap_err();
+        assert_eq!(
+            decoding_err_1.to_string(),
+            "error parsing unsigned transaction: third byte in compact u16 has more than it's 2 least significant bits set",
+        );
+
+        // Test compact header with 2 bytes (INVALID, 2 continuation bytes but then nothing after)
+        let test_input_5 = "8080";
+        let test_bytes_5 = hex_to_vec(test_input_5).unwrap();
+        let decoding_err_2 = read_compact_u16(&test_bytes_5).unwrap_err();
+        assert_eq!(
+            decoding_err_2.to_string(),
+            "error parsing unsigned transaction: unable to parse compact array header, not enough bytes",
+        );
     }
 }
