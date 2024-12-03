@@ -5,6 +5,7 @@ pub struct SolanaMetadata {
     pub program_keys: Vec<String>,
     pub instructions: Vec<SolanaInstruction>,
     pub transfers: Vec<SolTransfer>,
+    pub spl_transfers: Vec<SplTransfer>,
     pub recent_blockhash: String,
     pub address_table_lookups: Vec<SolanaAddressTableLookup>,
 }
@@ -36,6 +37,14 @@ pub struct SolTransfer {
     pub from: String,
     pub to: String,
     pub amount: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SplTransfer {
+    pub from: String,
+    pub to: String,
+    pub amount: String,
+    pub token_mint_authority: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
