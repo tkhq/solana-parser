@@ -1,5 +1,6 @@
 use std::error::Error;
 use hex;
+use spl_token::instruction::TokenInstruction;
 use solana_sdk::{
     hash::Hash,
     instruction::CompiledInstruction,
@@ -8,9 +9,9 @@ use solana_sdk::{
         Message as LegacyMessage, MessageHeader, VersionedMessage,
     },
     pubkey::Pubkey,
-    system_instruction::SystemInstruction,
+    system_instruction::SystemInstruction, 
 };
-use super::structs::{SolTransfer, SolanaAccount, SolanaAddressTableLookup, SolanaInstruction, SolanaMetadata, SolanaParseResponse, SolanaParsedTransaction, SolanaParsedTransactionPayload, SolanaSingleAddressTableLookup};
+use super::structs::{SolTransfer, SolanaAccount, SolanaAddressTableLookup, SolanaInstruction, SolanaMetadata, SolanaParseResponse, SolanaParsedTransaction, SolanaParsedTransactionPayload, SolanaSingleAddressTableLookup, SplTransfer};
 
 // Length of a solana signature in bytes (64 bytes long)
 pub const LEN_SOL_SIGNATURE_BYTES: usize = 64;
@@ -22,6 +23,10 @@ pub const LEN_ARRAY_HEADER_BYTES: usize = 1;
 pub const LEN_MESSAGE_HEADER_BYTES: usize = 3;
 // This is a string representation of the account address of the Solana System Program -- the main native program that "owns" user accounts and is in charge of facilitating basic SOL transfers among other things
 pub const SOL_SYSTEM_PROGRAM_KEY: &str = "11111111111111111111111111111111";
+// This is a string representation of the account address of the Token Program -- Used for transferring SPL tokens 
+pub const TOKEN_PROGRAM_KEY: &str = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+// This is a string representation of the account address for the Token 2022 Program which is a strict superset of the old Token Program, used to add extra functionality -- Used for transferring SPL tokens
+pub const TOKEN_2022_PROGRAM_KEY: &str = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
 // Versioned transactions have a prefix of 0x80
 const V0_TRANSACTION_INDICATOR: u8 = 0x80;
 
@@ -530,9 +535,10 @@ impl SolanaTransaction {
 
     fn all_instructions_and_transfers(
         &self,
-    ) -> Result<(Vec<SolanaInstruction>, Vec<SolTransfer>), Box<dyn std::error::Error>> {
+    ) -> Result<(Vec<SolanaInstruction>, Vec<SolTransfer>, Vec<SplTransfer>), Box<dyn std::error::Error>> {
         let mut instructions: Vec<SolanaInstruction> = vec![];
         let mut transfers: Vec<SolTransfer> = vec![];
+        let mut spl_transfers: Vec<SplTransfer> = vec![];
         for i in self.message.instructions() {
             let mut accounts: Vec<SolanaAccount> = vec![];
             let mut address_table_lookups: Vec<SolanaSingleAddressTableLookup> = vec![];
@@ -556,20 +562,54 @@ impl SolanaTransaction {
                 accounts.push(acct);
             }
             let program_key = i.program_id(self.message.static_account_keys()).to_string();
-            if program_key == *SOL_SYSTEM_PROGRAM_KEY {
-                let system_instruction: SystemInstruction = bincode::deserialize(&i.data)
+            match program_key.as_str() {
+                SOL_SYSTEM_PROGRAM_KEY => {
+                    let system_instruction: SystemInstruction = bincode::deserialize(&i.data)
                     .map_err(|_| "Could not parse system instruction")?;
-                if let SystemInstruction::Transfer { lamports } = system_instruction {
-                    let transfer = SolTransfer {
-                        amount: lamports.to_string(),
-                        to: accounts[1].account_key.clone(),
-                        from: accounts[0].account_key.clone(),
-                    };
-                    transfers.push(transfer);
+                    if let SystemInstruction::Transfer { lamports } = system_instruction {
+                        if accounts.len() != 2 {
+                            return Err("System Program Transfer Instruction should have exactly 2 arguments".into())
+                        }
+                        let transfer = SolTransfer {
+                            amount: lamports.to_string(),
+                            to: accounts[1].account_key.clone(),
+                            from: accounts[0].account_key.clone(),
+                        };
+                        transfers.push(transfer);
+                    }
                 }
+                TOKEN_PROGRAM_KEY => {
+                    let token_program_instruction: TokenInstruction = TokenInstruction::unpack(&i.data).map_err(|_| "Could not parse token instruction")?;
+                    if let TokenInstruction::Transfer { amount } = token_program_instruction {
+                        if accounts.len() != 3 {
+                            return Err("Token Program Transfer Instruction should have exactly 3 arguments".into())
+                        }
+                        let spl_transfer = SplTransfer {
+                            amount: amount.to_string(),
+                            to: accounts[1].account_key.clone(),
+                            from: accounts[0].account_key.clone(),
+                            token_mint_authority: accounts[2].account_key.clone(), 
+                        };
+                        spl_transfers.push(spl_transfer);
+                    }
+                }
+                TOKEN_2022_PROGRAM_KEY => {
+                    let token_program_instruction: TokenInstruction = TokenInstruction::unpack(&i.data).map_err(|_| "Could not parse token instruction")?;
+                    if let TokenInstruction::Transfer { amount } = token_program_instruction {
+                        if accounts.len() != 3 {
+                            return Err("Token Program Transfer Instruction should have exactly 3 arguments".into())
+                        }
+                        let spl_transfer = SplTransfer {
+                            amount: amount.to_string(),
+                            to: accounts[1].account_key.clone(),
+                            from: accounts[0].account_key.clone(),
+                            token_mint_authority: accounts[2].account_key.clone(), 
+                        };
+                        spl_transfers.push(spl_transfer);
+                    }
+                }
+                _ => {}
             }
-
-            // TODO: verify this. unsure if this is correct
             let instruction_data_hex: String = hex::encode(&i.data);
             let inst = SolanaInstruction {
                 program_key,
@@ -579,7 +619,7 @@ impl SolanaTransaction {
             };
             instructions.push(inst);
         }
-        Ok((instructions, transfers))
+        Ok((instructions, transfers, spl_transfers))
     }
 
     fn recent_blockhash(&self) -> String {
@@ -617,7 +657,7 @@ impl SolanaTransaction {
     }
 
     pub fn transaction_metadata(&self) -> Result<SolanaMetadata, Box<dyn Error>> {
-        let (instructions, transfers) = self.all_instructions_and_transfers()?;
+        let (instructions, transfers, spl_transfers) = self.all_instructions_and_transfers()?;
         let signatures = self.signatures()?;
         Ok(SolanaMetadata {
             signatures,
@@ -627,6 +667,7 @@ impl SolanaTransaction {
             program_keys: self.all_invoked_programs(),
             instructions,
             transfers,
+            spl_transfers,
         })
     }
 }

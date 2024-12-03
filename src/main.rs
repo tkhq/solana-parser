@@ -62,6 +62,14 @@ fn print_parsed_transaction(transaction_payload: SolanaParsedTransactionPayload)
             println!("        To: {}", transfer.to);
             println!("        Amount: {}", transfer.amount);
         }
+        println!("    SPL Transfers:");
+        for (i, spl_transfer) in metadata.spl_transfers.iter().enumerate() {
+            println!("      SPL Transfer {}:", i + 1);
+            println!("        From: {}", spl_transfer.from);
+            println!("        To: {}", spl_transfer.to);
+            println!("        Mint Authority: {}", spl_transfer.token_mint_authority);
+            println!("        Amount: {}", spl_transfer.amount);
+        }
         println!("    Address Table Lookups: {:?}", metadata.address_table_lookups);
     }
 }
