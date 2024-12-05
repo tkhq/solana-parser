@@ -5,6 +5,7 @@ pub struct SolanaMetadata {
     pub program_keys: Vec<String>,
     pub instructions: Vec<SolanaInstruction>,
     pub transfers: Vec<SolTransfer>,
+    pub spl_transfers: Vec<SplTransfer>,
     pub recent_blockhash: String,
     pub address_table_lookups: Vec<SolanaAddressTableLookup>,
 }
@@ -36,6 +37,19 @@ pub struct SolTransfer {
     pub from: String,
     pub to: String,
     pub amount: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SplTransfer {
+    pub from: String,
+    pub to: String,
+    pub amount: String,
+    pub authority: String,
+    // TODO -- Add signers
+    pub token_mint: Option<String>, 
+    pub decimals: Option<String>, // TODO -- do we need to surface decimals??? is it useful for policies??
+    pub fee: Option<String>,
+    // TODO Should we include token program id here??? seems unnecessarily overcomplicating something that will likely already be a bit complicated
 }
 
 #[derive(Debug, Clone, PartialEq)]
