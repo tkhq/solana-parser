@@ -1,6 +1,5 @@
 use std::error::Error;
 use hex;
-use spl_token::instruction::TokenInstruction;
 use solana_sdk::{
     hash::Hash,
     instruction::CompiledInstruction,
@@ -426,6 +425,55 @@ fn read_compact_u16(tx_body_remainder: &[u8]) -> Result<(usize, &[u8]), Box<dyn 
     }
 }
 
+// SplInstructionData represents parsed instruction data of an instruction to the solana token program or the token 2022 program
+enum SplInstructionData {
+    Transfer{ amount: u64 },
+    TransferChecked{ amount: u64, decimals: u8 },
+    TransferCheckedWithFee{ amount: u64, decimals: u8, fee: u64 },
+    Unsupported,
+}
+
+impl SplInstructionData {
+    fn parse_spl_transfer_data(instruction_data: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
+        let (&tag, rest) = instruction_data.split_first().ok_or("Error while parsing spl instruction data header")?;
+        Ok(match tag {
+            3 => {
+                let (amount, _rest) = unpack_u64(rest)?; // TODO -- add better error handling
+                Self::Transfer { amount }
+            }
+            12 => {
+                let (amount, rest) = unpack_u64(rest)?;
+                let (&decimals, _rest) = rest.split_first().ok_or("Error while parsing spl instruction TransferChecked")?;
+                Self::TransferChecked { amount, decimals }
+            }
+            26 => {
+                let (&transfer_fee_tag, rest) = rest.split_first().ok_or("Error while parsing spl instruction TransferCheckedWithFee -- instruction index")?;
+                // Given the extension prefix of 26 ensure that we're calling instruciton 01, which is TransferCheckedWithFee
+                let (amount, decimals, fee) = match transfer_fee_tag {
+                    1 => {
+                        let (amount, rest) = unpack_u64(rest)?;
+                        let (&decimals, rest) = rest.split_first().ok_or("Error while parsing spl instruction TransferCheckedWithFee -- decimals")?;
+                        let (fee, _rest) = unpack_u64(rest)?;
+                        (amount, decimals, fee)
+                    }
+                    _ => return Ok(Self::Unsupported),
+                };
+                Self::TransferCheckedWithFee { amount, decimals, fee }
+            }
+            _ => Self::Unsupported,
+        })
+    }
+}
+
+fn unpack_u64(input: &[u8]) -> Result<(u64, &[u8]), Box<dyn std::error::Error>> {
+    let value = input
+        .get(..8)
+        .and_then(|slice| slice.try_into().ok())
+        .map(u64::from_le_bytes)
+        .ok_or("Error parsing u64 in spl instruction")?;
+    Ok((value, &input[8..]))
+}
+
 // Each signature is a Vec<u8> of 64 bytes
 pub type Signature = Vec<u8>;
 
@@ -579,31 +627,67 @@ impl SolanaTransaction {
                     }
                 }
                 TOKEN_PROGRAM_KEY => {
-                    let token_program_instruction: TokenInstruction = TokenInstruction::unpack(&i.data).map_err(|_| "Could not parse token instruction")?;
-                    if let TokenInstruction::Transfer { amount } = token_program_instruction {
-                        if accounts.len() != 3 {
-                            return Err("Token Program Transfer Instruction should have exactly 3 arguments".into())
-                        }
+                    let token_program_instruction: SplInstructionData = SplInstructionData::parse_spl_transfer_data(&i.data)?;
+                    // TODO consolidate transfer and transfer checked across both programs
+                    if let SplInstructionData::Transfer { amount } = token_program_instruction {
                         let spl_transfer = SplTransfer {
                             amount: amount.to_string(),
                             to: accounts[1].account_key.clone(),
                             from: accounts[0].account_key.clone(),
-                            token_mint_authority: accounts[2].account_key.clone(), 
+                            authority: accounts[2].account_key.clone(), 
+                            decimals: None,
+                            fee: None,
+                            token_mint: None, 
+                        };
+                        spl_transfers.push(spl_transfer);
+                    } else if let SplInstructionData::TransferChecked{ amount, decimals } = token_program_instruction {
+                        // TODO -- catch multi signer case for all
+                        let spl_transfer = SplTransfer {
+                            amount: amount.to_string(),
+                            to: accounts[2].account_key.clone(),
+                            from: accounts[0].account_key.clone(),
+                            token_mint: Some(accounts[1].account_key.clone()),
+                            authority: accounts[3].account_key.clone(),
+                            decimals: Some(decimals.to_string()),
+                            fee: None,
                         };
                         spl_transfers.push(spl_transfer);
                     }
                 }
                 TOKEN_2022_PROGRAM_KEY => {
-                    let token_program_instruction: TokenInstruction = TokenInstruction::unpack(&i.data).map_err(|_| "Could not parse token instruction")?;
-                    if let TokenInstruction::Transfer { amount } = token_program_instruction {
-                        if accounts.len() != 3 {
-                            return Err("Token Program Transfer Instruction should have exactly 3 arguments".into())
-                        }
+                    let token_program_instruction: SplInstructionData = SplInstructionData::parse_spl_transfer_data(&i.data)?;
+                    if let SplInstructionData::Transfer { amount } = token_program_instruction {
                         let spl_transfer = SplTransfer {
                             amount: amount.to_string(),
                             to: accounts[1].account_key.clone(),
                             from: accounts[0].account_key.clone(),
-                            token_mint_authority: accounts[2].account_key.clone(), 
+                            authority: accounts[2].account_key.clone(),
+                            decimals: None, 
+                            fee: None,
+                            token_mint: None,
+                        };
+                        spl_transfers.push(spl_transfer);
+                    } else if let SplInstructionData::TransferChecked{ amount, decimals } = token_program_instruction {
+                        // TODO -- catch multi signer case for all
+                        let spl_transfer = SplTransfer {
+                            amount: amount.to_string(),
+                            to: accounts[2].account_key.clone(),
+                            from: accounts[0].account_key.clone(),
+                            token_mint: Some(accounts[1].account_key.clone()),
+                            authority: accounts[3].account_key.clone(),
+                            decimals: Some(decimals.to_string()),
+                            fee: None,
+                        };
+                        spl_transfers.push(spl_transfer);
+                    } else if let SplInstructionData::TransferCheckedWithFee { amount, decimals, fee } = token_program_instruction {
+                        let spl_transfer = SplTransfer {
+                            amount: amount.to_string(),
+                            to: accounts[2].account_key.clone(),
+                            from: accounts[0].account_key.clone(),
+                            token_mint: Some(accounts[1].account_key.clone()),
+                            authority: accounts[3].account_key.clone(),
+                            decimals: Some(decimals.to_string()),
+                            fee: Some(fee.to_string()),
                         };
                         spl_transfers.push(spl_transfer);
                     }
