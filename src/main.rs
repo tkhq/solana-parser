@@ -67,7 +67,10 @@ fn print_parsed_transaction(transaction_payload: SolanaParsedTransactionPayload)
             println!("      SPL Transfer {}:", i + 1);
             println!("        From: {}", spl_transfer.from);
             println!("        To: {}", spl_transfer.to);
-            println!("        Authority: {}", spl_transfer.authority);
+            println!("        Owner: {}", spl_transfer.owner);
+            for (j, signer) in spl_transfer.signers.iter().enumerate() {
+                println!("        Signer {}: {}", j + 1, signer);
+            }
             println!("        Amount: {}", spl_transfer.amount);
             if let Some(token_mint) = spl_transfer.token_mint.clone() {
                 println!("        Mint: {}", token_mint);

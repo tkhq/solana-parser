@@ -44,12 +44,11 @@ pub struct SplTransfer {
     pub from: String,
     pub to: String,
     pub amount: String,
-    pub authority: String,
-    // TODO -- Add signers
+    pub owner: String,
+    pub signers: Vec<String>, // This is an empty array if ths is not a multisig account with multiple signers 
     pub token_mint: Option<String>, 
-    pub decimals: Option<String>, // TODO -- do we need to surface decimals??? is it useful for policies??
+    pub decimals: Option<String>,
     pub fee: Option<String>,
-    // TODO Should we include token program id here??? seems unnecessarily overcomplicating something that will likely already be a bit complicated
 }
 
 #[derive(Debug, Clone, PartialEq)]

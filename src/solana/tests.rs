@@ -4,7 +4,7 @@ use super::*;
 use parser::SOL_SYSTEM_PROGRAM_KEY;
 use structs::SolanaMetadata;
 use crate::solana::structs::{SolanaInstruction, SolanaAccount, SolanaAddressTableLookup, SolanaSingleAddressTableLookup, SolTransfer};
-use crate::solana::parser::SolanaTransaction;
+use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PROGRAM_KEY};
 
 
     #[test]
@@ -747,21 +747,148 @@ use crate::solana::parser::SolanaTransaction;
     }
 
     #[test]
-    fn parse_simple_spl_token_transfer() {
-        // TODO complete unit test 1
+    fn parse_spl_token_transfer() {
+        // The below transaction hex involves two instructions, one to the system program which is irrelevant for this test, and an SPL token transfer described below.
+        
+        // The below transaction is an SPL token transfer of the following type: 
+        // - A full transaction (legacy message)
+        // - Calls the original Token Program (NOT 2022)
+        // - Calls the TransferCheckedWithFee instruction 
+        // - Not a mutisig owner
 
         // ensure that transaction gets parsed without errors
         let unsigned_transaction = "010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000307533b5b0116e5bd434b30300c28f3814712637545ae345cc63d2f23709c75894d3bcae0fb76cc461d85bd05a078f887cf646fd27011e12edaaeb5091cdb976044a1460dfb457c122a8fe4d4c180b21a6078e67ea08c271acfd1b7ff3d88a2bbf4ca107ce11d55b05bdb209feaeeac8120fea5598cabbf91df2862fc36c5cf83a2000000000000000000000000000000000000000000000000000000000000000006a7d517192c568ee08a845f73d29788cf035c3145b21ab344d8062ea940000006ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a9eefd656548c17a30f2d97998a7ec413e2304464841f817bfc5c73c2c9a36bf6f020403020500040400000006030301000903a086010000000000".to_string();
         let parsed_tx = SolanaTransaction::new(&unsigned_transaction, true).unwrap();
-        let _ = parsed_tx.transaction_metadata().unwrap();
+        let tx_metadata = parsed_tx.transaction_metadata().unwrap();
+
+        // initialize expected values 
+        let exp_from = "EbmwLZmuugxuQb8ksm4TBXf2qPbSK8N4uxNmakvRaUyX";
+        let exp_to = "52QUutfwWMDDVNZSjovpmtD1ZmMe3Uf3n1ENE7JgBMkP";
+        let exp_owner = "6buLKuZFhVNtAFkyRituTZNNVyjHSYLx4NyfD8cKr1uW";
+        let exp_amount = "100000";
+
+        // Test assertions for SPL Transfer fields
+        let spl_transfer = &tx_metadata.spl_transfers[0];
+        assert_eq!(spl_transfer.from, exp_from);
+        assert_eq!(spl_transfer.to, exp_to);
+        assert_eq!(spl_transfer.owner, exp_owner);
+        assert_eq!(spl_transfer.amount, exp_amount);
+        assert_eq!(spl_transfer.signers, Vec::<String>::new());
+        assert_eq!(spl_transfer.decimals, None);
+        assert_eq!(spl_transfer.token_mint, None);
+        assert_eq!(spl_transfer.fee, None);
+
+        // Test Program called in the instruction
+        assert_eq!(tx_metadata.instructions[1].program_key, TOKEN_PROGRAM_KEY)
     }
 
     #[test]
-    fn parse_spl_token_transfer_checked_with_fee() {
-        // TODO complete unit test 2
+    fn parse_spl_token_22_transfer_checked_with_fee() {
+        // The below transaction is an SPL token transfer of the following type: 
+        // - A full transaction (legacy message)
+        // - Calls Token Program 2022
+        // - Calls the TransferCheckedWithFee instruction 
+        // - Not a mutisig owner
 
         // ensure that transaction gets parsed without errors
-        let unsigned_transaction = "010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000307533b5b0116e5bd434b30300c28f3814712637545ae345cc63d2f23709c75894d3bcae0fb76cc461d85bd05a078f887cf646fd27011e12edaaeb5091cdb976044a1460dfb457c122a8fe4d4c180b21a6078e67ea08c271acfd1b7ff3d88a2bbf4ca107ce11d55b05bdb209feaeeac8120fea5598cabbf91df2862fc36c5cf83a2000000000000000000000000000000000000000000000000000000000000000006a7d517192c568ee08a845f73d29788cf035c3145b21ab344d8062ea940000006ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a9eefd656548c17a30f2d97998a7ec413e2304464841f817bfc5c73c2c9a36bf6f020403020500040400000006030301000903a086010000000000".to_string();
-        let parsed_tx = SolanaTransaction::new(&unsigned_transaction, true).unwrap();
-        let _ = parsed_tx.transaction_metadata().unwrap();
+        let unsigned_transaction = "01000205864624d78f936e02c49acfd0320a66b8baec813f00df938ed2505b1242504fa9e3db1d9522e05705cf23ac1d3f5a1db2ef9f23ff78d7fcf699da1cf4902463263bcae0fb76cc461d85bd05a078f887cf646fd27011e12edaaeb5091cdb97604406ddf6e1ee758fde18425dbce46ccddab61afc4d83b90d27febdf928d8a18bfcbc07c56e60ad3d3f177382eac6548fba1fd32cfd90ca02b3e7cfa185fdce7398b97a42135e0503573230dfadebb740b6e206b513208e90a489f2b46684462bc801030401040200131a0100ca9a3b00000000097b00000000000000".to_string();
+        let parsed_tx = SolanaTransaction::new(&unsigned_transaction, false).unwrap();
+        let tx_metadata = parsed_tx.transaction_metadata().unwrap();
+
+        // Initialize expected value
+        let exp_from = "GLTLPbA1XJctLCsaErmbzgouaLsLm2CLGzWyi8xangNq";
+        let exp_to = "52QUutfwWMDDVNZSjovpmtD1ZmMe3Uf3n1ENE7JgBMkP";
+        let exp_owner = "A39fhEiRvz4YsSrrpqU8z3zF6n1t9S48CsDjL2ibDFrx";
+        let exp_amount = "1000000000";
+        let exp_mint = "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263";
+        let exp_decimals = "9";
+        let exp_fee = "123";
+
+        // Test assertions for SPL Transfer fields
+        let spl_transfer = &tx_metadata.spl_transfers[0];
+        assert_eq!(spl_transfer.from, exp_from);
+        assert_eq!(spl_transfer.to, exp_to);
+        assert_eq!(spl_transfer.owner, exp_owner);
+        assert_eq!(spl_transfer.amount, exp_amount);
+        assert_eq!(spl_transfer.signers, Vec::<String>::new());
+        assert_eq!(spl_transfer.decimals, Some(exp_decimals.to_string()));
+        assert_eq!(spl_transfer.token_mint, Some(exp_mint.to_string()));
+        assert_eq!(spl_transfer.fee, Some(exp_fee.to_string()));
+
+        // Test Program called in the instruction
+        assert_eq!(tx_metadata.instructions[0].program_key, TOKEN_2022_PROGRAM_KEY)
+    }
+
+    #[test]
+    fn parse_spl_token_program_tranfer_multiple_signers() {
+        // The below Transaction is an SPL token transfer of the following type: 
+        // - Versioned Transaction Message
+        // - Calls the original Token Program (NOT 2022)
+        // - Calls the simple Transfer instruction 
+        // - Mutlisig owner with 2 signers
+
+        // ensure that transaction gets parsed without errors
+        let unsigned_transaction = "8003020106864624d78f936e02c49acfd0320a66b8baec813f00df938ed2505b1242504fa98b2e0a1e9310dc03bfc0432ac8c9f290d15cbc57b2ed367f43aeefc28c7a4d7a5078df268c218e5c9ebe650a7f90c8879bba318b35ce9046cb505b7ed5724a9de3db1d9522e05705cf23ac1d3f5a1db2ef9f23ff78d7fcf699da1cf4902463263bcae0fb76cc461d85bd05a078f887cf646fd27011e12edaaeb5091cdb97604406ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a9b97a42135e0503573230dfadebb740b6e206b513208e90a489f2b46684462bc80105050304000102090300ca9a3b0000000000".to_string();
+        let parsed_tx = SolanaTransaction::new(&unsigned_transaction, false).unwrap();
+        let tx_metadata = parsed_tx.transaction_metadata().unwrap();
+
+        // Initialize expected value
+        let exp_from = "GLTLPbA1XJctLCsaErmbzgouaLsLm2CLGzWyi8xangNq";
+        let exp_to = "52QUutfwWMDDVNZSjovpmtD1ZmMe3Uf3n1ENE7JgBMkP";
+        let exp_owner = "A39fhEiRvz4YsSrrpqU8z3zF6n1t9S48CsDjL2ibDFrx";
+        let exp_signer_1 = "ANJPUpqXC1Qn8uhHVXLTsRKjving6kPfjCATJzg7EJjB";
+        let exp_signer_2 = "6R8WtdoanEVNJfkeGfbQDMsCrqeHE1sGXjsReJsSbmxQ";
+        let exp_amount = "1000000000";
+
+        // Test assertions for SPL Transfer fields
+        let spl_transfer = &tx_metadata.spl_transfers[0];
+        assert_eq!(spl_transfer.from, exp_from);
+        assert_eq!(spl_transfer.to, exp_to);
+        assert_eq!(spl_transfer.owner, exp_owner);
+        assert_eq!(spl_transfer.amount, exp_amount);
+        assert_eq!(spl_transfer.signers, vec![exp_signer_1, exp_signer_2]);
+        assert_eq!(spl_transfer.decimals, None);
+        assert_eq!(spl_transfer.token_mint, None);
+        assert_eq!(spl_transfer.fee, None);
+
+        // Test Program called in the instruction
+        assert_eq!(tx_metadata.instructions[0].program_key, TOKEN_PROGRAM_KEY)
+    }
+
+    #[test]
+    fn parse_spl_token_program_2022_transfer_checked_multiple_signers() {
+        // The below Transaction is an SPL token transfer of the following type: 
+        // - Versioned Transaction Message
+        // - Calls Token Program 2022
+        // - Calls the TransferChecked instruction
+        // - Mutlisig owner with 2 signers
+
+        // ensure that transaction gets parsed without errors
+        let unsigned_transaction = "8003020207864624d78f936e02c49acfd0320a66b8baec813f00df938ed2505b1242504fa98b2e0a1e9310dc03bfc0432ac8c9f290d15cbc57b2ed367f43aeefc28c7a4d7a5078df268c218e5c9ebe650a7f90c8879bba318b35ce9046cb505b7ed5724a9de3db1d9522e05705cf23ac1d3f5a1db2ef9f23ff78d7fcf699da1cf4902463263bcae0fb76cc461d85bd05a078f887cf646fd27011e12edaaeb5091cdb97604406ddf6e1ee758fde18425dbce46ccddab61afc4d83b90d27febdf928d8a18bfcbc07c56e60ad3d3f177382eac6548fba1fd32cfd90ca02b3e7cfa185fdce7398b97a42135e0503573230dfadebb740b6e206b513208e90a489f2b46684462bc80105060306040001020a0c00ca9a3b000000000900".to_string();
+        let parsed_tx = SolanaTransaction::new(&unsigned_transaction, false).unwrap();
+        let tx_metadata = parsed_tx.transaction_metadata().unwrap();
+
+        // Initialize expected value
+        let exp_from = "GLTLPbA1XJctLCsaErmbzgouaLsLm2CLGzWyi8xangNq";
+        let exp_to = "52QUutfwWMDDVNZSjovpmtD1ZmMe3Uf3n1ENE7JgBMkP";
+        let exp_owner = "A39fhEiRvz4YsSrrpqU8z3zF6n1t9S48CsDjL2ibDFrx";
+        let exp_signer_1 = "ANJPUpqXC1Qn8uhHVXLTsRKjving6kPfjCATJzg7EJjB";
+        let exp_signer_2 = "6R8WtdoanEVNJfkeGfbQDMsCrqeHE1sGXjsReJsSbmxQ";
+        let exp_amount = "1000000000";
+        let exp_mint = "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263";
+        let exp_decimals = 9;
+
+        // Test assertions for SPL Transfer fields
+        let spl_transfer = &tx_metadata.spl_transfers[0];
+        assert_eq!(spl_transfer.from, exp_from);
+        assert_eq!(spl_transfer.to, exp_to);
+        assert_eq!(spl_transfer.owner, exp_owner);
+        assert_eq!(spl_transfer.amount, exp_amount);
+        assert_eq!(spl_transfer.signers, vec![exp_signer_1, exp_signer_2]);
+        assert_eq!(spl_transfer.decimals, Some(exp_decimals.to_string()));
+        assert_eq!(spl_transfer.token_mint, Some(exp_mint.to_string()));
+        assert_eq!(spl_transfer.fee, None);
+
+        // Test Program called in the instruction
+        assert_eq!(tx_metadata.instructions[0].program_key, TOKEN_2022_PROGRAM_KEY)
     }
