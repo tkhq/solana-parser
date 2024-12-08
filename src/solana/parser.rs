@@ -434,6 +434,7 @@ enum SplInstructionData {
 }
 
 impl SplInstructionData {
+    // Reference for instruction data parsing code: https://docs.rs/spl-token/latest/src/spl_token/instruction.rs.html#476
     fn parse_spl_transfer_data(instruction_data: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
         let (&tag, rest) = instruction_data.split_first().ok_or("Error while parsing spl instruction data header")?;
         Ok(match tag {
