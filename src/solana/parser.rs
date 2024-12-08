@@ -444,7 +444,7 @@ impl SplInstructionData {
             }
             12 => {
                 let (amount, rest) = unpack_u64(rest).map_err(|_| format!("Error while parsing spl instruction TransferChecked -- amount"))?;
-                let (&decimals, _rest) = rest.split_first().ok_or("Error while parsing spl instruction TransferChecked")?;
+                let (&decimals, _rest) = rest.split_first().ok_or("Error while parsing spl instruction TransferChecked -- decimals")?;
                 Self::TransferChecked { amount, decimals }
             }
             26 => {
