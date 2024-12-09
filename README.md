@@ -57,6 +57,7 @@ Solana Parsed Transaction Payload:
         From: 3uC8tBZQQA1RCKv9htCngTfYm4JK4ezuYx4M4nFsZQVp
         To: tkhqC9QX2gkqJtUFk2QKhBmQfFyyqZXSpr73VFRi35C
         Amount: 111
+    SPL Transfers:
     Address Table Lookups: []
 ```
 
@@ -122,6 +123,7 @@ Solana Parsed Transaction Payload:
         From: G6fEj2pt4YYAxLS8JAsY5BL6hea7Fpe8Xyqscg2e7pgp
         To: FxDNKZ14p3W7o1tpinH935oiwUo3YiZowzP1hUcUzUFw
         Amount: 50000000
+    SPL Transfers:
     Address Table Lookups: [SolanaAddressTableLookup { address_table_key: "6yJwigBRYdkrpfDEsCRj7H5rrzdnAYv8LHzYbb5jRFKy", writable_indexes: [189, 194, 193, 186], readonly_indexes: [151, 188, 187, 191] }]
 ```
 
@@ -131,7 +133,13 @@ This area provides context on some areas of the parser output that are opinionat
 
 ### Top Level Transfers Array
 
-There is a top level array called "Transfers". This does not map 1 to 1 to an abstraction that exists in a Solana transaction, but is more of a custom abstraction for user-friendliness. Specifically it is an array representing all instructions within the instruction list that are simple SOL transfers (expressed in lamports) including the amount, the sender and the recipient of the transfer.
+There is a top level array called `Transfers`. This does not map 1 to 1 to an abstraction that exists in a Solana transaction, but is more of a custom abstraction for user-friendliness. Specifically it is an array representing all instructions within the instruction list that are simple SOL transfers (expressed in lamports) including the amount, the sender and the recipient of the transfer.
+
+### Top Level SPL Transfers Array
+
+Similar to `Transfers`, there is a top level array called `SPL Transfers`. This is a custom abstraction for user-friendliness that represents all instructions within the instruction list of a transaction that are SPL token transfers (it includes calls to the `Transfer` and `TransferChecked` instructions on the Solana Token Program and Solana Token 2022 Program as well as the `TransferCheckedWithFee` instruction on the Token 2022 Program). It includes all relevant information to SPL transfers like the sending token account, receiving token account, the signing authority of the sender, the mint account key of the token being transferred etc. 
+
+Note: For some SPL transfers, some of the fields may be unused. This is because the three different SPL transfer instructions that are supported, require different levels of information in the instruction call.
 
 ### Address table lookups
 
