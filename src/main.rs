@@ -7,40 +7,60 @@ use crate::solana::structs::SolanaParsedTransactionPayload;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    
-    if args.len() != 4 {
-        println!("Usage: `cargo run parse <unsigned transaction> --message OR cargo run parse <unsinged transaction> --transaction`");
+
+    if !(args.len() == 4 || args.len() == 6) {
+        println!("Usage: `cargo run parse <unsigned transaction> --message OR cargo run parse <unsigned transaction> --transaction`. You can optionally include the format flag (base64 or hex) after the flag.");
         return;
     }
 
     let command = &args[1];
-        match command.as_str() {
-            "parse" => {
-                let unsigned_tx = &args[3];
-                let flag = if args.len() > 3 { Some(&args[2]) } else { None };
-                match flag {
-                    Some(flag) if flag == "--message" || flag == "--transaction" => {
-                        let is_transaction = flag == "--transaction";
-                        let result = parse_transaction(unsigned_tx.to_string(), is_transaction);
-                        match result {
-                            Ok(response) => {
-                                print_parsed_transaction(response.solana_parsed_transaction.payload.unwrap());
-                            },
-                            Err(e) => println!("Error: {}", e),
+    match command.as_str() {
+        "parse" => {
+            let unsigned_tx = &args[3];
+            let flag = if args.len() > 3 { Some(&args[2]) } else { None };
+            println!("Parsing transaction: {}", unsigned_tx);
+            println!("Flag: {:?}", flag);
+            let format_flag = if args.len() > 4 {
+                Some(args[5].as_str())
+            } else {
+                Some("hex")
+            }; // Default to "hex"
+            println!("Format Flag: {:?}", format_flag);
+            match (flag, format_flag) {
+                (Some(flag), Some(format_flag))
+                    if (flag == "--message" || flag == "--transaction")
+                        && (format_flag == "base64" || format_flag == "hex") =>
+                {
+                    let is_transaction = flag == "--transaction";
+                    let result = parse_transaction(
+                        unsigned_tx.to_string(),
+                        is_transaction,
+                        format_flag.to_string(),
+                    );
+                    match result {
+                        Ok(response) => {
+                            print_parsed_transaction(
+                                response.solana_parsed_transaction.payload.unwrap(),
+                            );
                         }
-                    }
-                    _ => {
-                        println!("Invalid or missing flag. Use either --message or --transaction.");
+                        Err(e) => println!("Error: {}", e),
                     }
                 }
+                _ => {
+                    println!("Invalid or missing flag. Use either --message or --transaction followed by format flag (base64 or hex).");
+                }
             }
-            _ => println!("Unknown command: {}", command),
         }
+        _ => println!("Unknown command: {}", command),
+    }
 }
 
 fn print_parsed_transaction(transaction_payload: SolanaParsedTransactionPayload) {
     println!("Solana Parsed Transaction Payload:");
-    println!("  Unsigned Payload: {}", transaction_payload.unsigned_payload);
+    println!(
+        "  Unsigned Payload: {}",
+        transaction_payload.unsigned_payload
+    );
     if let Some(metadata) = transaction_payload.transaction_metadata {
         println!("  Transaction Metadata:");
         println!("    Signatures: {:?}", metadata.signatures);
@@ -52,8 +72,14 @@ fn print_parsed_transaction(transaction_payload: SolanaParsedTransactionPayload)
             println!("      Instruction {}:", i + 1);
             println!("        Program Key: {}", instruction.program_key);
             println!("        Accounts: {:?}", instruction.accounts);
-            println!("        Instruction Data (hex): {}", instruction.instruction_data_hex);
-            println!("        Address Table Lookups: {:?}", instruction.address_table_lookups);
+            println!(
+                "        Instruction Data (hex): {}",
+                instruction.instruction_data_hex
+            );
+            println!(
+                "        Address Table Lookups: {:?}",
+                instruction.address_table_lookups
+            );
         }
         println!("    Transfers:");
         for (i, transfer) in metadata.transfers.iter().enumerate() {
@@ -82,6 +108,9 @@ fn print_parsed_transaction(transaction_payload: SolanaParsedTransactionPayload)
                 println!("        Fee: {}", fee);
             }
         }
-        println!("    Address Table Lookups: {:?}", metadata.address_table_lookups);
+        println!(
+            "    Address Table Lookups: {:?}",
+            metadata.address_table_lookups
+        );
     }
 }

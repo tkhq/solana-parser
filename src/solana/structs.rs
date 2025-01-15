@@ -45,8 +45,8 @@ pub struct SplTransfer {
     pub to: String,
     pub amount: String,
     pub owner: String,
-    pub signers: Vec<String>, // This is an empty array if ths is not a multisig account with multiple signers 
-    pub token_mint: Option<String>, 
+    pub signers: Vec<String>, // This is an empty array if ths is not a multisig account with multiple signers
+    pub token_mint: Option<String>,
     pub decimals: Option<String>,
     pub fee: Option<String>,
 }
