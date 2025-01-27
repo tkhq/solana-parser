@@ -1,4 +1,8 @@
-use std::error::Error;
+use super::structs::{
+    SolTransfer, SolanaAccount, SolanaAddressTableLookup, SolanaInstruction, SolanaMetadata,
+    SolanaParseResponse, SolanaParsedTransaction, SolanaParsedTransactionPayload,
+    SolanaSingleAddressTableLookup, SplTransfer,
+};
 use hex;
 use solana_sdk::{
     hash::Hash,
@@ -8,9 +12,9 @@ use solana_sdk::{
         Message as LegacyMessage, MessageHeader, VersionedMessage,
     },
     pubkey::Pubkey,
-    system_instruction::SystemInstruction, 
+    system_instruction::SystemInstruction,
 };
-use super::structs::{SolTransfer, SolanaAccount, SolanaAddressTableLookup, SolanaInstruction, SolanaMetadata, SolanaParseResponse, SolanaParsedTransaction, SolanaParsedTransactionPayload, SolanaSingleAddressTableLookup, SplTransfer};
+use std::error::Error;
 
 // Length of a solana signature in bytes (64 bytes long)
 pub const LEN_SOL_SIGNATURE_BYTES: usize = 64;
@@ -22,7 +26,7 @@ pub const LEN_ARRAY_HEADER_BYTES: usize = 1;
 pub const LEN_MESSAGE_HEADER_BYTES: usize = 3;
 // This is a string representation of the account address of the Solana System Program -- the main native program that "owns" user accounts and is in charge of facilitating basic SOL transfers among other things
 pub const SOL_SYSTEM_PROGRAM_KEY: &str = "11111111111111111111111111111111";
-// This is a string representation of the account address of the Token Program -- Used for transferring SPL tokens 
+// This is a string representation of the account address of the Token Program -- Used for transferring SPL tokens
 pub const TOKEN_PROGRAM_KEY: &str = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 // This is a string representation of the account address for the Token 2022 Program which is a strict superset of the old Token Program, used to add extra functionality -- Used for transferring SPL tokens
 pub const TOKEN_2022_PROGRAM_KEY: &str = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
@@ -30,12 +34,21 @@ pub const TOKEN_2022_PROGRAM_KEY: &str = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEp
 const V0_TRANSACTION_INDICATOR: u8 = 0x80;
 
 // Entrypoint to parsing
-pub fn parse_transaction(unsigned_tx: String, full_transaction: bool) -> Result<SolanaParseResponse, Box<dyn Error>> {
+pub fn parse_transaction(
+    unsigned_tx: String,
+    full_transaction: bool,
+    format: String,
+) -> Result<SolanaParseResponse, Box<dyn Error>> {
     if unsigned_tx.is_empty() {
         return Err("Transaction is empty".into());
     }
 
-    let tx = SolanaTransaction::new(&unsigned_tx, full_transaction).map_err(|e| {
+    let tx = match format.as_str() {
+        "hex" => SolanaTransaction::new(&unsigned_tx, full_transaction),
+        "base64" => SolanaTransaction::from_base64(&unsigned_tx, full_transaction),
+        _ => return Err("Unsupported format".into()),
+    }
+    .map_err(|e| {
         Box::<dyn std::error::Error>::from(format!("Unable to parse transaction: {}", e))
     })?;
 
@@ -59,6 +72,7 @@ fn parse_solana_transaction(
     unsigned_tx: &str,
     full_transaction: bool,
 ) -> Result<SolanaTransaction, Box<dyn std::error::Error>> {
+    println!("Unsigned Transaction: {}", unsigned_tx);
     if unsigned_tx.len() % 2 != 0 {
         return Err("unsigned transaction provided is invalid when converted to bytes".into());
     }
@@ -74,14 +88,19 @@ fn parse_solana_transaction(
             V0_TRANSACTION_INDICATOR => parse_solana_v0_transaction(&tx_body[LEN_ARRAY_HEADER_BYTES..tx_body.len()]).map_err(|e| format!("Error parsing full transaction. If this is just a message instead of a full transaction, parse using the --message flag. Parsing Error: {:#?}", e))?,
             _ => parse_solana_legacy_transaction(tx_body).map_err(|e| format!("Error parsing full transaction. If this is just a message instead of a full transaction, parse using the --message flag. Parsing Error: {:#?}", e))?,
         };
-        return Ok(SolanaTransaction{ message, signatures });
+        return Ok(SolanaTransaction {
+            message,
+            signatures,
+        });
     }
     let message = match unsigned_tx_bytes[0] {
         V0_TRANSACTION_INDICATOR => parse_solana_v0_transaction(&unsigned_tx_bytes[LEN_ARRAY_HEADER_BYTES..unsigned_tx_bytes.len()]).map_err(|e| format!("Error parsing message. If this is a serialized Solana transaction with signatures, parse using the --transaction flag. Parsing error: {:#?}", e))?,
         _ => parse_solana_legacy_transaction(unsigned_tx_bytes).map_err(|e| format!("Error parsing message. If this is a full solana transaction with signatures or signature placeholders, parse using the --transaction flag. Parsing Error: {:#?}", e))?,
     };
-    return Ok(SolanaTransaction{ message, signatures: vec![] }); // Signatures array is empty when we are parsing a message (using --message) as opposed to a full transaction
-
+    return Ok(SolanaTransaction {
+        message,
+        signatures: vec![],
+    }); // Signatures array is empty when we are parsing a message (using --message) as opposed to a full transaction
 }
 
 /*
@@ -161,7 +180,7 @@ fn validate_length(
 
 /*
 Parse Signatures
-- Context: Solana transactions contain a compact array of signatures at the beginning of a transaction 
+- Context: Solana transactions contain a compact array of signatures at the beginning of a transaction
 - This function parses these signatures.
 - NOTE: This is only relevant for when we are parsing FULL TRANSACTIONS (using the flag --transasction) not when we are parsing only the message (using --message)
 */
@@ -181,7 +200,10 @@ fn parse_signatures(
         .take(num_signatures)
         .map(<[u8]>::to_vec)
         .collect();
-    Ok((signatures, &unsigned_tx_bytes[parse_len..unsigned_tx_bytes.len()]))
+    Ok((
+        signatures,
+        &unsigned_tx_bytes[parse_len..unsigned_tx_bytes.len()],
+    ))
 }
 
 /*
@@ -389,7 +411,9 @@ Read Compact u16
 - FINALLY -- if the final format is zzyyyyyyyxxxxxxx it is represented in compactu16 as 1xxxxxxx1yyyyyyy000000zz
 - In a 3 byte representation, the first byte has the 7 least significant digits, and the 3rd byte has the two most significant digits of the final u16
 */
-fn read_compact_u16(tx_body_remainder: &[u8]) -> Result<(usize, &[u8]), Box<dyn std::error::Error>> {
+fn read_compact_u16(
+    tx_body_remainder: &[u8],
+) -> Result<(usize, &[u8]), Box<dyn std::error::Error>> {
     let mut value = 0u16;
     let mut shift = 0;
     let mut bytes_read = 0;
@@ -417,7 +441,10 @@ fn read_compact_u16(tx_body_remainder: &[u8]) -> Result<(usize, &[u8]), Box<dyn 
         // remove the continuation bit from the new byte and shift it over by the correct amount to put it in the final bit representation of the u16 number
         value |= u16::from(byte & 0x7f) << shift;
         if byte & 0x80 == 0 {
-            return Ok((value as usize, &tx_body_remainder[bytes_read..tx_body_remainder.len()]));
+            return Ok((
+                value as usize,
+                &tx_body_remainder[bytes_read..tx_body_remainder.len()],
+            ));
         }
 
         // increasing the shift of the digits in the next byte by 7 as in the description above this method
@@ -427,24 +454,34 @@ fn read_compact_u16(tx_body_remainder: &[u8]) -> Result<(usize, &[u8]), Box<dyn 
 
 // SplInstructionData represents parsed instruction data of an instruction to the solana token program or the token 2022 program
 enum SplInstructionData {
-    Transfer{ amount: u64 },
-    TransferChecked{ amount: u64, decimals: u8 },
-    TransferCheckedWithFee{ amount: u64, decimals: u8, fee: u64 },
+    Transfer { amount: u64 },
+    TransferChecked { amount: u64, decimals: u8 },
+    TransferCheckedWithFee { amount: u64, decimals: u8, fee: u64 },
     Unsupported,
 }
 
 impl SplInstructionData {
     // Reference for instruction data parsing code: https://docs.rs/spl-token/latest/src/spl_token/instruction.rs.html#476
-    fn parse_spl_transfer_data(instruction_data: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
-        let (&tag, rest) = instruction_data.split_first().ok_or("Error while parsing spl instruction data header")?;
+    fn parse_spl_transfer_data(
+        instruction_data: &[u8],
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        let (&tag, rest) = instruction_data
+            .split_first()
+            .ok_or("Error while parsing spl instruction data header")?;
         Ok(match tag {
             3 => {
-                let (amount, _rest) = unpack_u64(rest).map_err(|_| format!("Error while parsing spl instruction Transfer -- amount"))?;
+                let (amount, _rest) = unpack_u64(rest).map_err(|_| {
+                    format!("Error while parsing spl instruction Transfer -- amount")
+                })?;
                 Self::Transfer { amount }
             }
             12 => {
-                let (amount, rest) = unpack_u64(rest).map_err(|_| format!("Error while parsing spl instruction TransferChecked -- amount"))?;
-                let (&decimals, _rest) = rest.split_first().ok_or("Error while parsing spl instruction TransferChecked -- decimals")?;
+                let (amount, rest) = unpack_u64(rest).map_err(|_| {
+                    format!("Error while parsing spl instruction TransferChecked -- amount")
+                })?;
+                let (&decimals, _rest) = rest
+                    .split_first()
+                    .ok_or("Error while parsing spl instruction TransferChecked -- decimals")?;
                 Self::TransferChecked { amount, decimals }
             }
             26 => {
@@ -454,12 +491,20 @@ impl SplInstructionData {
                     1 => {
                         let (amount, rest) = unpack_u64(rest).map_err(|_| format!("Error while parsing spl instruction TransferCheckedWithFee -- amount"))?;
                         let (&decimals, rest) = rest.split_first().ok_or("Error while parsing spl instruction TransferCheckedWithFee -- decimals")?;
-                        let (fee, _rest) = unpack_u64(rest).map_err(|_| format!("Error while parsing spl instruction TransferCheckedWithFee -- fee"))?;
+                        let (fee, _rest) = unpack_u64(rest).map_err(|_| {
+                            format!(
+                                "Error while parsing spl instruction TransferCheckedWithFee -- fee"
+                            )
+                        })?;
                         (amount, decimals, fee)
                     }
                     _ => return Ok(Self::Unsupported),
                 };
-                Self::TransferCheckedWithFee { amount, decimals, fee }
+                Self::TransferCheckedWithFee {
+                    amount,
+                    decimals,
+                    fee,
+                }
             }
             _ => Self::Unsupported,
         })
@@ -486,6 +531,12 @@ pub struct SolanaTransaction {
 impl SolanaTransaction {
     pub fn new(hex_tx: &str, full_transaction: bool) -> Result<Self, Box<dyn Error>> {
         parse_solana_transaction(hex_tx, full_transaction)
+    }
+
+    pub fn from_base64(base64_tx: &str, full_transaction: bool) -> Result<Self, Box<dyn Error>> {
+        let bytes_tx = base64::decode(base64_tx)?;
+        let hex_tx = hex::encode(bytes_tx);
+        parse_solana_transaction(&hex_tx, full_transaction)
     }
 
     fn all_account_key_strings(&self) -> Vec<String> {
@@ -584,7 +635,10 @@ impl SolanaTransaction {
 
     fn all_instructions_and_transfers(
         &self,
-    ) -> Result<(Vec<SolanaInstruction>, Vec<SolTransfer>, Vec<SplTransfer>), Box<dyn std::error::Error>> {
+    ) -> Result<
+        (Vec<SolanaInstruction>, Vec<SolTransfer>, Vec<SplTransfer>),
+        Box<dyn std::error::Error>,
+    > {
         let mut instructions: Vec<SolanaInstruction> = vec![];
         let mut transfers: Vec<SolTransfer> = vec![];
         let mut spl_transfers: Vec<SplTransfer> = vec![];
@@ -614,10 +668,10 @@ impl SolanaTransaction {
             match program_key.as_str() {
                 SOL_SYSTEM_PROGRAM_KEY => {
                     let system_instruction: SystemInstruction = bincode::deserialize(&i.data)
-                    .map_err(|_| "Could not parse system instruction")?;
+                        .map_err(|_| "Could not parse system instruction")?;
                     if let SystemInstruction::Transfer { lamports } = system_instruction {
                         if accounts.len() != 2 {
-                            return Err("System Program Transfer Instruction should have exactly 2 arguments".into())
+                            return Err("System Program Transfer Instruction should have exactly 2 arguments".into());
                         }
                         let transfer = SolTransfer {
                             amount: lamports.to_string(),
@@ -628,16 +682,22 @@ impl SolanaTransaction {
                     }
                 }
                 TOKEN_PROGRAM_KEY => {
-                    let token_program_instruction: SplInstructionData = SplInstructionData::parse_spl_transfer_data(&i.data)?;
-                    let spl_tranfer_opt = self.parse_spl_instruction_data(token_program_instruction, accounts.clone())?;
+                    let token_program_instruction: SplInstructionData =
+                        SplInstructionData::parse_spl_transfer_data(&i.data)?;
+                    let spl_tranfer_opt = self
+                        .parse_spl_instruction_data(token_program_instruction, accounts.clone())?;
                     match spl_tranfer_opt {
                         Some(spl_transfer) => spl_transfers.push(spl_transfer),
                         None => (),
                     }
                 }
                 TOKEN_2022_PROGRAM_KEY => {
-                    let token_program_22_instruction: SplInstructionData = SplInstructionData::parse_spl_transfer_data(&i.data)?;
-                    let spl_tranfer_opt = self.parse_spl_instruction_data(token_program_22_instruction, accounts.clone())?;
+                    let token_program_22_instruction: SplInstructionData =
+                        SplInstructionData::parse_spl_transfer_data(&i.data)?;
+                    let spl_tranfer_opt = self.parse_spl_instruction_data(
+                        token_program_22_instruction,
+                        accounts.clone(),
+                    )?;
                     match spl_tranfer_opt {
                         Some(spl_transfer) => spl_transfers.push(spl_transfer),
                         None => (),
@@ -658,7 +718,11 @@ impl SolanaTransaction {
     }
 
     // Parse Instruction to Solana Token Program OR Solana Token Program 2022 and return something if it is an SPL transfer
-    fn parse_spl_instruction_data(&self, token_instruction: SplInstructionData, accounts: Vec<SolanaAccount>) -> Result<Option<SplTransfer>, Box<dyn std::error::Error>> {
+    fn parse_spl_instruction_data(
+        &self,
+        token_instruction: SplInstructionData,
+        accounts: Vec<SolanaAccount>,
+    ) -> Result<Option<SplTransfer>, Box<dyn std::error::Error>> {
         if let SplInstructionData::Transfer { amount } = token_instruction {
             let signers = self.get_spl_multisig_signers_if_exist(&accounts, 3)?;
             let spl_transfer = SplTransfer {
@@ -667,12 +731,12 @@ impl SolanaTransaction {
                 from: accounts[0].account_key.clone(),
                 owner: accounts[2].account_key.clone(),
                 signers,
-                decimals: None, 
+                decimals: None,
                 fee: None,
                 token_mint: None,
             };
-            return Ok(Some(spl_transfer))
-        } else if let SplInstructionData::TransferChecked{ amount, decimals } = token_instruction {
+            return Ok(Some(spl_transfer));
+        } else if let SplInstructionData::TransferChecked { amount, decimals } = token_instruction {
             let signers = self.get_spl_multisig_signers_if_exist(&accounts, 4)?;
             let spl_transfer = SplTransfer {
                 amount: amount.to_string(),
@@ -684,8 +748,13 @@ impl SolanaTransaction {
                 decimals: Some(decimals.to_string()),
                 fee: None,
             };
-            return Ok(Some(spl_transfer))
-        } else if let SplInstructionData::TransferCheckedWithFee { amount, decimals, fee } = token_instruction {
+            return Ok(Some(spl_transfer));
+        } else if let SplInstructionData::TransferCheckedWithFee {
+            amount,
+            decimals,
+            fee,
+        } = token_instruction
+        {
             let signers = self.get_spl_multisig_signers_if_exist(&accounts, 4)?;
             let spl_transfer = SplTransfer {
                 amount: amount.to_string(),
@@ -697,16 +766,27 @@ impl SolanaTransaction {
                 decimals: Some(decimals.to_string()),
                 fee: Some(fee.to_string()),
             };
-            return Ok(Some(spl_transfer))
+            return Ok(Some(spl_transfer));
         }
-        return Ok(None)
+        return Ok(None);
     }
 
-    fn get_spl_multisig_signers_if_exist(&self, accounts: &Vec<SolanaAccount>, num_accts_before_signer: usize) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    fn get_spl_multisig_signers_if_exist(
+        &self,
+        accounts: &Vec<SolanaAccount>,
+        num_accts_before_signer: usize,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
         if accounts.len() < num_accts_before_signer {
-            return Err(format!("Invalid number of accounts provided for spl token transfer instruction").into())
+            return Err(format!(
+                "Invalid number of accounts provided for spl token transfer instruction"
+            )
+            .into());
         }
-        Ok(accounts[num_accts_before_signer..accounts.len()].to_vec().into_iter().map(|a| a.account_key).collect())
+        Ok(accounts[num_accts_before_signer..accounts.len()]
+            .to_vec()
+            .into_iter()
+            .map(|a| a.account_key)
+            .collect())
     }
 
     fn recent_blockhash(&self) -> String {
@@ -737,7 +817,8 @@ impl SolanaTransaction {
     }
 
     fn signatures(&self) -> Result<Vec<String>, Box<dyn Error>> {
-        Ok(self.signatures
+        Ok(self
+            .signatures
             .iter()
             .map(|sig| sig.iter().map(|b| format!("{:02x}", b)).collect::<String>())
             .collect())
@@ -772,7 +853,7 @@ mod tests {
         Ok(unsigned_tx_bytes)
     }
 
-#[test]
+    #[test]
     fn test_read_compact_u16() {
         // Test compact header with a single byte
         let test_input_1 = "05FFFFFFFFFF";
