@@ -57,10 +57,6 @@ fn main() {
 
 fn print_parsed_transaction(transaction_payload: SolanaParsedTransactionPayload) {
     println!("Solana Parsed Transaction Payload:");
-    println!(
-        "  Unsigned Payload: {}",
-        transaction_payload.unsigned_payload
-    );
     if let Some(metadata) = transaction_payload.transaction_metadata {
         println!("  Transaction Metadata:");
         println!("    Signatures: {:?}", metadata.signatures);

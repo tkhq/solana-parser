@@ -72,7 +72,6 @@ fn parse_solana_transaction(
     unsigned_tx: &str,
     full_transaction: bool,
 ) -> Result<SolanaTransaction, Box<dyn std::error::Error>> {
-    println!("Unsigned Transaction: {}", unsigned_tx);
     if unsigned_tx.len() % 2 != 0 {
         return Err("unsigned transaction provided is invalid when converted to bytes".into());
     }
