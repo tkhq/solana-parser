@@ -14,19 +14,19 @@ fn main() {
                     Arg::new("format")
                         .long("format")
                         .value_parser(["message", "transaction"])
-                        .required(true)
+                        .required(true),
                 )
                 .arg(
                     Arg::new("input")
                         .required(true)
-                        .help("The transaction/message to parse")
+                        .help("The transaction/message to parse"),
                 )
                 .arg(
                     Arg::new("encoding")
                         .long("encoding")
                         .value_parser(["base64", "hex"])
-                        .default_value("hex")
-                )
+                        .default_value("hex"),
+                ),
         )
         .get_matches();
 
@@ -36,10 +36,21 @@ fn main() {
         let encoding = parse_matches.get_one::<String>("encoding").unwrap();
 
         println!("Parsing transaction: {}", unsigned_tx);
-        println!("Format: {}", if is_transaction { "transaction" } else { "message" });
+        println!(
+            "Format: {}",
+            if is_transaction {
+                "transaction"
+            } else {
+                "message"
+            }
+        );
         println!("Encoding: {}", encoding);
 
-        match parse_transaction(unsigned_tx.to_string(), is_transaction, encoding.to_string()) {
+        match parse_transaction(
+            unsigned_tx.to_string(),
+            is_transaction,
+            encoding.to_string(),
+        ) {
             Ok(response) => {
                 print_parsed_transaction(response.solana_parsed_transaction.payload.unwrap());
             }
