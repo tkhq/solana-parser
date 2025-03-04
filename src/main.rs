@@ -4,54 +4,47 @@ mod solana;
 
 use crate::solana::parser::parse_transaction;
 use crate::solana::structs::SolanaParsedTransactionPayload;
+use clap::{Arg, Command};
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let matches = Command::new("solana-parser")
+        .subcommand(
+            Command::new("parse")
+                .arg(
+                    Arg::new("format")
+                        .long("format")
+                        .value_parser(["message", "transaction"])
+                        .required(true)
+                )
+                .arg(
+                    Arg::new("input")
+                        .required(true)
+                        .help("The transaction/message to parse")
+                )
+                .arg(
+                    Arg::new("encoding")
+                        .long("encoding")
+                        .value_parser(["base64", "hex"])
+                        .default_value("hex")
+                )
+        )
+        .get_matches();
 
-    if !(args.len() == 4 || args.len() == 6) {
-        println!("Usage: `cargo run parse <unsigned transaction> --message OR cargo run parse <unsigned transaction> --transaction`. You can optionally include the format flag (base64 or hex) after the flag.");
-        return;
-    }
+    if let Some(parse_matches) = matches.subcommand_matches("parse") {
+        let unsigned_tx = parse_matches.get_one::<String>("input").unwrap();
+        let is_transaction = parse_matches.get_one::<String>("format").unwrap() == "transaction";
+        let encoding = parse_matches.get_one::<String>("encoding").unwrap();
 
-    let command = &args[1];
-    match command.as_str() {
-        "parse" => {
-            let unsigned_tx = &args[3];
-            let flag = if args.len() > 3 { Some(&args[2]) } else { None };
-            println!("Parsing transaction: {}", unsigned_tx);
-            println!("Flag: {:?}", flag);
-            let format_flag = if args.len() > 4 {
-                Some(args[5].as_str())
-            } else {
-                Some("hex")
-            }; // Default to "hex"
-            println!("Format Flag: {:?}", format_flag);
-            match (flag, format_flag) {
-                (Some(flag), Some(format_flag))
-                    if (flag == "--message" || flag == "--transaction")
-                        && (format_flag == "base64" || format_flag == "hex") =>
-                {
-                    let is_transaction = flag == "--transaction";
-                    let result = parse_transaction(
-                        unsigned_tx.to_string(),
-                        is_transaction,
-                        format_flag.to_string(),
-                    );
-                    match result {
-                        Ok(response) => {
-                            print_parsed_transaction(
-                                response.solana_parsed_transaction.payload.unwrap(),
-                            );
-                        }
-                        Err(e) => println!("Error: {}", e),
-                    }
-                }
-                _ => {
-                    println!("Invalid or missing flag. Use either --message or --transaction followed by format flag (base64 or hex).");
-                }
+        println!("Parsing transaction: {}", unsigned_tx);
+        println!("Format: {}", if is_transaction { "transaction" } else { "message" });
+        println!("Encoding: {}", encoding);
+
+        match parse_transaction(unsigned_tx.to_string(), is_transaction, encoding.to_string()) {
+            Ok(response) => {
+                print_parsed_transaction(response.solana_parsed_transaction.payload.unwrap());
             }
+            Err(e) => println!("Error: {}", e),
         }
-        _ => println!("Unknown command: {}", command),
     }
 }
 
