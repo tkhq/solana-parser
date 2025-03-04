@@ -1,5 +1,3 @@
-use std::env;
-
 mod solana;
 
 use crate::solana::parser::parse_transaction;
