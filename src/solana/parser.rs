@@ -10,7 +10,7 @@ use solana_sdk::{
     pubkey::Pubkey,
     system_instruction::SystemInstruction, 
 };
-use super::structs::{SolTransfer, SolanaAccount, SolanaAddressTableLookup, SolanaInstruction, SolanaMetadata, SolanaParseResponse, SolanaParsedTransaction, SolanaParsedTransactionPayload, SolanaSingleAddressTableLookup, SplTransfer};
+use super::structs::{AddressAccount, SolTransfer, SolanaAccount, SolanaAddressTableLookup, SolanaInstruction, SolanaMetadata, SolanaParseResponse, SolanaParsedTransaction, SolanaParsedTransactionPayload, SolanaSingleAddressTableLookup, SplTransfer};
 
 // Length of a solana signature in bytes (64 bytes long)
 pub const LEN_SOL_SIGNATURE_BYTES: usize = 64;
@@ -589,12 +589,15 @@ impl SolanaTransaction {
         let mut transfers: Vec<SolTransfer> = vec![];
         let mut spl_transfers: Vec<SplTransfer> = vec![];
         for i in self.message.instructions() {
+            let mut account_addresses: Vec<AddressAccount> = vec![];
             let mut accounts: Vec<SolanaAccount> = vec![];
             let mut address_table_lookups: Vec<SolanaSingleAddressTableLookup> = vec![];
             for a in i.accounts.clone() {
                 // if the index is out of bounds of the static account keys array it is an address lookup table (only for versioned transactions)
                 if a as usize >= self.message.static_account_keys().len() {
-                    address_table_lookups.push(self.resolve_address_table_lookup(a as usize)?);
+                    let atlu = self.resolve_address_table_lookup(a as usize)?;
+                    address_table_lookups.push(atlu.clone());
+                    account_addresses.push(AddressAccount::AddressTableLookUp(atlu.clone()));
                     continue;
                 }
                 let account_key = self
@@ -608,7 +611,8 @@ impl SolanaTransaction {
                     signer: self.message.is_signer(a as usize),
                     writable: self.message.is_maybe_writable(a as usize, None),
                 };
-                accounts.push(acct);
+                accounts.push(acct.clone());
+                account_addresses.push(AddressAccount::Static(acct.clone()));
             }
             let program_key = i.program_id(self.message.static_account_keys()).to_string();
             match program_key.as_str() {
@@ -616,20 +620,20 @@ impl SolanaTransaction {
                     let system_instruction: SystemInstruction = bincode::deserialize(&i.data)
                     .map_err(|_| "Could not parse system instruction")?;
                     if let SystemInstruction::Transfer { lamports } = system_instruction {
-                        if accounts.len() != 2 {
+                        if account_addresses.len() != 2 {
                             return Err("System Program Transfer Instruction should have exactly 2 arguments".into())
                         }
                         let transfer = SolTransfer {
                             amount: lamports.to_string(),
-                            to: accounts[1].account_key.clone(),
-                            from: accounts[0].account_key.clone(),
+                            to: account_addresses[1].to_string(),
+                            from: account_addresses[0].to_string(),
                         };
                         transfers.push(transfer);
                     }
                 }
                 TOKEN_PROGRAM_KEY => {
                     let token_program_instruction: SplInstructionData = SplInstructionData::parse_spl_transfer_data(&i.data)?;
-                    let spl_tranfer_opt = self.parse_spl_instruction_data(token_program_instruction, accounts.clone())?;
+                    let spl_tranfer_opt = self.parse_spl_instruction_data(token_program_instruction, account_addresses.clone())?;
                     match spl_tranfer_opt {
                         Some(spl_transfer) => spl_transfers.push(spl_transfer),
                         None => (),
@@ -637,7 +641,7 @@ impl SolanaTransaction {
                 }
                 TOKEN_2022_PROGRAM_KEY => {
                     let token_program_22_instruction: SplInstructionData = SplInstructionData::parse_spl_transfer_data(&i.data)?;
-                    let spl_tranfer_opt = self.parse_spl_instruction_data(token_program_22_instruction, accounts.clone())?;
+                    let spl_tranfer_opt = self.parse_spl_instruction_data(token_program_22_instruction, account_addresses.clone())?;
                     match spl_tranfer_opt {
                         Some(spl_transfer) => spl_transfers.push(spl_transfer),
                         None => (),
@@ -658,14 +662,14 @@ impl SolanaTransaction {
     }
 
     // Parse Instruction to Solana Token Program OR Solana Token Program 2022 and return something if it is an SPL transfer
-    fn parse_spl_instruction_data(&self, token_instruction: SplInstructionData, accounts: Vec<SolanaAccount>) -> Result<Option<SplTransfer>, Box<dyn std::error::Error>> {
+    fn parse_spl_instruction_data(&self, token_instruction: SplInstructionData, accounts: Vec<AddressAccount>) -> Result<Option<SplTransfer>, Box<dyn std::error::Error>> {
         if let SplInstructionData::Transfer { amount } = token_instruction {
             let signers = self.get_spl_multisig_signers_if_exist(&accounts, 3)?;
             let spl_transfer = SplTransfer {
                 amount: amount.to_string(),
-                to: accounts[1].account_key.clone(),
-                from: accounts[0].account_key.clone(),
-                owner: accounts[2].account_key.clone(),
+                to: accounts[1].to_string(),
+                from: accounts[0].to_string(),
+                owner: accounts[2].to_string(),
                 signers,
                 decimals: None, 
                 fee: None,
@@ -676,10 +680,10 @@ impl SolanaTransaction {
             let signers = self.get_spl_multisig_signers_if_exist(&accounts, 4)?;
             let spl_transfer = SplTransfer {
                 amount: amount.to_string(),
-                to: accounts[2].account_key.clone(),
-                from: accounts[0].account_key.clone(),
-                token_mint: Some(accounts[1].account_key.clone()),
-                owner: accounts[3].account_key.clone(),
+                to: accounts[2].to_string(),
+                from: accounts[0].to_string(),
+                token_mint: Some(accounts[1].to_string()),
+                owner: accounts[3].to_string(),
                 signers,
                 decimals: Some(decimals.to_string()),
                 fee: None,
@@ -689,11 +693,11 @@ impl SolanaTransaction {
             let signers = self.get_spl_multisig_signers_if_exist(&accounts, 4)?;
             let spl_transfer = SplTransfer {
                 amount: amount.to_string(),
-                to: accounts[2].account_key.clone(),
-                from: accounts[0].account_key.clone(),
-                token_mint: Some(accounts[1].account_key.clone()),
+                to: accounts[2].to_string(),
+                from: accounts[0].to_string(),
+                token_mint: Some(accounts[1].to_string()),
                 signers,
-                owner: accounts[3].account_key.clone(),
+                owner: accounts[3].to_string(),
                 decimals: Some(decimals.to_string()),
                 fee: Some(fee.to_string()),
             };
@@ -702,11 +706,11 @@ impl SolanaTransaction {
         return Ok(None)
     }
 
-    fn get_spl_multisig_signers_if_exist(&self, accounts: &Vec<SolanaAccount>, num_accts_before_signer: usize) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    fn get_spl_multisig_signers_if_exist(&self, accounts: &Vec<AddressAccount>, num_accts_before_signer: usize) -> Result<Vec<String>, Box<dyn std::error::Error>> {
         if accounts.len() < num_accts_before_signer {
             return Err(format!("Invalid number of accounts provided for spl token transfer instruction").into())
         }
-        Ok(accounts[num_accts_before_signer..accounts.len()].to_vec().into_iter().map(|a| a.account_key).collect())
+        Ok(accounts[num_accts_before_signer..accounts.len()].to_vec().into_iter().map(|a| a.to_string()).collect())
     }
 
     fn recent_blockhash(&self) -> String {

@@ -73,3 +73,18 @@ pub struct SolanaParsedTransaction {
 pub struct SolanaParseResponse {
     pub solana_parsed_transaction: SolanaParsedTransaction,
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum AddressAccount {
+    Static(SolanaAccount),
+    AddressTableLookUp(SolanaSingleAddressTableLookup)
+}
+
+impl AddressAccount {
+    pub fn to_string(&self) -> String {
+        match self {
+            AddressAccount::Static(account) => account.account_key.clone(),
+            AddressAccount::AddressTableLookUp(_) => String::new(),
+        }
+    }
+}
