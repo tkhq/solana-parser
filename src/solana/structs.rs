@@ -75,16 +75,16 @@ pub struct SolanaParseResponse {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum AddressAccount {
+pub enum AccountAddress {
     Static(SolanaAccount),
     AddressTableLookUp(SolanaSingleAddressTableLookup)
 }
 
-impl AddressAccount {
+impl AccountAddress {
     pub fn to_string(&self) -> String {
         match self {
-            AddressAccount::Static(account) => account.account_key.clone(),
-            AddressAccount::AddressTableLookUp(_) => String::new(),
+            AccountAddress::Static(account) => account.account_key.clone(),
+            AccountAddress::AddressTableLookUp(_) => String::new(),
         }
     }
 }
