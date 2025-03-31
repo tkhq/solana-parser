@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct SolanaMetadata {
     pub signatures: Vec<String>,
@@ -76,15 +78,21 @@ pub struct SolanaParseResponse {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AccountAddress {
+    /// Static Account Addresses refer to addresses whose string/hex representations have been entirely included in the serialized transaction
     Static(SolanaAccount),
-    AddressTableLookUp(SolanaSingleAddressTableLookup)
+    /// `AddressTableLookUp` Addresses refer to addresses whose string/hex representation have NOT been included
+    /// Rather, only a reference has been included using the concept of Address Lookup Tables -- <https://solana.com/developers/guides/advanced/lookup-tables>
+    /// NOTE the difference between Address Lookup Tables and Address Table Lookups
+    /// Address Lookup Tables -- the on chain tables where addresses are stored
+    /// Address Table Lookups -- the struct that gets serialized with transactions that is used to POINT to an address in a lookup table --> <https://github.com/solana-labs/solana-web3.js/blob/4e9988cfc561f3ed11f4c5016a29090a61d129a8/src/message/index.ts#L27-L30>
+    AddressTableLookUp(SolanaSingleAddressTableLookup),
 }
 
-impl AccountAddress {
-    pub fn to_string(&self) -> String {
+impl fmt::Display for AccountAddress {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            AccountAddress::Static(account) => account.account_key.clone(),
-            AccountAddress::AddressTableLookUp(_) => String::new(),
+            AccountAddress::Static(account) => write!(f, "{}", account.account_key),
+            AccountAddress::AddressTableLookUp(_) => write!(f, "ADDRESS_TABLE_LOOKUP"),
         }
     }
 }
