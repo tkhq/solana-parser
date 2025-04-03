@@ -892,3 +892,198 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
         // Test Program called in the instruction
         assert_eq!(tx_metadata.instructions[0].program_key, TOKEN_2022_PROGRAM_KEY)
     }
+
+    #[test]
+    fn parse_spl_transfer_using_address_table_lookups() {
+        // ensure that transaction gets parsed without errors
+        let unsigned_transaction = "01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008001000b10b9334994c55889c1e129158c59a9b3b16fd9bfc9bedd105a8e1d7b7a8644110772f445b3a19ac048d2a928fe0774cf7b8b5efa7c6457cbccbc82ecf0eac93c792343cde9faec81dfd6963f83ea57e8075f2db9eb0c461d195737e143f9b16909c52568e818f6871d033a00dba9ae878df8ba008104e34fb0332d685f3eacdf6a5149b5337cf8079ab25763ae8e8f95a9b09d2325dcc2ee5f8e8640b7eacf470d283d0dd282354fef0ae3b0e227d37cd89ca266fb17ddf8f7cb7ccefbe4ebdc5506a7d51718c774c928566398691d5eb68b5eb8a39b4b6d5c73555b2100000000d1a3910dca452ccc0c6d513e570b0a5cee7edf44fa74e1410cd405fba63e96100306466fe5211732ffecadba72c39be7bc8ce5bbc5f7126b2c439b3a400000008c97258f4e2489f1bb3d1029148e0d830b5a1399daff1084048e7bd8dbe9f8591e8c4fab8994494c8f1e5c1287445b2917d60c43c79aa959162f5d6000598d32000000000000000000000000000000000000000000000000000000000000000006ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a92ccd355fe72bcf08d5ee763f52bb9603e025ef8e1d0340f28a576313251507310479d55bf231c06eee74c56ece681507fdb1b2dea3f48e5102b1cda256bc138fb43ffa27f5d7f64a74c09b1f295879de4b09ab36dfc9dd514b321aa7b38ce5e8ee501f6575c6376b0fc00c38a8f474ed66466d3cc3bf159e8d2be46427a83a9c0a08000903a8d002000000000008000502e7e1060005020607090022bb6ad79d0c1600090600010a130b0c01010c04021301000a0c9c0100000000000006090600030d130b0c01010c04021303000a0c4603000000000000060906000400140b0c01010e120c0002040e140e0f0e150010111204020c1624e517cb977ae3ad2a010000003d016400013e9c070000000000c6c53a0000000000e803000c030400000109015de6c0e5b44625227af5ec45b683057e191d6d7bf7ff43e3d25f31d5d5e81dac03b86fba04c013b970".to_string();
+        let parsed_tx = SolanaTransaction::new(&unsigned_transaction, true).unwrap();
+        let _ = parsed_tx.transaction_metadata().unwrap();
+    }
+
+    #[test]
+    fn parse_spl_transfer_using_address_table_lookups_mint() {
+        // This transaction contains two SPL transfer instructions
+        // BOTH Spl transfer instructions use an Address Table look up to represent the Token Mint address
+        // The parser will return the flag ADDRESS_TABLE_LOOKUP for these non statically included addresses
+
+        // ensure that transaction gets parsed without errors
+        let unsigned_transaction = "01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008001000b10b9334994c55889c1e129158c59a9b3b16fd9bfc9bedd105a8e1d7b7a8644110772f445b3a19ac048d2a928fe0774cf7b8b5efa7c6457cbccbc82ecf0eac93c792343cde9faec81dfd6963f83ea57e8075f2db9eb0c461d195737e143f9b16909c52568e818f6871d033a00dba9ae878df8ba008104e34fb0332d685f3eacdf6a5149b5337cf8079ab25763ae8e8f95a9b09d2325dcc2ee5f8e8640b7eacf470d283d0dd282354fef0ae3b0e227d37cd89ca266fb17ddf8f7cb7ccefbe4ebdc5506a7d51718c774c928566398691d5eb68b5eb8a39b4b6d5c73555b2100000000d1a3910dca452ccc0c6d513e570b0a5cee7edf44fa74e1410cd405fba63e96100306466fe5211732ffecadba72c39be7bc8ce5bbc5f7126b2c439b3a400000008c97258f4e2489f1bb3d1029148e0d830b5a1399daff1084048e7bd8dbe9f8591e8c4fab8994494c8f1e5c1287445b2917d60c43c79aa959162f5d6000598d32000000000000000000000000000000000000000000000000000000000000000006ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a92ccd355fe72bcf08d5ee763f52bb9603e025ef8e1d0340f28a576313251507310479d55bf231c06eee74c56ece681507fdb1b2dea3f48e5102b1cda256bc138fb43ffa27f5d7f64a74c09b1f295879de4b09ab36dfc9dd514b321aa7b38ce5e8ee501f6575c6376b0fc00c38a8f474ed66466d3cc3bf159e8d2be46427a83a9c0a08000903a8d002000000000008000502e7e1060005020607090022bb6ad79d0c1600090600010a130b0c01010c04021301000a0c9c0100000000000006090600030d130b0c01010c04021303000a0c4603000000000000060906000400140b0c01010e120c0002040e140e0f0e150010111204020c1624e517cb977ae3ad2a010000003d016400013e9c070000000000c6c53a0000000000e803000c030400000109015de6c0e5b44625227af5ec45b683057e191d6d7bf7ff43e3d25f31d5d5e81dac03b86fba04c013b970".to_string();
+        let parsed_tx = SolanaTransaction::new(&unsigned_transaction, true).unwrap();
+        let tx_metadata = parsed_tx.transaction_metadata().unwrap();
+
+        let spl_transfers = tx_metadata.spl_transfers;
+
+        // SPL transfer 1 (Uses an address table lookup token mint address)
+        let spl_transfer_1 = spl_transfers[0].clone();
+        assert_eq!(
+            spl_transfer_1.from,
+            "3NfEggXMdHJPTYV4pkbHjh4iC3q5NoLkXTwyWAB1QSkp".to_string()
+        );
+        assert_eq!(
+            spl_transfer_1.to,
+            "8jjWmLhYdqrtFMcEkiMDdqkEN85cvEFnNS4LFgNf5NRv".to_string()
+        );
+        assert_eq!(spl_transfer_1.token_mint, Some("ADDRESS_TABLE_LOOKUP".to_string())); // EMPTY BECAUSE OF ATLU
+        assert_eq!(
+            spl_transfer_1.owner,
+            "DTwnQq6QdYRibHtyzWM5MxqsBuDTiUD8aeaFcjesnoKt".to_string()
+        );
+
+        // SPL transfer 2 (Uses an address table lookup token mint address)
+        let spl_transfer_2 = spl_transfers[1].clone();
+        assert_eq!(
+            spl_transfer_2.from,
+            "3NfEggXMdHJPTYV4pkbHjh4iC3q5NoLkXTwyWAB1QSkp".to_string()
+        );
+        assert_eq!(
+            spl_transfer_2.to,
+            "EGaQJtKJ4zctDY4VjP98f2KDtEeeso8JGk5a4E8X1EaV".to_string()
+        );
+        assert_eq!(spl_transfer_2.token_mint, Some("ADDRESS_TABLE_LOOKUP".to_string())); // EMPTY BECAUSE OF ATLU
+        assert_eq!(
+            spl_transfer_2.owner,
+            "DTwnQq6QdYRibHtyzWM5MxqsBuDTiUD8aeaFcjesnoKt".to_string()
+        );
+    }
+
+    #[test]
+    fn parse_spl_transfer_using_address_table_lookups_recipient() {
+        // This transaction contains two SPL transfer instructions
+        // 1. Uses an Address Table look up to represent the Token Mint address
+        // 2. Uses an Address Table look up to represent the Recipient address
+        // The parser will return the flag ADDRESS_TABLE_LOOKUP for these non statically included addresses
+
+        // ensure that transaction gets parsed without errors
+        let unsigned_transaction = "01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008001000b10b9334994c55889c1e129158c59a9b3b16fd9bfc9bedd105a8e1d7b7a8644110772f445b3a19ac048d2a928fe0774cf7b8b5efa7c6457cbccbc82ecf0eac93c792343cde9faec81dfd6963f83ea57e8075f2db9eb0c461d195737e143f9b16909c52568e818f6871d033a00dba9ae878df8ba008104e34fb0332d685f3eacdf6a5149b5337cf8079ab25763ae8e8f95a9b09d2325dcc2ee5f8e8640b7eacf470d283d0dd282354fef0ae3b0e227d37cd89ca266fb17ddf8f7cb7ccefbe4ebdc5506a7d51718c774c928566398691d5eb68b5eb8a39b4b6d5c73555b2100000000d1a3910dca452ccc0c6d513e570b0a5cee7edf44fa74e1410cd405fba63e96100306466fe5211732ffecadba72c39be7bc8ce5bbc5f7126b2c439b3a400000008c97258f4e2489f1bb3d1029148e0d830b5a1399daff1084048e7bd8dbe9f8591e8c4fab8994494c8f1e5c1287445b2917d60c43c79aa959162f5d6000598d32000000000000000000000000000000000000000000000000000000000000000006ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a92ccd355fe72bcf08d5ee763f52bb9603e025ef8e1d0340f28a576313251507310479d55bf231c06eee74c56ece681507fdb1b2dea3f48e5102b1cda256bc138fb43ffa27f5d7f64a74c09b1f295879de4b09ab36dfc9dd514b321aa7b38ce5e8ee501f6575c6376b0fc00c38a8f474ed66466d3cc3bf159e8d2be46427a83a9c0a08000903a8d002000000000008000502e7e1060005020607090022bb6ad79d0c1600090600010a130b0c01010c04021301000a0c9c0100000000000006090600030d130b0c01010c04020313000a0c4603000000000000060906000400140b0c01010e120c0002040e140e0f0e150010111204020c1624e517cb977ae3ad2a010000003d016400013e9c070000000000c6c53a0000000000e803000c030400000109015de6c0e5b44625227af5ec45b683057e191d6d7bf7ff43e3d25f31d5d5e81dac03b86fba04c013b970".to_string();
+        let parsed_tx = SolanaTransaction::new(&unsigned_transaction, true).unwrap();
+        let tx_metadata = parsed_tx.transaction_metadata().unwrap();
+
+        let spl_transfers = tx_metadata.spl_transfers;
+
+        // SPL transfer 1 (Uses an address table lookup token mint address)
+        let spl_transfer_1 = spl_transfers[0].clone();
+        assert_eq!(
+            spl_transfer_1.from,
+            "3NfEggXMdHJPTYV4pkbHjh4iC3q5NoLkXTwyWAB1QSkp".to_string()
+        );
+        assert_eq!(
+            spl_transfer_1.to,
+            "8jjWmLhYdqrtFMcEkiMDdqkEN85cvEFnNS4LFgNf5NRv".to_string()
+        );
+        assert_eq!(spl_transfer_1.token_mint, Some("ADDRESS_TABLE_LOOKUP".to_string())); // Shows the flag ADDRESS_TABLE_LOOKUP because an ATLU is used for this address in the transaction
+        assert_eq!(
+            spl_transfer_1.owner,
+            "DTwnQq6QdYRibHtyzWM5MxqsBuDTiUD8aeaFcjesnoKt".to_string()
+        );
+
+        // SPL transfer 2 (Uses an address table lookup for receiving "to" address)
+        let spl_transfer_2 = spl_transfers[1].clone();
+        assert_eq!(
+            spl_transfer_2.from,
+            "3NfEggXMdHJPTYV4pkbHjh4iC3q5NoLkXTwyWAB1QSkp".to_string()
+        );
+        assert_eq!(spl_transfer_2.to, "ADDRESS_TABLE_LOOKUP".to_string()); // Shows the flag ADDRESS_TABLE_LOOKUP because an ATLU is used for this address in the transaction
+        assert_eq!(
+            spl_transfer_2.token_mint,
+            Some("EGaQJtKJ4zctDY4VjP98f2KDtEeeso8JGk5a4E8X1EaV".to_string())
+        );
+        assert_eq!(
+            spl_transfer_2.owner,
+            "DTwnQq6QdYRibHtyzWM5MxqsBuDTiUD8aeaFcjesnoKt".to_string()
+        );
+    }
+
+    #[test]
+    fn parse_spl_transfer_using_address_table_lookups_sender() {
+        // This transaction contains two SPL transfer instructions
+        // 1. Uses an Address Table look up to represent the Token Mint address
+        // 2. Uses an Address Table look up to represent the Sending address
+        // The parser will return the flag ADDRESS_TABLE_LOOKUP for these non statically included addresses
+
+        // ensure that transaction gets parsed without errors
+        let unsigned_transaction = "01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008001000b10b9334994c55889c1e129158c59a9b3b16fd9bfc9bedd105a8e1d7b7a8644110772f445b3a19ac048d2a928fe0774cf7b8b5efa7c6457cbccbc82ecf0eac93c792343cde9faec81dfd6963f83ea57e8075f2db9eb0c461d195737e143f9b16909c52568e818f6871d033a00dba9ae878df8ba008104e34fb0332d685f3eacdf6a5149b5337cf8079ab25763ae8e8f95a9b09d2325dcc2ee5f8e8640b7eacf470d283d0dd282354fef0ae3b0e227d37cd89ca266fb17ddf8f7cb7ccefbe4ebdc5506a7d51718c774c928566398691d5eb68b5eb8a39b4b6d5c73555b2100000000d1a3910dca452ccc0c6d513e570b0a5cee7edf44fa74e1410cd405fba63e96100306466fe5211732ffecadba72c39be7bc8ce5bbc5f7126b2c439b3a400000008c97258f4e2489f1bb3d1029148e0d830b5a1399daff1084048e7bd8dbe9f8591e8c4fab8994494c8f1e5c1287445b2917d60c43c79aa959162f5d6000598d32000000000000000000000000000000000000000000000000000000000000000006ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a92ccd355fe72bcf08d5ee763f52bb9603e025ef8e1d0340f28a576313251507310479d55bf231c06eee74c56ece681507fdb1b2dea3f48e5102b1cda256bc138fb43ffa27f5d7f64a74c09b1f295879de4b09ab36dfc9dd514b321aa7b38ce5e8ee501f6575c6376b0fc00c38a8f474ed66466d3cc3bf159e8d2be46427a83a9c0a08000903a8d002000000000008000502e7e1060005020607090022bb6ad79d0c1600090600010a130b0c01010c04021301000a0c9c0100000000000006090600030d130b0c01010c04130303000a0c4603000000000000060906000400140b0c01010e120c0002040e140e0f0e150010111204020c1624e517cb977ae3ad2a010000003d016400013e9c070000000000c6c53a0000000000e803000c030400000109015de6c0e5b44625227af5ec45b683057e191d6d7bf7ff43e3d25f31d5d5e81dac03b86fba04c013b970".to_string();
+        let parsed_tx = SolanaTransaction::new(&unsigned_transaction, true).unwrap();
+        let tx_metadata = parsed_tx.transaction_metadata().unwrap();
+
+        let spl_transfers = tx_metadata.spl_transfers;
+
+        // SPL transfer 1 (Uses an address table lookup token mint address)
+        let spl_transfer_1 = spl_transfers[0].clone();
+        assert_eq!(
+            spl_transfer_1.from,
+            "3NfEggXMdHJPTYV4pkbHjh4iC3q5NoLkXTwyWAB1QSkp".to_string()
+        );
+        assert_eq!(
+            spl_transfer_1.to,
+            "8jjWmLhYdqrtFMcEkiMDdqkEN85cvEFnNS4LFgNf5NRv".to_string()
+        );
+        assert_eq!(spl_transfer_1.token_mint, Some("ADDRESS_TABLE_LOOKUP".to_string())); // Shows the flag ADDRESS_TABLE_LOOKUP because an ATLU is used for this address in the transaction
+        assert_eq!(
+            spl_transfer_1.owner,
+            "DTwnQq6QdYRibHtyzWM5MxqsBuDTiUD8aeaFcjesnoKt".to_string()
+        );
+
+        // SPL transfer 2 (Uses an address table lookup for sending "from" address)
+        let spl_transfer_2 = spl_transfers[1].clone();
+        assert_eq!(spl_transfer_2.from, "ADDRESS_TABLE_LOOKUP".to_string()); // Shows the flag ADDRESS_TABLE_LOOKUP because an ATLU is used for this address in the transaction
+        assert_eq!(
+            spl_transfer_2.to,
+            "EGaQJtKJ4zctDY4VjP98f2KDtEeeso8JGk5a4E8X1EaV".to_string()
+        );
+        assert_eq!(
+            spl_transfer_2.token_mint,
+            Some("EGaQJtKJ4zctDY4VjP98f2KDtEeeso8JGk5a4E8X1EaV".to_string())
+        );
+        assert_eq!(
+            spl_transfer_2.owner,
+            "DTwnQq6QdYRibHtyzWM5MxqsBuDTiUD8aeaFcjesnoKt".to_string()
+        );
+    }
+
+    #[test]
+    fn parse_spl_transfer_using_address_table_lookups_owner() {
+        // This transaction contains two SPL transfer instructions
+        // 1. Uses an Address Table look up to represent the Token Mint address
+        // 2. Uses an Address Table look up to represent the Owner address
+        // The parser will return the flag ADDRESS_TABLE_LOOKUP for these non statically included addresses
+
+        // ensure that transaction gets parsed without errors
+        let unsigned_transaction = "01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008001000b10b9334994c55889c1e129158c59a9b3b16fd9bfc9bedd105a8e1d7b7a8644110772f445b3a19ac048d2a928fe0774cf7b8b5efa7c6457cbccbc82ecf0eac93c792343cde9faec81dfd6963f83ea57e8075f2db9eb0c461d195737e143f9b16909c52568e818f6871d033a00dba9ae878df8ba008104e34fb0332d685f3eacdf6a5149b5337cf8079ab25763ae8e8f95a9b09d2325dcc2ee5f8e8640b7eacf470d283d0dd282354fef0ae3b0e227d37cd89ca266fb17ddf8f7cb7ccefbe4ebdc5506a7d51718c774c928566398691d5eb68b5eb8a39b4b6d5c73555b2100000000d1a3910dca452ccc0c6d513e570b0a5cee7edf44fa74e1410cd405fba63e96100306466fe5211732ffecadba72c39be7bc8ce5bbc5f7126b2c439b3a400000008c97258f4e2489f1bb3d1029148e0d830b5a1399daff1084048e7bd8dbe9f8591e8c4fab8994494c8f1e5c1287445b2917d60c43c79aa959162f5d6000598d32000000000000000000000000000000000000000000000000000000000000000006ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a92ccd355fe72bcf08d5ee763f52bb9603e025ef8e1d0340f28a576313251507310479d55bf231c06eee74c56ece681507fdb1b2dea3f48e5102b1cda256bc138fb43ffa27f5d7f64a74c09b1f295879de4b09ab36dfc9dd514b321aa7b38ce5e8ee501f6575c6376b0fc00c38a8f474ed66466d3cc3bf159e8d2be46427a83a9c0a08000903a8d002000000000008000502e7e1060005020607090022bb6ad79d0c1600090600010a130b0c01010c04021301000a0c9c0100000000000006090600030d130b0c01010c04020003130a0c4603000000000000060906000400140b0c01010e120c0002040e140e0f0e150010111204020c1624e517cb977ae3ad2a010000003d016400013e9c070000000000c6c53a0000000000e803000c030400000109015de6c0e5b44625227af5ec45b683057e191d6d7bf7ff43e3d25f31d5d5e81dac03b86fba04c013b970".to_string();
+        let parsed_tx = SolanaTransaction::new(&unsigned_transaction, true).unwrap();
+        let tx_metadata = parsed_tx.transaction_metadata().unwrap();
+
+        let spl_transfers = tx_metadata.spl_transfers;
+
+        // SPL transfer 1 (Uses an address table lookup token mint address)
+        let spl_transfer_1 = spl_transfers[0].clone();
+        assert_eq!(
+            spl_transfer_1.from,
+            "3NfEggXMdHJPTYV4pkbHjh4iC3q5NoLkXTwyWAB1QSkp".to_string()
+        );
+        assert_eq!(
+            spl_transfer_1.to,
+            "8jjWmLhYdqrtFMcEkiMDdqkEN85cvEFnNS4LFgNf5NRv".to_string()
+        );
+        assert_eq!(spl_transfer_1.token_mint, Some("ADDRESS_TABLE_LOOKUP".to_string())); // Shows the flag ADDRESS_TABLE_LOOKUP because an ATLU is used for this address in the transaction
+        assert_eq!(
+            spl_transfer_1.owner,
+            "DTwnQq6QdYRibHtyzWM5MxqsBuDTiUD8aeaFcjesnoKt".to_string()
+        );
+
+        // SPL transfer 2 (Uses an address table lookup for owner address)
+        let spl_transfer_2 = spl_transfers[1].clone();
+        assert_eq!(
+            spl_transfer_2.from,
+            "3NfEggXMdHJPTYV4pkbHjh4iC3q5NoLkXTwyWAB1QSkp".to_string()
+        );
+        assert_eq!(
+            spl_transfer_2.to,
+            "EGaQJtKJ4zctDY4VjP98f2KDtEeeso8JGk5a4E8X1EaV".to_string()
+        );
+        assert_eq!(
+            spl_transfer_2.token_mint,
+            Some("DTwnQq6QdYRibHtyzWM5MxqsBuDTiUD8aeaFcjesnoKt".to_string())
+        );
+        assert_eq!(spl_transfer_2.owner, "ADDRESS_TABLE_LOOKUP".to_string()); // Shows the flag ADDRESS_TABLE_LOOKUP because an ATLU is used for this address in the transaction
+    }
