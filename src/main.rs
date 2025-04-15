@@ -1,87 +1,64 @@
-use std::env;
+// use alloy_abi::{Abi, Function};
+use alloy_json_abi::{Function, JsonAbi};
+use hex::FromHex;
+use std::error::Error;
 
-mod solana;
+fn main() -> Result<(), Box<dyn Error>> {
+    // Replace this with your actual contract ABI in JSON format.
+    let abi_json = r#"
+    [
+        {
+            "type": "function",
+            "name": "transfer",
+            "inputs": [
+                { "name": "to", "type": "address" },
+                { "name": "amount", "type": "uint256" }
+            ],
+            "outputs": []
+        }
+    ]
+    "#;
 
-use crate::solana::parser::parse_transaction;
-use crate::solana::structs::SolanaParsedTransactionPayload;
+    // Parse the ABI JSON into an Abi object.
+    let abi: JsonAbi = serde_json::from_str(abi_json)?;
 
-fn main() {
-    let args: Vec<String> = env::args().collect();
-    
-    if args.len() != 4 {
-        println!("Usage: `cargo run parse <unsigned transaction> --message OR cargo run parse <unsinged transaction> --transaction`");
-        return;
+    print!("ABI: {:?}\n", abi);
+
+    // Example unsigned transaction input data (hex string).
+    // For instance, "a9059cbb" is the selector for transfer(address,uint256).
+    let tx_data_hex = "a9059cbb0000000000000000000000000123456789abcdef0123456789abcdef012345670000000000000000000000000000000000000000000000000000000000000001";
+
+    // Convert the hex string into bytes.
+    let tx_data = Vec::from_hex(tx_data_hex)?;
+    if tx_data.len() < 4 {
+        return Err("Transaction data too short".into());
     }
 
-    let command = &args[1];
-        match command.as_str() {
-            "parse" => {
-                let unsigned_tx = &args[3];
-                let flag = if args.len() > 3 { Some(&args[2]) } else { None };
-                match flag {
-                    Some(flag) if flag == "--message" || flag == "--transaction" => {
-                        let is_transaction = flag == "--transaction";
-                        let result = parse_transaction(unsigned_tx.to_string(), is_transaction);
-                        match result {
-                            Ok(response) => {
-                                print_parsed_transaction(response.solana_parsed_transaction.payload.unwrap());
-                            },
-                            Err(e) => println!("Error: {}", e),
-                        }
-                    }
-                    _ => {
-                        println!("Invalid or missing flag. Use either --message or --transaction.");
-                    }
-                }
-            }
-            _ => println!("Unknown command: {}", command),
-        }
-}
+    // Extract the first 4 bytes as the function selector.
+    let selector = &tx_data[..4];
 
-fn print_parsed_transaction(transaction_payload: SolanaParsedTransactionPayload) {
-    println!("Solana Parsed Transaction Payload:");
-    println!("  Unsigned Payload: {}", transaction_payload.unsigned_payload);
-    if let Some(metadata) = transaction_payload.transaction_metadata {
-        println!("  Transaction Metadata:");
-        println!("    Signatures: {:?}", metadata.signatures);
-        println!("    Account Keys: {:?}", metadata.account_keys);
-        println!("    Program Keys: {:?}", metadata.program_keys);
-        println!("    Recent Blockhash: {}", metadata.recent_blockhash);
-        println!("    Instructions:");
-        for (i, instruction) in metadata.instructions.iter().enumerate() {
-            println!("      Instruction {}:", i + 1);
-            println!("        Program Key: {}", instruction.program_key);
-            println!("        Accounts: {:?}", instruction.accounts);
-            println!("        Instruction Data (hex): {}", instruction.instruction_data_hex);
-            println!("        Address Table Lookups: {:?}", instruction.address_table_lookups);
-        }
-        println!("    Transfers:");
-        for (i, transfer) in metadata.transfers.iter().enumerate() {
-            println!("      Transfer {}:", i + 1);
-            println!("        From: {}", transfer.from);
-            println!("        To: {}", transfer.to);
-            println!("        Amount: {}", transfer.amount);
-        }
-        println!("    SPL Transfers:");
-        for (i, spl_transfer) in metadata.spl_transfers.iter().enumerate() {
-            println!("      SPL Transfer {}:", i + 1);
-            println!("        From: {}", spl_transfer.from);
-            println!("        To: {}", spl_transfer.to);
-            println!("        Owner: {}", spl_transfer.owner);
-            for (j, signer) in spl_transfer.signers.iter().enumerate() {
-                println!("        Signer {}: {}", j + 1, signer);
-            }
-            println!("        Amount: {}", spl_transfer.amount);
-            if let Some(token_mint) = spl_transfer.token_mint.clone() {
-                println!("        Mint: {}", token_mint);
-            }
-            if let Some(decimals) = spl_transfer.decimals.clone() {
-                println!("        Decimals: {}", decimals);
-            }
-            if let Some(fee) = spl_transfer.fee.clone() {
-                println!("        Fee: {}", fee);
-            }
-        }
-        println!("    Address Table Lookups: {:?}", metadata.address_table_lookups);
-    }
+    print!("ABI FUNCTIONS: {:?}\n", abi.functions);
+
+    // Find the matching function in the ABI using the selector.
+    let found = abi.functions().find(|f| {
+        print!("FOUND MATCHING SELECTOR: {:?}\n", f.selector());
+        f.selector() == selector
+    });
+
+    let function = found.unwrap();
+
+    print!("MATCHING FUNCTION: {:?}\n", function);
+
+    // Now, we have the matching function. We just need to decode the parameters encoded within the transaction data, given the function signature / interface
+
+    // Decode the input parameters (skipping the first 4 bytes for the selector).
+    // let tokens = function.&tx_data[4..])?;
+
+    // // Print the function name and its parameters.
+    // println!("Function: {}", function.name);
+    // for (input, token) in function.inputs.iter().zip(tokens) {
+    //     println!("Parameter {}: {:?}", input.name, token);
+    // }
+
+    Ok(())
 }
