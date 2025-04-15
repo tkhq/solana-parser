@@ -1,64 +1,55 @@
-// use alloy_abi::{Abi, Function};
-use alloy_json_abi::{Function, JsonAbi};
-use hex::FromHex;
+use alloy_primitives::{Address, U256};
+use alloy_sol_types::{sol, SolCall};
 use std::error::Error;
+use alloy_sol_types::SolInterface;
 
-fn main() -> Result<(), Box<dyn Error>> {
-    // Replace this with your actual contract ABI in JSON format.
-    let abi_json = r#"
-    [
-        {
-            "type": "function",
-            "name": "transfer",
-            "inputs": [
-                { "name": "to", "type": "address" },
-                { "name": "amount", "type": "uint256" }
-            ],
-            "outputs": []
-        }
-    ]
-    "#;
-
-    // Parse the ABI JSON into an Abi object.
-    let abi: JsonAbi = serde_json::from_str(abi_json)?;
-
-    print!("ABI: {:?}\n", abi);
-
-    // Example unsigned transaction input data (hex string).
-    // For instance, "a9059cbb" is the selector for transfer(address,uint256).
-    let tx_data_hex = "a9059cbb0000000000000000000000000123456789abcdef0123456789abcdef012345670000000000000000000000000000000000000000000000000000000000000001";
-
-    // Convert the hex string into bytes.
-    let tx_data = Vec::from_hex(tx_data_hex)?;
-    if tx_data.len() < 4 {
-        return Err("Transaction data too short".into());
+// Need to be able to dynamically generate these interfaces
+sol! {
+    #[derive(Debug, PartialEq)]
+    interface IERC20 {
+        function transfer(address to, uint256 amount) external returns (bool);
     }
 
-    // Extract the first 4 bytes as the function selector.
-    let selector = &tx_data[..4];
+    #[derive(Debug, PartialEq)]
+    interface IUSDC {
+        function approve(address spender, uint256 value) external returns (bool);
+    }
+}
 
-    print!("ABI FUNCTIONS: {:?}\n", abi.functions);
+fn main() -> Result<(), Box<dyn Error>> {
+    // random mainnet ERC20 transfer
+    // https://etherscan.io/tx/0x947332ff624b5092fb92e8f02cdbb8a50314e861a4b39c29a286b3b75432165e
+    let data = alloy_primitives::hex!("a9059cbb0000000000000000000000008bc47be1e3abbaba182069c89d08a61fa6c2b2920000000000000000000000000000000000000000000000000000000253c51700");
 
-    // Find the matching function in the ABI using the selector.
-    let found = abi.functions().find(|f| {
-        print!("FOUND MATCHING SELECTOR: {:?}\n", f.selector());
-        f.selector() == selector
-    });
+    let expected = IERC20::transferCall {
+        to: Address::from(alloy_primitives::hex!("8bc47be1e3abbaba182069c89d08a61fa6c2b292")),
+        amount: U256::from(9995360000_u64),
+    };
 
-    let function = found.unwrap();
+    assert_eq!(data[..4], IERC20::transferCall::SELECTOR);
+    let decoded = IERC20::IERC20Calls::abi_decode(&data, true).unwrap();
 
-    print!("MATCHING FUNCTION: {:?}\n", function);
+    print!("DECODED: {:?}\n", decoded);
 
-    // Now, we have the matching function. We just need to decode the parameters encoded within the transaction data, given the function signature / interface
+    assert_eq!(decoded, IERC20::IERC20Calls::transfer(expected));
+    assert_eq!(decoded.abi_encode(), data);
 
-    // Decode the input parameters (skipping the first 4 bytes for the selector).
-    // let tokens = function.&tx_data[4..])?;
+    // random mainnet USDC approval
+    // https://etherscan.io/tx/0xed07bce2d76cabed2de738b5c184543db1206bba8a97833ab7835bc234e337e7
+    let data = alloy_primitives::hex!("095ea7b30000000000000000000000006a000f20005980200259b80c510200304000106800000000000000000000000000000000000000000000000000000000000f4240");
 
-    // // Print the function name and its parameters.
-    // println!("Function: {}", function.name);
-    // for (input, token) in function.inputs.iter().zip(tokens) {
-    //     println!("Parameter {}: {:?}", input.name, token);
-    // }
+    let expected = IUSDC::approveCall {
+        spender: Address::from(alloy_primitives::hex!("6A000F20005980200259B80c5102003040001068")),
+        value: U256::from(1000000_u64),
+    };
+
+    assert_eq!(data[..4], IUSDC::approveCall::SELECTOR);
+    let decoded = IUSDC::IUSDCCalls::abi_decode(&data, true).unwrap();
+
+    print!("DECODED: {:?}\n", decoded);
+
+    assert_eq!(decoded, IUSDC::IUSDCCalls::approve(expected));
+    assert_eq!(decoded.abi_encode(), data);
 
     Ok(())
 }
