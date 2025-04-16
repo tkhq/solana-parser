@@ -3,6 +3,22 @@ name = "evm_parser"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "evm_parser"
+path = "src/main.rs"
+
+[[bin]]
+name = "abi_example"
+path = "src/abi_example.rs"
+
+[[bin]]
+name = "abi_example2"
+path = "src/abi_example2.rs"
+
+[[bin]]
+name = "generic_decoder"
+path = "src/generic_decoder.rs"
+
 [dependencies]
 log = "0.4.22"
 bincode = "1.3.3"
