@@ -1,4 +1,5 @@
 use std::fmt;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SolanaMetadata {
@@ -95,4 +96,168 @@ impl fmt::Display for AccountAddress {
             AccountAddress::AddressTableLookUp(_) => write!(f, "ADDRESS_TABLE_LOOKUP"),
         }
     }
+}
+
+/// IDL that is compatible with what anchor and shank extract from a solana program.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Idl {
+    /// This is the program ID of the 
+    pub program_id: String,
+
+    /// This is the name of the program
+    pub name: String,
+
+    /// Instructions that are handled by the program.
+    pub instructions: Vec<IdlInstruction>,
+
+    /// Types defined in the program that are used by account structs.
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub types: Vec<IdlTypeDefinition>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct IdlInstruction {
+    /// Name of the instruction.
+    pub name: String,
+
+    /// Name of the instruction.
+    pub discriminator: Vec<u8>,
+
+    /// Accounts that need to be supplied in order to process the instruction.
+    pub accounts: Vec<IdlAccount>,
+
+    /// Instruction args.
+    pub args: Vec<IdlField>,
+}
+
+/// Metadata of an account that is provided when calling an instruction.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct IdlAccount {
+    /// Name of the account used for documentation and by code generators.
+    pub name: String,
+
+    /// Whether the account is writable.
+    #[serde(skip_serializing_if = "is_false", default)]
+    pub is_mut: bool,
+
+    /// Whether the account is signer.
+    #[serde(skip_serializing_if = "is_false", default)]
+    pub is_signer: bool,
+
+    /// Whether the account is optional or not.
+    #[serde(skip_serializing_if = "is_false", default)]
+    pub is_optional: bool,
+}
+
+fn is_false(x: &bool) -> bool {
+    !x
+}
+
+/// Custom type definition.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct IdlTypeDefinition {
+    /// Name of the struct or enum.
+    pub name: String,
+
+    /// Underlying type description.
+    /// Note: This is named ty and not type because type is a type is a reserved name in rust
+    #[serde(rename = "type")]
+    pub ty: IdlTypeDefinitionTy,
+}
+
+/// A field in a struct, enum variant or [IdlInstruction] args.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct IdlField {
+    /// Name of the field.
+    pub name: String,
+
+    /// Type of the field.
+    #[serde(rename = "type")]
+    pub ty: IdlType,
+}
+
+/// Underlying fields of a tuple or struct [IdlEnumVariant].
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum EnumFields {
+    Named(Vec<IdlField>),
+    Tuple(Vec<IdlType>),
+}
+
+/// An enum variant which could be scalar (withouth fields) or tuple/struct (with fields).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct IdlEnumVariant {
+    /// Name of the variant.
+    pub name: String,
+
+    /// Optional fields of the variant, only present when it is a tuple or a struct variant.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub fields: Option<EnumFields>,
+}
+
+
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase", tag = "kind")]
+pub enum IdlTypeDefinitionTy {
+    Struct { fields: Vec<IdlField> },
+    Enum { variants: Vec<IdlEnumVariant> },
+}
+
+impl IdlTypeDefinitionTy {
+    pub fn is_struct(&self) -> bool {
+        matches!(self, IdlTypeDefinitionTy::Struct { .. })
+    }
+
+    pub fn is_enum(&self) -> bool {
+        matches!(self, IdlTypeDefinitionTy::Enum { .. })
+    }
+
+    pub fn fields(&self) -> Option<&Vec<IdlField>> {
+        match self {
+            IdlTypeDefinitionTy::Struct { fields } => Some(fields),
+            _ => None,
+        }
+    }
+
+    pub fn variants(&self) -> Option<&Vec<IdlEnumVariant>> {
+        match self {
+            IdlTypeDefinitionTy::Enum { variants } => Some(variants),
+            _ => None,
+        }
+    }
+}
+
+/// Types that can be included in accounts or user defined structs or instruction args of an IDL.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum IdlType {
+    Array(Box<IdlType>, usize),
+    Bool,
+    Bytes,
+    Defined(String),
+    F32,
+    F64,
+    I128,
+    I16,
+    I32,
+    I64,
+    I8,
+    Option(Box<IdlType>),
+    #[serde(rename = "coption")]
+    COption(Box<IdlType>),
+    Tuple(Vec<IdlType>),
+    PublicKey,
+    String,
+    U128,
+    U16,
+    U32,
+    U64,
+    U8,
+    Vec(Box<IdlType>),
+    HashMap(Box<IdlType>, Box<IdlType>),
+    BTreeMap(Box<IdlType>, Box<IdlType>),
+    HashSet(Box<IdlType>),
+    BTreeSet(Box<IdlType>),
 }

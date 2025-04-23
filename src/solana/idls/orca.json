@@ -1,0 +1,3700 @@
+{
+  "accounts": [
+    {
+      "name": "WhirlpoolsConfig",
+      "type": {
+        "fields": [
+          {
+            "name": "feeAuthority",
+            "type": "publicKey"
+          },
+          {
+            "name": "collectProtocolFeesAuthority",
+            "type": "publicKey"
+          },
+          {
+            "name": "rewardEmissionsSuperAuthority",
+            "type": "publicKey"
+          },
+          {
+            "name": "defaultProtocolFeeRate",
+            "type": "u16"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "WhirlpoolsConfigExtension",
+      "type": {
+        "fields": [
+          {
+            "name": "whirlpoolsConfig",
+            "type": "publicKey"
+          },
+          {
+            "name": "configExtensionAuthority",
+            "type": "publicKey"
+          },
+          {
+            "name": "tokenBadgeAuthority",
+            "type": "publicKey"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "FeeTier",
+      "type": {
+        "fields": [
+          {
+            "name": "whirlpoolsConfig",
+            "type": "publicKey"
+          },
+          {
+            "name": "tickSpacing",
+            "type": "u16"
+          },
+          {
+            "name": "defaultFeeRate",
+            "type": "u16"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "LockConfig",
+      "type": {
+        "fields": [
+          {
+            "name": "position",
+            "type": "publicKey"
+          },
+          {
+            "name": "positionOwner",
+            "type": "publicKey"
+          },
+          {
+            "name": "whirlpool",
+            "type": "publicKey"
+          },
+          {
+            "name": "lockedTimestamp",
+            "type": "u64"
+          },
+          {
+            "name": "lockType",
+            "type": {
+              "defined": "LockTypeLabel"
+            }
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "Position",
+      "type": {
+        "fields": [
+          {
+            "name": "whirlpool",
+            "type": "publicKey"
+          },
+          {
+            "name": "positionMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "liquidity",
+            "type": "u128"
+          },
+          {
+            "name": "tickLowerIndex",
+            "type": "i32"
+          },
+          {
+            "name": "tickUpperIndex",
+            "type": "i32"
+          },
+          {
+            "name": "feeGrowthCheckpointA",
+            "type": "u128"
+          },
+          {
+            "name": "feeOwedA",
+            "type": "u64"
+          },
+          {
+            "name": "feeGrowthCheckpointB",
+            "type": "u128"
+          },
+          {
+            "name": "feeOwedB",
+            "type": "u64"
+          },
+          {
+            "name": "rewardInfos",
+            "type": {
+              "array": [
+                {
+                  "defined": "PositionRewardInfo"
+                },
+                3
+              ]
+            }
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "PositionBundle",
+      "type": {
+        "fields": [
+          {
+            "name": "positionBundleMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "positionBitmap",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "TickArray",
+      "type": {
+        "fields": [
+          {
+            "name": "startTickIndex",
+            "type": "i32"
+          },
+          {
+            "name": "ticks",
+            "type": {
+              "array": [
+                {
+                  "defined": "Tick"
+                },
+                88
+              ]
+            }
+          },
+          {
+            "name": "whirlpool",
+            "type": "publicKey"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "TokenBadge",
+      "type": {
+        "fields": [
+          {
+            "name": "whirlpoolsConfig",
+            "type": "publicKey"
+          },
+          {
+            "name": "tokenMint",
+            "type": "publicKey"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "Whirlpool",
+      "type": {
+        "fields": [
+          {
+            "name": "whirlpoolsConfig",
+            "type": "publicKey"
+          },
+          {
+            "name": "whirlpoolBump",
+            "type": {
+              "array": [
+                "u8",
+                1
+              ]
+            }
+          },
+          {
+            "name": "tickSpacing",
+            "type": "u16"
+          },
+          {
+            "name": "tickSpacingSeed",
+            "type": {
+              "array": [
+                "u8",
+                2
+              ]
+            }
+          },
+          {
+            "name": "feeRate",
+            "type": "u16"
+          },
+          {
+            "name": "protocolFeeRate",
+            "type": "u16"
+          },
+          {
+            "name": "liquidity",
+            "type": "u128"
+          },
+          {
+            "name": "sqrtPrice",
+            "type": "u128"
+          },
+          {
+            "name": "tickCurrentIndex",
+            "type": "i32"
+          },
+          {
+            "name": "protocolFeeOwedA",
+            "type": "u64"
+          },
+          {
+            "name": "protocolFeeOwedB",
+            "type": "u64"
+          },
+          {
+            "name": "tokenMintA",
+            "type": "publicKey"
+          },
+          {
+            "name": "tokenVaultA",
+            "type": "publicKey"
+          },
+          {
+            "name": "feeGrowthGlobalA",
+            "type": "u128"
+          },
+          {
+            "name": "tokenMintB",
+            "type": "publicKey"
+          },
+          {
+            "name": "tokenVaultB",
+            "type": "publicKey"
+          },
+          {
+            "name": "feeGrowthGlobalB",
+            "type": "u128"
+          },
+          {
+            "name": "rewardLastUpdatedTimestamp",
+            "type": "u64"
+          },
+          {
+            "name": "rewardInfos",
+            "type": {
+              "array": [
+                {
+                  "defined": "WhirlpoolRewardInfo"
+                },
+                3
+              ]
+            }
+          }
+        ],
+        "kind": "struct"
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "msg": "Enum value could not be converted",
+      "name": "InvalidEnum"
+    },
+    {
+      "code": 6001,
+      "msg": "Invalid start tick index provided.",
+      "name": "InvalidStartTick"
+    },
+    {
+      "code": 6002,
+      "msg": "Tick-array already exists in this whirlpool",
+      "name": "TickArrayExistInPool"
+    },
+    {
+      "code": 6003,
+      "msg": "Attempt to search for a tick-array failed",
+      "name": "TickArrayIndexOutofBounds"
+    },
+    {
+      "code": 6004,
+      "msg": "Tick-spacing is not supported",
+      "name": "InvalidTickSpacing"
+    },
+    {
+      "code": 6005,
+      "msg": "Position is not empty It cannot be closed",
+      "name": "ClosePositionNotEmpty"
+    },
+    {
+      "code": 6006,
+      "msg": "Unable to divide by zero",
+      "name": "DivideByZero"
+    },
+    {
+      "code": 6007,
+      "msg": "Unable to cast number into BigInt",
+      "name": "NumberCastError"
+    },
+    {
+      "code": 6008,
+      "msg": "Unable to down cast number",
+      "name": "NumberDownCastError"
+    },
+    {
+      "code": 6009,
+      "msg": "Tick not found within tick array",
+      "name": "TickNotFound"
+    },
+    {
+      "code": 6010,
+      "msg": "Provided tick index is either out of bounds or uninitializable",
+      "name": "InvalidTickIndex"
+    },
+    {
+      "code": 6011,
+      "msg": "Provided sqrt price out of bounds",
+      "name": "SqrtPriceOutOfBounds"
+    },
+    {
+      "code": 6012,
+      "msg": "Liquidity amount must be greater than zero",
+      "name": "LiquidityZero"
+    },
+    {
+      "code": 6013,
+      "msg": "Liquidity amount must be less than i64::MAX",
+      "name": "LiquidityTooHigh"
+    },
+    {
+      "code": 6014,
+      "msg": "Liquidity overflow",
+      "name": "LiquidityOverflow"
+    },
+    {
+      "code": 6015,
+      "msg": "Liquidity underflow",
+      "name": "LiquidityUnderflow"
+    },
+    {
+      "code": 6016,
+      "msg": "Tick liquidity net underflowed or overflowed",
+      "name": "LiquidityNetError"
+    },
+    {
+      "code": 6017,
+      "msg": "Exceeded token max",
+      "name": "TokenMaxExceeded"
+    },
+    {
+      "code": 6018,
+      "msg": "Did not meet token min",
+      "name": "TokenMinSubceeded"
+    },
+    {
+      "code": 6019,
+      "msg": "Position token account has a missing or invalid delegate",
+      "name": "MissingOrInvalidDelegate"
+    },
+    {
+      "code": 6020,
+      "msg": "Position token amount must be 1",
+      "name": "InvalidPositionTokenAmount"
+    },
+    {
+      "code": 6021,
+      "msg": "Timestamp should be convertible from i64 to u64",
+      "name": "InvalidTimestampConversion"
+    },
+    {
+      "code": 6022,
+      "msg": "Timestamp should be greater than the last updated timestamp",
+      "name": "InvalidTimestamp"
+    },
+    {
+      "code": 6023,
+      "msg": "Invalid tick array sequence provided for instruction.",
+      "name": "InvalidTickArraySequence"
+    },
+    {
+      "code": 6024,
+      "msg": "Token Mint in wrong order",
+      "name": "InvalidTokenMintOrder"
+    },
+    {
+      "code": 6025,
+      "msg": "Reward not initialized",
+      "name": "RewardNotInitialized"
+    },
+    {
+      "code": 6026,
+      "msg": "Invalid reward index",
+      "name": "InvalidRewardIndex"
+    },
+    {
+      "code": 6027,
+      "msg": "Reward vault requires amount to support emissions for at least one day",
+      "name": "RewardVaultAmountInsufficient"
+    },
+    {
+      "code": 6028,
+      "msg": "Exceeded max fee rate",
+      "name": "FeeRateMaxExceeded"
+    },
+    {
+      "code": 6029,
+      "msg": "Exceeded max protocol fee rate",
+      "name": "ProtocolFeeRateMaxExceeded"
+    },
+    {
+      "code": 6030,
+      "msg": "Multiplication with shift right overflow",
+      "name": "MultiplicationShiftRightOverflow"
+    },
+    {
+      "code": 6031,
+      "msg": "Muldiv overflow",
+      "name": "MulDivOverflow"
+    },
+    {
+      "code": 6032,
+      "msg": "Invalid div_u256 input",
+      "name": "MulDivInvalidInput"
+    },
+    {
+      "code": 6033,
+      "msg": "Multiplication overflow",
+      "name": "MultiplicationOverflow"
+    },
+    {
+      "code": 6034,
+      "msg": "Provided SqrtPriceLimit not in the same direction as the swap.",
+      "name": "InvalidSqrtPriceLimitDirection"
+    },
+    {
+      "code": 6035,
+      "msg": "There are no tradable amount to swap.",
+      "name": "ZeroTradableAmount"
+    },
+    {
+      "code": 6036,
+      "msg": "Amount out below minimum threshold",
+      "name": "AmountOutBelowMinimum"
+    },
+    {
+      "code": 6037,
+      "msg": "Amount in above maximum threshold",
+      "name": "AmountInAboveMaximum"
+    },
+    {
+      "code": 6038,
+      "msg": "Invalid index for tick array sequence",
+      "name": "TickArraySequenceInvalidIndex"
+    },
+    {
+      "code": 6039,
+      "msg": "Amount calculated overflows",
+      "name": "AmountCalcOverflow"
+    },
+    {
+      "code": 6040,
+      "msg": "Amount remaining overflows",
+      "name": "AmountRemainingOverflow"
+    },
+    {
+      "code": 6041,
+      "msg": "Invalid intermediary mint",
+      "name": "InvalidIntermediaryMint"
+    },
+    {
+      "code": 6042,
+      "msg": "Duplicate two hop pool",
+      "name": "DuplicateTwoHopPool"
+    },
+    {
+      "code": 6043,
+      "msg": "Bundle index is out of bounds",
+      "name": "InvalidBundleIndex"
+    },
+    {
+      "code": 6044,
+      "msg": "Position has already been opened",
+      "name": "BundledPositionAlreadyOpened"
+    },
+    {
+      "code": 6045,
+      "msg": "Position has already been closed",
+      "name": "BundledPositionAlreadyClosed"
+    },
+    {
+      "code": 6046,
+      "msg": "Unable to delete PositionBundle with open positions",
+      "name": "PositionBundleNotDeletable"
+    },
+    {
+      "code": 6047,
+      "msg": "Token mint has unsupported attributes",
+      "name": "UnsupportedTokenMint"
+    },
+    {
+      "code": 6048,
+      "msg": "Invalid remaining accounts",
+      "name": "RemainingAccountsInvalidSlice"
+    },
+    {
+      "code": 6049,
+      "msg": "Insufficient remaining accounts",
+      "name": "RemainingAccountsInsufficient"
+    },
+    {
+      "code": 6050,
+      "msg": "Unable to call transfer hook without extra accounts",
+      "name": "NoExtraAccountsForTransferHook"
+    },
+    {
+      "code": 6051,
+      "msg": "Output and input amount mismatch",
+      "name": "IntermediateTokenAmountMismatch"
+    },
+    {
+      "code": 6052,
+      "msg": "Transfer fee calculation failed",
+      "name": "TransferFeeCalculationError"
+    },
+    {
+      "code": 6053,
+      "msg": "Same accounts type is provided more than once",
+      "name": "RemainingAccountsDuplicatedAccountsType"
+    },
+    {
+      "code": 6054,
+      "msg": "This whirlpool only supports full-range positions",
+      "name": "FullRangeOnlyPool"
+    },
+    {
+      "code": 6055,
+      "msg": "Too many supplemental tick arrays provided",
+      "name": "TooManySupplementalTickArrays"
+    },
+    {
+      "code": 6056,
+      "msg": "TickArray account for different whirlpool provided",
+      "name": "DifferentWhirlpoolTickArrayAccount"
+    },
+    {
+      "code": 6057,
+      "msg": "Trade resulted in partial fill",
+      "name": "PartialFillError"
+    },
+    {
+      "code": 6058,
+      "msg": "Position is not lockable",
+      "name": "PositionNotLockable"
+    },
+    {
+      "code": 6059,
+      "msg": "Operation not allowed on locked position",
+      "name": "OperationNotAllowedOnLockedPosition"
+    }
+  ],
+  "events": [
+    {
+      "fields": [
+        {
+          "index": false,
+          "name": "whirlpool",
+          "type": "publicKey"
+        },
+        {
+          "index": false,
+          "name": "position",
+          "type": "publicKey"
+        },
+        {
+          "index": false,
+          "name": "tickLowerIndex",
+          "type": "i32"
+        },
+        {
+          "index": false,
+          "name": "tickUpperIndex",
+          "type": "i32"
+        },
+        {
+          "index": false,
+          "name": "liquidity",
+          "type": "u128"
+        },
+        {
+          "index": false,
+          "name": "tokenAAmount",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "tokenBAmount",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "tokenATransferFee",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "tokenBTransferFee",
+          "type": "u64"
+        }
+      ],
+      "name": "LiquidityDecreased"
+    },
+    {
+      "fields": [
+        {
+          "index": false,
+          "name": "whirlpool",
+          "type": "publicKey"
+        },
+        {
+          "index": false,
+          "name": "position",
+          "type": "publicKey"
+        },
+        {
+          "index": false,
+          "name": "tickLowerIndex",
+          "type": "i32"
+        },
+        {
+          "index": false,
+          "name": "tickUpperIndex",
+          "type": "i32"
+        },
+        {
+          "index": false,
+          "name": "liquidity",
+          "type": "u128"
+        },
+        {
+          "index": false,
+          "name": "tokenAAmount",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "tokenBAmount",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "tokenATransferFee",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "tokenBTransferFee",
+          "type": "u64"
+        }
+      ],
+      "name": "LiquidityIncreased"
+    },
+    {
+      "fields": [
+        {
+          "index": false,
+          "name": "whirlpool",
+          "type": "publicKey"
+        },
+        {
+          "index": false,
+          "name": "whirlpoolsConfig",
+          "type": "publicKey"
+        },
+        {
+          "index": false,
+          "name": "tokenMintA",
+          "type": "publicKey"
+        },
+        {
+          "index": false,
+          "name": "tokenMintB",
+          "type": "publicKey"
+        },
+        {
+          "index": false,
+          "name": "tickSpacing",
+          "type": "u16"
+        },
+        {
+          "index": false,
+          "name": "tokenProgramA",
+          "type": "publicKey"
+        },
+        {
+          "index": false,
+          "name": "tokenProgramB",
+          "type": "publicKey"
+        },
+        {
+          "index": false,
+          "name": "decimalsA",
+          "type": "u8"
+        },
+        {
+          "index": false,
+          "name": "decimalsB",
+          "type": "u8"
+        },
+        {
+          "index": false,
+          "name": "initialSqrtPrice",
+          "type": "u128"
+        }
+      ],
+      "name": "PoolInitialized"
+    },
+    {
+      "fields": [
+        {
+          "index": false,
+          "name": "whirlpool",
+          "type": "publicKey"
+        },
+        {
+          "index": false,
+          "name": "aToB",
+          "type": "bool"
+        },
+        {
+          "index": false,
+          "name": "preSqrtPrice",
+          "type": "u128"
+        },
+        {
+          "index": false,
+          "name": "postSqrtPrice",
+          "type": "u128"
+        },
+        {
+          "index": false,
+          "name": "inputAmount",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "outputAmount",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "inputTransferFee",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "outputTransferFee",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "lpFee",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "protocolFee",
+          "type": "u64"
+        }
+      ],
+      "name": "Traded"
+    }
+  ],
+  "instructions": [
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "config"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "funder"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "systemProgram"
+        }
+      ],
+      "args": [
+        {
+          "name": "feeAuthority",
+          "type": "publicKey"
+        },
+        {
+          "name": "collectProtocolFeesAuthority",
+          "type": "publicKey"
+        },
+        {
+          "name": "rewardEmissionsSuperAuthority",
+          "type": "publicKey"
+        },
+        {
+          "name": "defaultProtocolFeeRate",
+          "type": "u16"
+        }
+      ],
+      "name": "initializeConfig"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpoolsConfig"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenMintA"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenMintB"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "funder"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "tokenVaultA"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "tokenVaultB"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "feeTier"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "systemProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "rent"
+        }
+      ],
+      "args": [
+        {
+          "name": "bumps",
+          "type": {
+            "defined": "WhirlpoolBumps"
+          }
+        },
+        {
+          "name": "tickSpacing",
+          "type": "u16"
+        },
+        {
+          "name": "initialSqrtPrice",
+          "type": "u128"
+        }
+      ],
+      "name": "initializePool"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "funder"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArray"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "systemProgram"
+        }
+      ],
+      "args": [
+        {
+          "name": "startTickIndex",
+          "type": "i32"
+        }
+      ],
+      "name": "initializeTickArray"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "config"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "feeTier"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "funder"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "feeAuthority"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "systemProgram"
+        }
+      ],
+      "args": [
+        {
+          "name": "tickSpacing",
+          "type": "u16"
+        },
+        {
+          "name": "defaultFeeRate",
+          "type": "u16"
+        }
+      ],
+      "name": "initializeFeeTier"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "rewardAuthority"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "funder"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "rewardMint"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "rewardVault"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "systemProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "rent"
+        }
+      ],
+      "args": [
+        {
+          "name": "rewardIndex",
+          "type": "u8"
+        }
+      ],
+      "name": "initializeReward"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "rewardAuthority"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "rewardVault"
+        }
+      ],
+      "args": [
+        {
+          "name": "rewardIndex",
+          "type": "u8"
+        },
+        {
+          "name": "emissionsPerSecondX64",
+          "type": "u128"
+        }
+      ],
+      "name": "setRewardEmissions"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "funder"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "owner"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "position"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "positionMint"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "positionTokenAccount"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "systemProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "rent"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "associatedTokenProgram"
+        }
+      ],
+      "args": [
+        {
+          "name": "bumps",
+          "type": {
+            "defined": "OpenPositionBumps"
+          }
+        },
+        {
+          "name": "tickLowerIndex",
+          "type": "i32"
+        },
+        {
+          "name": "tickUpperIndex",
+          "type": "i32"
+        }
+      ],
+      "name": "openPosition"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "funder"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "owner"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "position"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "positionMint"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "positionMetadataAccount"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "positionTokenAccount"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "systemProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "rent"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "associatedTokenProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "metadataProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "metadataUpdateAuth"
+        }
+      ],
+      "args": [
+        {
+          "name": "bumps",
+          "type": {
+            "defined": "OpenPositionWithMetadataBumps"
+          }
+        },
+        {
+          "name": "tickLowerIndex",
+          "type": "i32"
+        },
+        {
+          "name": "tickUpperIndex",
+          "type": "i32"
+        }
+      ],
+      "name": "openPositionWithMetadata"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "positionAuthority"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "position"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "positionTokenAccount"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenOwnerAccountA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenOwnerAccountB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArrayLower"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArrayUpper"
+        }
+      ],
+      "args": [
+        {
+          "name": "liquidityAmount",
+          "type": "u128"
+        },
+        {
+          "name": "tokenMaxA",
+          "type": "u64"
+        },
+        {
+          "name": "tokenMaxB",
+          "type": "u64"
+        }
+      ],
+      "name": "increaseLiquidity"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "positionAuthority"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "position"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "positionTokenAccount"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenOwnerAccountA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenOwnerAccountB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArrayLower"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArrayUpper"
+        }
+      ],
+      "args": [
+        {
+          "name": "liquidityAmount",
+          "type": "u128"
+        },
+        {
+          "name": "tokenMinA",
+          "type": "u64"
+        },
+        {
+          "name": "tokenMinB",
+          "type": "u64"
+        }
+      ],
+      "name": "decreaseLiquidity"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "position"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tickArrayLower"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tickArrayUpper"
+        }
+      ],
+      "args": [],
+      "name": "updateFeesAndRewards"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "positionAuthority"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "position"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "positionTokenAccount"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenOwnerAccountA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenOwnerAccountB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultB"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        }
+      ],
+      "args": [],
+      "name": "collectFees"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "positionAuthority"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "position"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "positionTokenAccount"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "rewardOwnerAccount"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "rewardVault"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        }
+      ],
+      "args": [
+        {
+          "name": "rewardIndex",
+          "type": "u8"
+        }
+      ],
+      "name": "collectReward"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpoolsConfig"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "collectProtocolFeesAuthority"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenDestinationA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenDestinationB"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        }
+      ],
+      "args": [],
+      "name": "collectProtocolFees"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "tokenAuthority"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenOwnerAccountA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenOwnerAccountB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArray0"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArray1"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArray2"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "oracle"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "otherAmountThreshold",
+          "type": "u64"
+        },
+        {
+          "name": "sqrtPriceLimit",
+          "type": "u128"
+        },
+        {
+          "name": "amountSpecifiedIsInput",
+          "type": "bool"
+        },
+        {
+          "name": "aToB",
+          "type": "bool"
+        }
+      ],
+      "name": "swap"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "positionAuthority"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "receiver"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "position"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "positionMint"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "positionTokenAccount"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        }
+      ],
+      "args": [],
+      "name": "closePosition"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpoolsConfig"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "feeTier"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "feeAuthority"
+        }
+      ],
+      "args": [
+        {
+          "name": "defaultFeeRate",
+          "type": "u16"
+        }
+      ],
+      "name": "setDefaultFeeRate"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpoolsConfig"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "feeAuthority"
+        }
+      ],
+      "args": [
+        {
+          "name": "defaultProtocolFeeRate",
+          "type": "u16"
+        }
+      ],
+      "name": "setDefaultProtocolFeeRate"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpoolsConfig"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "feeAuthority"
+        }
+      ],
+      "args": [
+        {
+          "name": "feeRate",
+          "type": "u16"
+        }
+      ],
+      "name": "setFeeRate"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpoolsConfig"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "feeAuthority"
+        }
+      ],
+      "args": [
+        {
+          "name": "protocolFeeRate",
+          "type": "u16"
+        }
+      ],
+      "name": "setProtocolFeeRate"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpoolsConfig"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "feeAuthority"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "newFeeAuthority"
+        }
+      ],
+      "args": [],
+      "name": "setFeeAuthority"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpoolsConfig"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "collectProtocolFeesAuthority"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "newCollectProtocolFeesAuthority"
+        }
+      ],
+      "args": [],
+      "name": "setCollectProtocolFeesAuthority"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "rewardAuthority"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "newRewardAuthority"
+        }
+      ],
+      "args": [
+        {
+          "name": "rewardIndex",
+          "type": "u8"
+        }
+      ],
+      "name": "setRewardAuthority"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpoolsConfig"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "rewardEmissionsSuperAuthority"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "newRewardAuthority"
+        }
+      ],
+      "args": [
+        {
+          "name": "rewardIndex",
+          "type": "u8"
+        }
+      ],
+      "name": "setRewardAuthorityBySuperAuthority"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpoolsConfig"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "rewardEmissionsSuperAuthority"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "newRewardEmissionsSuperAuthority"
+        }
+      ],
+      "args": [],
+      "name": "setRewardEmissionsSuperAuthority"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "tokenAuthority"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpoolOne"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpoolTwo"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenOwnerAccountOneA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultOneA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenOwnerAccountOneB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultOneB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenOwnerAccountTwoA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultTwoA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenOwnerAccountTwoB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultTwoB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArrayOne0"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArrayOne1"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArrayOne2"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArrayTwo0"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArrayTwo1"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArrayTwo2"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "oracleOne"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "oracleTwo"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "otherAmountThreshold",
+          "type": "u64"
+        },
+        {
+          "name": "amountSpecifiedIsInput",
+          "type": "bool"
+        },
+        {
+          "name": "aToBOne",
+          "type": "bool"
+        },
+        {
+          "name": "aToBTwo",
+          "type": "bool"
+        },
+        {
+          "name": "sqrtPriceLimitOne",
+          "type": "u128"
+        },
+        {
+          "name": "sqrtPriceLimitTwo",
+          "type": "u128"
+        }
+      ],
+      "name": "twoHopSwap"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "positionBundle"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "positionBundleMint"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "positionBundleTokenAccount"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "positionBundleOwner"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "funder"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "systemProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "rent"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "associatedTokenProgram"
+        }
+      ],
+      "args": [],
+      "name": "initializePositionBundle"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "positionBundle"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "positionBundleMint"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "positionBundleMetadata"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "positionBundleTokenAccount"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "positionBundleOwner"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "funder"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "metadataUpdateAuth"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "systemProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "rent"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "associatedTokenProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "metadataProgram"
+        }
+      ],
+      "args": [],
+      "name": "initializePositionBundleWithMetadata"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "positionBundle"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "positionBundleMint"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "positionBundleTokenAccount"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "positionBundleOwner"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "receiver"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        }
+      ],
+      "args": [],
+      "name": "deletePositionBundle"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "bundledPosition"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "positionBundle"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "positionBundleTokenAccount"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "positionBundleAuthority"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "funder"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "systemProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "rent"
+        }
+      ],
+      "args": [
+        {
+          "name": "bundleIndex",
+          "type": "u16"
+        },
+        {
+          "name": "tickLowerIndex",
+          "type": "i32"
+        },
+        {
+          "name": "tickUpperIndex",
+          "type": "i32"
+        }
+      ],
+      "name": "openBundledPosition"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "bundledPosition"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "positionBundle"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "positionBundleTokenAccount"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "positionBundleAuthority"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "receiver"
+        }
+      ],
+      "args": [
+        {
+          "name": "bundleIndex",
+          "type": "u16"
+        }
+      ],
+      "name": "closeBundledPosition"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "funder"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "owner"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "position"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "positionMint"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "positionTokenAccount"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "token2022Program"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "systemProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "associatedTokenProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "metadataUpdateAuth"
+        }
+      ],
+      "args": [
+        {
+          "name": "tickLowerIndex",
+          "type": "i32"
+        },
+        {
+          "name": "tickUpperIndex",
+          "type": "i32"
+        },
+        {
+          "name": "withTokenMetadataExtension",
+          "type": "bool"
+        }
+      ],
+      "name": "openPositionWithTokenExtensions"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "positionAuthority"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "receiver"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "position"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "positionMint"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "positionTokenAccount"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "token2022Program"
+        }
+      ],
+      "args": [],
+      "name": "closePositionWithTokenExtensions"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "funder"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "positionAuthority"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "position"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "positionMint"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "positionTokenAccount"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "lockConfig"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "token2022Program"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "systemProgram"
+        }
+      ],
+      "args": [
+        {
+          "name": "lockType",
+          "type": {
+            "defined": "LockType"
+          }
+        }
+      ],
+      "name": "lockPosition"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "positionAuthority"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "position"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "positionTokenAccount"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenMintA"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenMintB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenOwnerAccountA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenOwnerAccountB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultB"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgramA"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgramB"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "memoProgram"
+        }
+      ],
+      "args": [
+        {
+          "name": "remainingAccountsInfo",
+          "type": {
+            "option": {
+              "defined": "RemainingAccountsInfo"
+            }
+          }
+        }
+      ],
+      "name": "collectFeesV2"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpoolsConfig"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "collectProtocolFeesAuthority"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenMintA"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenMintB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenDestinationA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenDestinationB"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgramA"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgramB"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "memoProgram"
+        }
+      ],
+      "args": [
+        {
+          "name": "remainingAccountsInfo",
+          "type": {
+            "option": {
+              "defined": "RemainingAccountsInfo"
+            }
+          }
+        }
+      ],
+      "name": "collectProtocolFeesV2"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "positionAuthority"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "position"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "positionTokenAccount"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "rewardOwnerAccount"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "rewardMint"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "rewardVault"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "rewardTokenProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "memoProgram"
+        }
+      ],
+      "args": [
+        {
+          "name": "rewardIndex",
+          "type": "u8"
+        },
+        {
+          "name": "remainingAccountsInfo",
+          "type": {
+            "option": {
+              "defined": "RemainingAccountsInfo"
+            }
+          }
+        }
+      ],
+      "name": "collectRewardV2"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgramA"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgramB"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "memoProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "positionAuthority"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "position"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "positionTokenAccount"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenMintA"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenMintB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenOwnerAccountA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenOwnerAccountB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArrayLower"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArrayUpper"
+        }
+      ],
+      "args": [
+        {
+          "name": "liquidityAmount",
+          "type": "u128"
+        },
+        {
+          "name": "tokenMinA",
+          "type": "u64"
+        },
+        {
+          "name": "tokenMinB",
+          "type": "u64"
+        },
+        {
+          "name": "remainingAccountsInfo",
+          "type": {
+            "option": {
+              "defined": "RemainingAccountsInfo"
+            }
+          }
+        }
+      ],
+      "name": "decreaseLiquidityV2"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgramA"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgramB"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "memoProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "positionAuthority"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "position"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "positionTokenAccount"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenMintA"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenMintB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenOwnerAccountA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenOwnerAccountB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArrayLower"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArrayUpper"
+        }
+      ],
+      "args": [
+        {
+          "name": "liquidityAmount",
+          "type": "u128"
+        },
+        {
+          "name": "tokenMaxA",
+          "type": "u64"
+        },
+        {
+          "name": "tokenMaxB",
+          "type": "u64"
+        },
+        {
+          "name": "remainingAccountsInfo",
+          "type": {
+            "option": {
+              "defined": "RemainingAccountsInfo"
+            }
+          }
+        }
+      ],
+      "name": "increaseLiquidityV2"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpoolsConfig"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenMintA"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenMintB"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenBadgeA"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenBadgeB"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "funder"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "tokenVaultA"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "tokenVaultB"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "feeTier"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgramA"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgramB"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "systemProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "rent"
+        }
+      ],
+      "args": [
+        {
+          "name": "tickSpacing",
+          "type": "u16"
+        },
+        {
+          "name": "initialSqrtPrice",
+          "type": "u128"
+        }
+      ],
+      "name": "initializePoolV2"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "rewardAuthority"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "funder"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "rewardMint"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "rewardTokenBadge"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "rewardVault"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "rewardTokenProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "systemProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "rent"
+        }
+      ],
+      "args": [
+        {
+          "name": "rewardIndex",
+          "type": "u8"
+        }
+      ],
+      "name": "initializeRewardV2"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "rewardAuthority"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "rewardVault"
+        }
+      ],
+      "args": [
+        {
+          "name": "rewardIndex",
+          "type": "u8"
+        },
+        {
+          "name": "emissionsPerSecondX64",
+          "type": "u128"
+        }
+      ],
+      "name": "setRewardEmissionsV2"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgramA"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgramB"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "memoProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "tokenAuthority"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpool"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenMintA"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenMintB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenOwnerAccountA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenOwnerAccountB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArray0"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArray1"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArray2"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "oracle"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "otherAmountThreshold",
+          "type": "u64"
+        },
+        {
+          "name": "sqrtPriceLimit",
+          "type": "u128"
+        },
+        {
+          "name": "amountSpecifiedIsInput",
+          "type": "bool"
+        },
+        {
+          "name": "aToB",
+          "type": "bool"
+        },
+        {
+          "name": "remainingAccountsInfo",
+          "type": {
+            "option": {
+              "defined": "RemainingAccountsInfo"
+            }
+          }
+        }
+      ],
+      "name": "swapV2"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpoolOne"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpoolTwo"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenMintInput"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenMintIntermediate"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenMintOutput"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgramInput"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgramIntermediate"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgramOutput"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenOwnerAccountInput"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultOneInput"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultOneIntermediate"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultTwoIntermediate"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenVaultTwoOutput"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenOwnerAccountOutput"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "tokenAuthority"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArrayOne0"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArrayOne1"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArrayOne2"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArrayTwo0"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArrayTwo1"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tickArrayTwo2"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "oracleOne"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "oracleTwo"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "memoProgram"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "otherAmountThreshold",
+          "type": "u64"
+        },
+        {
+          "name": "amountSpecifiedIsInput",
+          "type": "bool"
+        },
+        {
+          "name": "aToBOne",
+          "type": "bool"
+        },
+        {
+          "name": "aToBTwo",
+          "type": "bool"
+        },
+        {
+          "name": "sqrtPriceLimitOne",
+          "type": "u128"
+        },
+        {
+          "name": "sqrtPriceLimitTwo",
+          "type": "u128"
+        },
+        {
+          "name": "remainingAccountsInfo",
+          "type": {
+            "option": {
+              "defined": "RemainingAccountsInfo"
+            }
+          }
+        }
+      ],
+      "name": "twoHopSwapV2"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "config"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "configExtension"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "funder"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "feeAuthority"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "systemProgram"
+        }
+      ],
+      "args": [],
+      "name": "initializeConfigExtension"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpoolsConfig"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpoolsConfigExtension"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "configExtensionAuthority"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "newConfigExtensionAuthority"
+        }
+      ],
+      "args": [],
+      "name": "setConfigExtensionAuthority"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpoolsConfig"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "whirlpoolsConfigExtension"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "configExtensionAuthority"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "newTokenBadgeAuthority"
+        }
+      ],
+      "args": [],
+      "name": "setTokenBadgeAuthority"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpoolsConfig"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpoolsConfigExtension"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "tokenBadgeAuthority"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenMint"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenBadge"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "funder"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "systemProgram"
+        }
+      ],
+      "args": [],
+      "name": "initializeTokenBadge"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpoolsConfig"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "whirlpoolsConfigExtension"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "tokenBadgeAuthority"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenMint"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenBadge"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "receiver"
+        }
+      ],
+      "args": [],
+      "name": "deleteTokenBadge"
+    }
+  ],
+  "name": "whirlpool",
+  "types": [
+    {
+      "name": "LockType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Permanent"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LockTypeLabel",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Permanent"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OpenPositionBumps",
+      "type": {
+        "fields": [
+          {
+            "name": "positionBump",
+            "type": "u8"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "OpenPositionWithMetadataBumps",
+      "type": {
+        "fields": [
+          {
+            "name": "positionBump",
+            "type": "u8"
+          },
+          {
+            "name": "metadataBump",
+            "type": "u8"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "PositionRewardInfo",
+      "type": {
+        "fields": [
+          {
+            "name": "growthInsideCheckpoint",
+            "type": "u128"
+          },
+          {
+            "name": "amountOwed",
+            "type": "u64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "Tick",
+      "type": {
+        "fields": [
+          {
+            "name": "initialized",
+            "type": "bool"
+          },
+          {
+            "name": "liquidityNet",
+            "type": "i128"
+          },
+          {
+            "name": "liquidityGross",
+            "type": "u128"
+          },
+          {
+            "name": "feeGrowthOutsideA",
+            "type": "u128"
+          },
+          {
+            "name": "feeGrowthOutsideB",
+            "type": "u128"
+          },
+          {
+            "name": "rewardGrowthsOutside",
+            "type": {
+              "array": [
+                "u128",
+                3
+              ]
+            }
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "WhirlpoolBumps",
+      "type": {
+        "fields": [
+          {
+            "name": "whirlpoolBump",
+            "type": "u8"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "WhirlpoolRewardInfo",
+      "type": {
+        "fields": [
+          {
+            "name": "mint",
+            "type": "publicKey"
+          },
+          {
+            "name": "vault",
+            "type": "publicKey"
+          },
+          {
+            "name": "authority",
+            "type": "publicKey"
+          },
+          {
+            "name": "emissionsPerSecondX64",
+            "type": "u128"
+          },
+          {
+            "name": "growthGlobalX64",
+            "type": "u128"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "AccountsType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "TransferHookA"
+          },
+          {
+            "name": "TransferHookB"
+          },
+          {
+            "name": "TransferHookReward"
+          },
+          {
+            "name": "TransferHookInput"
+          },
+          {
+            "name": "TransferHookIntermediate"
+          },
+          {
+            "name": "TransferHookOutput"
+          },
+          {
+            "name": "SupplementalTickArrays"
+          },
+          {
+            "name": "SupplementalTickArraysOne"
+          },
+          {
+            "name": "SupplementalTickArraysTwo"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RemainingAccountsInfo",
+      "type": {
+        "fields": [
+          {
+            "name": "slices",
+            "type": {
+              "vec": {
+                "defined": "RemainingAccountsSlice"
+              }
+            }
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "RemainingAccountsSlice",
+      "type": {
+        "fields": [
+          {
+            "name": "accountsType",
+            "type": {
+              "defined": "AccountsType"
+            }
+          },
+          {
+            "name": "length",
+            "type": "u8"
+          }
+        ],
+        "kind": "struct"
+      }
+    }
+  ],
+  "version": "0.3.4"
+}

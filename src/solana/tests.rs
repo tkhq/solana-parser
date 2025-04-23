@@ -779,7 +779,8 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
         assert_eq!(spl_transfer.fee, None);
 
         // Test Program called in the instruction
-        assert_eq!(tx_metadata.instructions[1].program_key, TOKEN_PROGRAM_KEY)
+        assert_eq!(tx_metadata.instructions[1].program_key, TOKEN_PROGRAM_KEY);
+        assert_eq!(tx_metadata.instructions[1].instruction_data_hex, TOKEN_PROGRAM_KEY)
     }
 
     #[test]

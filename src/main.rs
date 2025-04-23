@@ -1,17 +1,21 @@
-use std::env;
+use std::{env, fs};
 
 mod solana;
 
 use crate::solana::parser::parse_transaction;
+use crate::solana::idl_parser::decode_idl_data;
 use crate::solana::structs::SolanaParsedTransactionPayload;
+
+const IDL_DIRECTORY: &str = "src/solana/idls/";
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     
-    if args.len() != 4 {
-        println!("Usage: `cargo run parse <unsigned transaction> --message OR cargo run parse <unsinged transaction> --transaction`");
-        return;
-    }
+    // TEMPORARILY DISABLE CHECK
+    // if args.len() != 4 {
+    //     println!("Usage: `cargo run parse <unsigned transaction> --message OR cargo run parse <unsinged transaction> --transaction`");
+    //     return;
+    // }
 
     let command = &args[1];
         match command.as_str() {
@@ -32,6 +36,19 @@ fn main() {
                     _ => {
                         println!("Invalid or missing flag. Use either --message or --transaction.");
                     }
+                }
+            }
+            "parse-idl" => {
+                let idl_file = IDL_DIRECTORY.to_string() + &args[2];
+                let idl_json = fs::read_to_string(idl_file).unwrap();
+                decode_idl_data(&idl_json).unwrap();
+            }
+            "parse-all-idls" => {
+                for entry in fs::read_dir(IDL_DIRECTORY).unwrap() {
+                    let idl_file_name = IDL_DIRECTORY.to_string() + entry.unwrap().file_name().to_str().unwrap();
+                    println!("PARSING IDL: {}", idl_file_name.clone());
+                    let idl_json = fs::read_to_string(idl_file_name).unwrap();
+                    decode_idl_data(&idl_json).unwrap();
                 }
             }
             _ => println!("Unknown command: {}", command),
