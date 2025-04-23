@@ -1,0 +1,1619 @@
+{
+  "accounts": [
+    {
+      "docs": [
+        "Holds the current owner of the factory"
+      ],
+      "name": "AmmConfig",
+      "type": {
+        "fields": [
+          {
+            "docs": [
+              "Bump to identify PDA"
+            ],
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "docs": [
+              "Status to control if new pool can be create"
+            ],
+            "name": "disableCreatePool",
+            "type": "bool"
+          },
+          {
+            "docs": [
+              "Config index"
+            ],
+            "name": "index",
+            "type": "u16"
+          },
+          {
+            "docs": [
+              "The trade fee, denominated in hundredths of a bip (10^-6)"
+            ],
+            "name": "tradeFeeRate",
+            "type": "u64"
+          },
+          {
+            "docs": [
+              "The protocol fee"
+            ],
+            "name": "protocolFeeRate",
+            "type": "u64"
+          },
+          {
+            "docs": [
+              "The fund fee, denominated in hundredths of a bip (10^-6)"
+            ],
+            "name": "fundFeeRate",
+            "type": "u64"
+          },
+          {
+            "docs": [
+              "Fee for create a new pool"
+            ],
+            "name": "createPoolFee",
+            "type": "u64"
+          },
+          {
+            "docs": [
+              "Address of the protocol fee owner"
+            ],
+            "name": "protocolOwner",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "Address of the fund fee owner"
+            ],
+            "name": "fundOwner",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "padding"
+            ],
+            "name": "padding",
+            "type": {
+              "array": [
+                "u64",
+                16
+              ]
+            }
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "ObservationState",
+      "type": {
+        "fields": [
+          {
+            "docs": [
+              "Whether the ObservationState is initialized"
+            ],
+            "name": "initialized",
+            "type": "bool"
+          },
+          {
+            "docs": [
+              "the most-recently updated index of the observations array"
+            ],
+            "name": "observationIndex",
+            "type": "u16"
+          },
+          {
+            "name": "poolId",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "observation array"
+            ],
+            "name": "observations",
+            "type": {
+              "array": [
+                {
+                  "defined": "Observation"
+                },
+                100
+              ]
+            }
+          },
+          {
+            "docs": [
+              "padding for feature update"
+            ],
+            "name": "padding",
+            "type": {
+              "array": [
+                "u64",
+                4
+              ]
+            }
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "PoolState",
+      "type": {
+        "fields": [
+          {
+            "docs": [
+              "Which config the pool belongs"
+            ],
+            "name": "ammConfig",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "pool creator"
+            ],
+            "name": "poolCreator",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "Token A"
+            ],
+            "name": "token0Vault",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "Token B"
+            ],
+            "name": "token1Vault",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "Pool tokens are issued when A or B tokens are deposited.",
+              "Pool tokens can be withdrawn back to the original A or B token."
+            ],
+            "name": "lpMint",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "Mint information for token A"
+            ],
+            "name": "token0Mint",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "Mint information for token B"
+            ],
+            "name": "token1Mint",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "token_0 program"
+            ],
+            "name": "token0Program",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "token_1 program"
+            ],
+            "name": "token1Program",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "observation account to store oracle data"
+            ],
+            "name": "observationKey",
+            "type": "publicKey"
+          },
+          {
+            "name": "authBump",
+            "type": "u8"
+          },
+          {
+            "docs": [
+              "Bitwise representation of the state of the pool",
+              "bit0, 1: disable deposit(vaule is 1), 0: normal",
+              "bit1, 1: disable withdraw(vaule is 2), 0: normal",
+              "bit2, 1: disable swap(vaule is 4), 0: normal"
+            ],
+            "name": "status",
+            "type": "u8"
+          },
+          {
+            "name": "lpMintDecimals",
+            "type": "u8"
+          },
+          {
+            "docs": [
+              "mint0 and mint1 decimals"
+            ],
+            "name": "mint0Decimals",
+            "type": "u8"
+          },
+          {
+            "name": "mint1Decimals",
+            "type": "u8"
+          },
+          {
+            "docs": [
+              "lp mint supply"
+            ],
+            "name": "lpSupply",
+            "type": "u64"
+          },
+          {
+            "docs": [
+              "The amounts of token_0 and token_1 that are owed to the liquidity provider."
+            ],
+            "name": "protocolFeesToken0",
+            "type": "u64"
+          },
+          {
+            "name": "protocolFeesToken1",
+            "type": "u64"
+          },
+          {
+            "name": "fundFeesToken0",
+            "type": "u64"
+          },
+          {
+            "name": "fundFeesToken1",
+            "type": "u64"
+          },
+          {
+            "docs": [
+              "The timestamp allowed for swap in the pool."
+            ],
+            "name": "openTime",
+            "type": "u64"
+          },
+          {
+            "docs": [
+              "padding for future updates"
+            ],
+            "name": "padding",
+            "type": {
+              "array": [
+                "u64",
+                32
+              ]
+            }
+          }
+        ],
+        "kind": "struct"
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "msg": "Not approved",
+      "name": "NotApproved"
+    },
+    {
+      "code": 6001,
+      "msg": "Input account owner is not the program address",
+      "name": "InvalidOwner"
+    },
+    {
+      "code": 6002,
+      "msg": "Input token account empty",
+      "name": "EmptySupply"
+    },
+    {
+      "code": 6003,
+      "msg": "InvalidInput",
+      "name": "InvalidInput"
+    },
+    {
+      "code": 6004,
+      "msg": "Address of the provided lp token mint is incorrect",
+      "name": "IncorrectLpMint"
+    },
+    {
+      "code": 6005,
+      "msg": "Exceeds desired slippage limit",
+      "name": "ExceededSlippage"
+    },
+    {
+      "code": 6006,
+      "msg": "Given pool token amount results in zero trading tokens",
+      "name": "ZeroTradingTokens"
+    },
+    {
+      "code": 6007,
+      "msg": "Not support token_2022 mint extension",
+      "name": "NotSupportMint"
+    },
+    {
+      "code": 6008,
+      "msg": "invaild vault",
+      "name": "InvalidVault"
+    },
+    {
+      "code": 6009,
+      "msg": "Init lp amount is too less(Because 100 amount lp will be locked)",
+      "name": "InitLpAmountTooLess"
+    }
+  ],
+  "events": [
+    {
+      "fields": [
+        {
+          "index": true,
+          "name": "poolId",
+          "type": "publicKey"
+        },
+        {
+          "index": false,
+          "name": "lpAmountBefore",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "token0VaultBefore",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "token1VaultBefore",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "token0Amount",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "token1Amount",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "token0TransferFee",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "token1TransferFee",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "changeType",
+          "type": "u8"
+        }
+      ],
+      "name": "LpChangeEvent"
+    },
+    {
+      "fields": [
+        {
+          "index": true,
+          "name": "poolId",
+          "type": "publicKey"
+        },
+        {
+          "index": false,
+          "name": "inputVaultBefore",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "outputVaultBefore",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "inputAmount",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "outputAmount",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "inputTransferFee",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "outputTransferFee",
+          "type": "u64"
+        },
+        {
+          "index": false,
+          "name": "baseInput",
+          "type": "bool"
+        }
+      ],
+      "name": "SwapEvent"
+    }
+  ],
+  "instructions": [
+    {
+      "accounts": [
+        {
+          "docs": [
+            "Address to be set as protocol owner."
+          ],
+          "isMut": true,
+          "isSigner": true,
+          "name": "owner"
+        },
+        {
+          "docs": [
+            "Initialize config state account to store protocol owner address and fee rates."
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "ammConfig"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "systemProgram"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u16"
+        },
+        {
+          "name": "tradeFeeRate",
+          "type": "u64"
+        },
+        {
+          "name": "protocolFeeRate",
+          "type": "u64"
+        },
+        {
+          "name": "fundFeeRate",
+          "type": "u64"
+        },
+        {
+          "name": "createPoolFee",
+          "type": "u64"
+        }
+      ],
+      "docs": [
+        "# Arguments",
+        "",
+        "* `ctx`- The accounts needed by instruction.",
+        "* `index` - The index of amm config, there may be multiple config.",
+        "* `trade_fee_rate` - Trade fee rate, can be changed.",
+        "* `protocol_fee_rate` - The rate of protocol fee within tarde fee.",
+        "* `fund_fee_rate` - The rate of fund fee within tarde fee.",
+        ""
+      ],
+      "name": "createAmmConfig"
+    },
+    {
+      "accounts": [
+        {
+          "docs": [
+            "The amm config owner or admin"
+          ],
+          "isMut": false,
+          "isSigner": true,
+          "name": "owner"
+        },
+        {
+          "docs": [
+            "Amm config account to be changed"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "ammConfig"
+        }
+      ],
+      "args": [
+        {
+          "name": "param",
+          "type": "u8"
+        },
+        {
+          "name": "value",
+          "type": "u64"
+        }
+      ],
+      "docs": [
+        "Updates the owner of the amm config",
+        "Must be called by the current owner or admin",
+        "",
+        "# Arguments",
+        "",
+        "* `ctx`- The context of accounts",
+        "* `trade_fee_rate`- The new trade fee rate of amm config, be set when `param` is 0",
+        "* `protocol_fee_rate`- The new protocol fee rate of amm config, be set when `param` is 1",
+        "* `fund_fee_rate`- The new fund fee rate of amm config, be set when `param` is 2",
+        "* `new_owner`- The config's new owner, be set when `param` is 3",
+        "* `new_fund_owner`- The config's new fund owner, be set when `param` is 4",
+        "* `param`- The vaule can be 0 | 1 | 2 | 3 | 4, otherwise will report a error",
+        ""
+      ],
+      "name": "updateAmmConfig"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "authority"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "poolState"
+        }
+      ],
+      "args": [
+        {
+          "name": "status",
+          "type": "u8"
+        }
+      ],
+      "docs": [
+        "Update pool status for given vaule",
+        "",
+        "# Arguments",
+        "",
+        "* `ctx`- The context of accounts",
+        "* `status` - The vaule of status",
+        ""
+      ],
+      "name": "updatePoolStatus"
+    },
+    {
+      "accounts": [
+        {
+          "docs": [
+            "Only admin or owner can collect fee now"
+          ],
+          "isMut": false,
+          "isSigner": true,
+          "name": "owner"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "authority"
+        },
+        {
+          "docs": [
+            "Pool state stores accumulated protocol fee amount"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "poolState"
+        },
+        {
+          "docs": [
+            "Amm config account stores owner"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "ammConfig"
+        },
+        {
+          "docs": [
+            "The address that holds pool tokens for token_0"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "token0Vault"
+        },
+        {
+          "docs": [
+            "The address that holds pool tokens for token_1"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "token1Vault"
+        },
+        {
+          "docs": [
+            "The mint of token_0 vault"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "vault0Mint"
+        },
+        {
+          "docs": [
+            "The mint of token_1 vault"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "vault1Mint"
+        },
+        {
+          "docs": [
+            "The address that receives the collected token_0 protocol fees"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "recipientToken0Account"
+        },
+        {
+          "docs": [
+            "The address that receives the collected token_1 protocol fees"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "recipientToken1Account"
+        },
+        {
+          "docs": [
+            "The SPL program to perform token transfers"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        },
+        {
+          "docs": [
+            "The SPL program 2022 to perform token transfers"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram2022"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount0Requested",
+          "type": "u64"
+        },
+        {
+          "name": "amount1Requested",
+          "type": "u64"
+        }
+      ],
+      "docs": [
+        "Collect the protocol fee accrued to the pool",
+        "",
+        "# Arguments",
+        "",
+        "* `ctx` - The context of accounts",
+        "* `amount_0_requested` - The maximum amount of token_0 to send, can be 0 to collect fees in only token_1",
+        "* `amount_1_requested` - The maximum amount of token_1 to send, can be 0 to collect fees in only token_0",
+        ""
+      ],
+      "name": "collectProtocolFee"
+    },
+    {
+      "accounts": [
+        {
+          "docs": [
+            "Only admin or fund_owner can collect fee now"
+          ],
+          "isMut": false,
+          "isSigner": true,
+          "name": "owner"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "authority"
+        },
+        {
+          "docs": [
+            "Pool state stores accumulated protocol fee amount"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "poolState"
+        },
+        {
+          "docs": [
+            "Amm config account stores fund_owner"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "ammConfig"
+        },
+        {
+          "docs": [
+            "The address that holds pool tokens for token_0"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "token0Vault"
+        },
+        {
+          "docs": [
+            "The address that holds pool tokens for token_1"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "token1Vault"
+        },
+        {
+          "docs": [
+            "The mint of token_0 vault"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "vault0Mint"
+        },
+        {
+          "docs": [
+            "The mint of token_1 vault"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "vault1Mint"
+        },
+        {
+          "docs": [
+            "The address that receives the collected token_0 fund fees"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "recipientToken0Account"
+        },
+        {
+          "docs": [
+            "The address that receives the collected token_1 fund fees"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "recipientToken1Account"
+        },
+        {
+          "docs": [
+            "The SPL program to perform token transfers"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        },
+        {
+          "docs": [
+            "The SPL program 2022 to perform token transfers"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram2022"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount0Requested",
+          "type": "u64"
+        },
+        {
+          "name": "amount1Requested",
+          "type": "u64"
+        }
+      ],
+      "docs": [
+        "Collect the fund fee accrued to the pool",
+        "",
+        "# Arguments",
+        "",
+        "* `ctx` - The context of accounts",
+        "* `amount_0_requested` - The maximum amount of token_0 to send, can be 0 to collect fees in only token_1",
+        "* `amount_1_requested` - The maximum amount of token_1 to send, can be 0 to collect fees in only token_0",
+        ""
+      ],
+      "name": "collectFundFee"
+    },
+    {
+      "accounts": [
+        {
+          "docs": [
+            "Address paying to create the pool. Can be anyone"
+          ],
+          "isMut": true,
+          "isSigner": true,
+          "name": "creator"
+        },
+        {
+          "docs": [
+            "Which config the pool belongs to."
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "ammConfig"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "authority"
+        },
+        {
+          "docs": [
+            "Initialize an account to store the pool state"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "poolState"
+        },
+        {
+          "docs": [
+            "Token_0 mint, the key must smaller then token_1 mint."
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "token0Mint"
+        },
+        {
+          "docs": [
+            "Token_1 mint, the key must grater then token_0 mint."
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "token1Mint"
+        },
+        {
+          "docs": [
+            "pool lp mint"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "lpMint"
+        },
+        {
+          "docs": [
+            "payer token0 account"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "creatorToken0"
+        },
+        {
+          "docs": [
+            "creator token1 account"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "creatorToken1"
+        },
+        {
+          "docs": [
+            "creator lp token account"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "creatorLpToken"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "token0Vault"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "token1Vault"
+        },
+        {
+          "docs": [
+            "create pool fee account"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "createPoolFee"
+        },
+        {
+          "docs": [
+            "an account to store oracle observations"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "observationState"
+        },
+        {
+          "docs": [
+            "Program to create mint account and mint tokens"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        },
+        {
+          "docs": [
+            "Spl token program or token program 2022"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "token0Program"
+        },
+        {
+          "docs": [
+            "Spl token program or token program 2022"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "token1Program"
+        },
+        {
+          "docs": [
+            "Program to create an ATA for receiving position NFT"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "associatedTokenProgram"
+        },
+        {
+          "docs": [
+            "To create a new program account"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "systemProgram"
+        },
+        {
+          "docs": [
+            "Sysvar for program account"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "rent"
+        }
+      ],
+      "args": [
+        {
+          "name": "initAmount0",
+          "type": "u64"
+        },
+        {
+          "name": "initAmount1",
+          "type": "u64"
+        },
+        {
+          "name": "openTime",
+          "type": "u64"
+        }
+      ],
+      "docs": [
+        "Creates a pool for the given token pair and the initial price",
+        "",
+        "# Arguments",
+        "",
+        "* `ctx`- The context of accounts",
+        "* `init_amount_0` - the initial amount_0 to deposit",
+        "* `init_amount_1` - the initial amount_1 to deposit",
+        "* `open_time` - the timestamp allowed for swap",
+        ""
+      ],
+      "name": "initialize"
+    },
+    {
+      "accounts": [
+        {
+          "docs": [
+            "Pays to mint the position"
+          ],
+          "isMut": false,
+          "isSigner": true,
+          "name": "owner"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "authority"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "poolState"
+        },
+        {
+          "docs": [
+            "Owner lp tokan account"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "ownerLpToken"
+        },
+        {
+          "docs": [
+            "The payer's token account for token_0"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "token0Account"
+        },
+        {
+          "docs": [
+            "The payer's token account for token_1"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "token1Account"
+        },
+        {
+          "docs": [
+            "The address that holds pool tokens for token_0"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "token0Vault"
+        },
+        {
+          "docs": [
+            "The address that holds pool tokens for token_1"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "token1Vault"
+        },
+        {
+          "docs": [
+            "token Program"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        },
+        {
+          "docs": [
+            "Token program 2022"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram2022"
+        },
+        {
+          "docs": [
+            "The mint of token_0 vault"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "vault0Mint"
+        },
+        {
+          "docs": [
+            "The mint of token_1 vault"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "vault1Mint"
+        },
+        {
+          "docs": [
+            "Lp token mint"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "lpMint"
+        }
+      ],
+      "args": [
+        {
+          "name": "lpTokenAmount",
+          "type": "u64"
+        },
+        {
+          "name": "maximumToken0Amount",
+          "type": "u64"
+        },
+        {
+          "name": "maximumToken1Amount",
+          "type": "u64"
+        }
+      ],
+      "docs": [
+        "Creates a pool for the given token pair and the initial price",
+        "",
+        "# Arguments",
+        "",
+        "* `ctx`- The context of accounts",
+        "* `lp_token_amount` - Pool token amount to transfer. token_a and token_b amount are set by the current exchange rate and size of the pool",
+        "* `maximum_token_0_amount` -  Maximum token 0 amount to deposit, prevents excessive slippage",
+        "* `maximum_token_1_amount` - Maximum token 1 amount to deposit, prevents excessive slippage",
+        ""
+      ],
+      "name": "deposit"
+    },
+    {
+      "accounts": [
+        {
+          "docs": [
+            "Pays to mint the position"
+          ],
+          "isMut": false,
+          "isSigner": true,
+          "name": "owner"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "authority"
+        },
+        {
+          "docs": [
+            "Pool state account"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "poolState"
+        },
+        {
+          "docs": [
+            "Owner lp token account"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "ownerLpToken"
+        },
+        {
+          "docs": [
+            "The owner's token account for receive token_0"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "token0Account"
+        },
+        {
+          "docs": [
+            "The owner's token account for receive token_1"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "token1Account"
+        },
+        {
+          "docs": [
+            "The address that holds pool tokens for token_0"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "token0Vault"
+        },
+        {
+          "docs": [
+            "The address that holds pool tokens for token_1"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "token1Vault"
+        },
+        {
+          "docs": [
+            "token Program"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        },
+        {
+          "docs": [
+            "Token program 2022"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram2022"
+        },
+        {
+          "docs": [
+            "The mint of token_0 vault"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "vault0Mint"
+        },
+        {
+          "docs": [
+            "The mint of token_1 vault"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "vault1Mint"
+        },
+        {
+          "docs": [
+            "Pool lp token mint"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "lpMint"
+        },
+        {
+          "docs": [
+            "memo program"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "memoProgram"
+        }
+      ],
+      "args": [
+        {
+          "name": "lpTokenAmount",
+          "type": "u64"
+        },
+        {
+          "name": "minimumToken0Amount",
+          "type": "u64"
+        },
+        {
+          "name": "minimumToken1Amount",
+          "type": "u64"
+        }
+      ],
+      "docs": [
+        "Withdraw lp for token0 ande token1",
+        "",
+        "# Arguments",
+        "",
+        "* `ctx`- The context of accounts",
+        "* `lp_token_amount` - Amount of pool tokens to burn. User receives an output of token a and b based on the percentage of the pool tokens that are returned.",
+        "* `minimum_token_0_amount` -  Minimum amount of token 0 to receive, prevents excessive slippage",
+        "* `minimum_token_1_amount` -  Minimum amount of token 1 to receive, prevents excessive slippage",
+        ""
+      ],
+      "name": "withdraw"
+    },
+    {
+      "accounts": [
+        {
+          "docs": [
+            "The user performing the swap"
+          ],
+          "isMut": false,
+          "isSigner": true,
+          "name": "payer"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "authority"
+        },
+        {
+          "docs": [
+            "The factory state to read protocol fees"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "ammConfig"
+        },
+        {
+          "docs": [
+            "The program account of the pool in which the swap will be performed"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "poolState"
+        },
+        {
+          "docs": [
+            "The user token account for input token"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "inputTokenAccount"
+        },
+        {
+          "docs": [
+            "The user token account for output token"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "outputTokenAccount"
+        },
+        {
+          "docs": [
+            "The vault token account for input token"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "inputVault"
+        },
+        {
+          "docs": [
+            "The vault token account for output token"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "outputVault"
+        },
+        {
+          "docs": [
+            "SPL program for input token transfers"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "inputTokenProgram"
+        },
+        {
+          "docs": [
+            "SPL program for output token transfers"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "outputTokenProgram"
+        },
+        {
+          "docs": [
+            "The mint of input token"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "inputTokenMint"
+        },
+        {
+          "docs": [
+            "The mint of output token"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "outputTokenMint"
+        },
+        {
+          "docs": [
+            "The program account for the most recent oracle observation"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "observationState"
+        }
+      ],
+      "args": [
+        {
+          "name": "amountIn",
+          "type": "u64"
+        },
+        {
+          "name": "minimumAmountOut",
+          "type": "u64"
+        }
+      ],
+      "docs": [
+        "Swap the tokens in the pool base input amount",
+        "",
+        "# Arguments",
+        "",
+        "* `ctx`- The context of accounts",
+        "* `amount_in` -  input amount to transfer, output to DESTINATION is based on the exchange rate",
+        "* `minimum_amount_out` -  Minimum amount of output token, prevents excessive slippage",
+        ""
+      ],
+      "name": "swapBaseInput"
+    },
+    {
+      "accounts": [
+        {
+          "docs": [
+            "The user performing the swap"
+          ],
+          "isMut": false,
+          "isSigner": true,
+          "name": "payer"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "authority"
+        },
+        {
+          "docs": [
+            "The factory state to read protocol fees"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "ammConfig"
+        },
+        {
+          "docs": [
+            "The program account of the pool in which the swap will be performed"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "poolState"
+        },
+        {
+          "docs": [
+            "The user token account for input token"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "inputTokenAccount"
+        },
+        {
+          "docs": [
+            "The user token account for output token"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "outputTokenAccount"
+        },
+        {
+          "docs": [
+            "The vault token account for input token"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "inputVault"
+        },
+        {
+          "docs": [
+            "The vault token account for output token"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "outputVault"
+        },
+        {
+          "docs": [
+            "SPL program for input token transfers"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "inputTokenProgram"
+        },
+        {
+          "docs": [
+            "SPL program for output token transfers"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "outputTokenProgram"
+        },
+        {
+          "docs": [
+            "The mint of input token"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "inputTokenMint"
+        },
+        {
+          "docs": [
+            "The mint of output token"
+          ],
+          "isMut": false,
+          "isSigner": false,
+          "name": "outputTokenMint"
+        },
+        {
+          "docs": [
+            "The program account for the most recent oracle observation"
+          ],
+          "isMut": true,
+          "isSigner": false,
+          "name": "observationState"
+        }
+      ],
+      "args": [
+        {
+          "name": "maxAmountIn",
+          "type": "u64"
+        },
+        {
+          "name": "amountOut",
+          "type": "u64"
+        }
+      ],
+      "docs": [
+        "Swap the tokens in the pool base output amount",
+        "",
+        "# Arguments",
+        "",
+        "* `ctx`- The context of accounts",
+        "* `max_amount_in` -  input amount prevents excessive slippage",
+        "* `amount_out` -  amount of output token",
+        ""
+      ],
+      "name": "swapBaseOutput"
+    }
+  ],
+  "name": "raydium_cp_swap",
+  "types": [
+    {
+      "docs": [
+        "The element of observations in ObservationState"
+      ],
+      "name": "Observation",
+      "type": {
+        "fields": [
+          {
+            "docs": [
+              "The block timestamp of the observation"
+            ],
+            "name": "blockTimestamp",
+            "type": "u64"
+          },
+          {
+            "docs": [
+              "the cumulative of token0 price during the duration time, Q32.32, the remaining 64 bit for overflow"
+            ],
+            "name": "cumulativeToken0PriceX32",
+            "type": "u128"
+          },
+          {
+            "docs": [
+              "the cumulative of token1 price during the duration time, Q32.32, the remaining 64 bit for overflow"
+            ],
+            "name": "cumulativeToken1PriceX32",
+            "type": "u128"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "docs": [
+        "The direction of a trade, since curves can be specialized to treat each",
+        "token differently (by adding offsets or weights)"
+      ],
+      "name": "TradeDirection",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "ZeroForOne"
+          },
+          {
+            "name": "OneForZero"
+          }
+        ]
+      }
+    },
+    {
+      "docs": [
+        "The direction to round.  Used for pool token to trading token conversions to",
+        "avoid losing value on any deposit or withdrawal."
+      ],
+      "name": "RoundDirection",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Floor"
+          },
+          {
+            "name": "Ceiling"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolStatusBitIndex",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Deposit"
+          },
+          {
+            "name": "Withdraw"
+          },
+          {
+            "name": "Swap"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolStatusBitFlag",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Enable"
+          },
+          {
+            "name": "Disable"
+          }
+        ]
+      }
+    }
+  ],
+  "version": "0.1.0"
+}
