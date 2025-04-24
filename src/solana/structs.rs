@@ -121,7 +121,7 @@ pub struct IdlInstruction {
     pub name: String,
 
     /// Name of the instruction.
-    pub discriminator: Vec<u8>,
+    pub discriminator: Option<Vec<u8>>,
 
     /// Accounts that need to be supplied in order to process the instruction.
     pub accounts: Vec<IdlAccount>,
@@ -138,15 +138,15 @@ pub struct IdlAccount {
     pub name: String,
 
     /// Whether the account is writable.
-    #[serde(skip_serializing_if = "is_false", default)]
+    #[serde(alias = "writable", skip_serializing_if = "is_false", default)]
     pub is_mut: bool,
 
     /// Whether the account is signer.
-    #[serde(skip_serializing_if = "is_false", default)]
+    #[serde(alias = "signer", skip_serializing_if = "is_false", default)]
     pub is_signer: bool,
 
     /// Whether the account is optional or not.
-    #[serde(skip_serializing_if = "is_false", default)]
+    #[serde(alias = "optional", skip_serializing_if = "is_false", default)]
     pub is_optional: bool,
 }
 
@@ -203,6 +203,7 @@ pub struct IdlEnumVariant {
 pub enum IdlTypeDefinitionTy {
     Struct { fields: Vec<IdlField> },
     Enum { variants: Vec<IdlEnumVariant> },
+    Alias { value: IdlType },
 }
 
 impl IdlTypeDefinitionTy {
@@ -212,6 +213,10 @@ impl IdlTypeDefinitionTy {
 
     pub fn is_enum(&self) -> bool {
         matches!(self, IdlTypeDefinitionTy::Enum { .. })
+    }
+
+    pub fn is_alias(&self) -> bool {
+        matches!(self, IdlTypeDefinitionTy::Alias { .. })
     }
 
     pub fn fields(&self) -> Option<&Vec<IdlField>> {
@@ -227,6 +232,13 @@ impl IdlTypeDefinitionTy {
             _ => None,
         }
     }
+
+    pub fn value(&self) -> Option<&IdlType> {
+        match self {
+            IdlTypeDefinitionTy::Alias { value } => Some(value),
+            _ => None,
+        }
+    }
 }
 
 /// Types that can be included in accounts or user defined structs or instruction args of an IDL.
@@ -236,7 +248,7 @@ pub enum IdlType {
     Array(Box<IdlType>, usize),
     Bool,
     Bytes,
-    Defined(String),
+    Defined(Defined),
     F32,
     F64,
     I128,
@@ -248,6 +260,7 @@ pub enum IdlType {
     #[serde(rename = "coption")]
     COption(Box<IdlType>),
     Tuple(Vec<IdlType>),
+    #[serde(alias = "pubkey")]
     PublicKey,
     String,
     U128,
@@ -260,4 +273,11 @@ pub enum IdlType {
     BTreeMap(Box<IdlType>, Box<IdlType>),
     HashSet(Box<IdlType>),
     BTreeSet(Box<IdlType>),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum Defined {
+    String(String),
+    Object { name: String },
 }

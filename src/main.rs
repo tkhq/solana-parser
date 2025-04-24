@@ -2,9 +2,12 @@ use std::{env, fs};
 
 mod solana;
 
+use solana::structs::Idl;
+
 use crate::solana::parser::parse_transaction;
 use crate::solana::idl_parser::decode_idl_data;
 use crate::solana::structs::SolanaParsedTransactionPayload;
+use crate::solana::idl_db::IDL_DB;
 
 const IDL_DIRECTORY: &str = "src/solana/idls/";
 
@@ -38,18 +41,16 @@ fn main() {
                     }
                 }
             }
-            "parse-idl" => {
-                let idl_file = IDL_DIRECTORY.to_string() + &args[2];
-                let idl_json = fs::read_to_string(idl_file).unwrap();
-                decode_idl_data(&idl_json).unwrap();
-            }
             "parse-all-idls" => {
-                for entry in fs::read_dir(IDL_DIRECTORY).unwrap() {
-                    let idl_file_name = IDL_DIRECTORY.to_string() + entry.unwrap().file_name().to_str().unwrap();
+                let mut idls: Vec<Idl> = vec![];
+                for entry in IDL_DB {
+                    let (name, program_id, file_name) = entry;
+                    let idl_file_name = IDL_DIRECTORY.to_string() + file_name;
                     println!("PARSING IDL: {}", idl_file_name.clone());
                     let idl_json = fs::read_to_string(idl_file_name).unwrap();
-                    decode_idl_data(&idl_json).unwrap();
+                    idls.push(decode_idl_data(&idl_json, program_id, name).unwrap())
                 }
+                println!("{:#?}", idls)
             }
             _ => println!("Unknown command: {}", command),
         }
