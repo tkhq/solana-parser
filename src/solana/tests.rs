@@ -1,10 +1,11 @@
-use std::vec;
+use std::{fs, vec};
 
 use super::*;
 use parser::SOL_SYSTEM_PROGRAM_KEY;
 use structs::SolanaMetadata;
 use crate::solana::structs::{SolanaInstruction, SolanaAccount, SolanaAddressTableLookup, SolanaSingleAddressTableLookup, SolTransfer};
 use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PROGRAM_KEY};
+use crate::solana::idl_parser;
 
 
     #[test]
@@ -1087,4 +1088,16 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             Some("DTwnQq6QdYRibHtyzWM5MxqsBuDTiUD8aeaFcjesnoKt".to_string())
         );
         assert_eq!(spl_transfer_2.owner, "ADDRESS_TABLE_LOOKUP".to_string()); // Shows the flag ADDRESS_TABLE_LOOKUP because an ATLU is used for this address in the transaction
+    }
+
+    #[test]
+    fn test_idl_parsing() {
+        let data = hex::decode("e517cb977ae3ad2a020000001a6400013d0164010000bca065010000000000000000000000000000").unwrap();
+        let idl_json = fs::read_to_string("src/solana/idls/jupiter_other.json").unwrap();
+
+        let idl_program_name = "Jupiter";
+        let idl_program_id = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4";
+        let idl = idl_parser::decode_idl_data(&idl_json, &idl_program_id, &idl_program_name).unwrap();
+        let value = idl_parser::process_instruction_data(data, idl).unwrap();
+        println!("{:#?}", value)
     }

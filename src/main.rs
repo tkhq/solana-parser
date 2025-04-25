@@ -8,8 +8,8 @@ use crate::solana::parser::parse_transaction;
 use crate::solana::idl_parser::decode_idl_data;
 use crate::solana::structs::SolanaParsedTransactionPayload;
 use crate::solana::idl_db::IDL_DB;
+use crate::solana::parser::IDL_DIRECTORY;
 
-const IDL_DIRECTORY: &str = "src/solana/idls/";
 
 fn main() {
     let args: Vec<String> = env::args().collect();

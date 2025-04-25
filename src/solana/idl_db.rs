@@ -1,4 +1,4 @@
-pub const IDL_DB: [(&str, &str, &str); 12] = [
+pub const IDL_DB: [(&str, &str, &str); 13] = [
     ("Ape Pro", "JSW99DKmxNyREQM14SQLDykeBvEUG63TeohrvmofEiw", "ape_pro.json"),
     ("Metaplex Candy Machine", "cndyAnrLdpbGgjKr3WbH5LQ1b7vKkB5o4n1zF8kzQ9bA", "cndy.json"),
     ("Drift Protocol V2", "dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH", "drift.json"),
@@ -11,4 +11,5 @@ pub const IDL_DB: [(&str, &str, &str); 12] = [
     ("Orca Whirlpool", "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc", "orca.json"),
     ("Raydium", "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C", "raydium.json"),
     ("Stabble", "swapNyd8XiQwJ6ianp9snpu4brUqFxadzvHebnAXjJZ", "stabble.json"),
+    ("Jupiter Other", "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4", "jupiter_other.json"),
 ];
