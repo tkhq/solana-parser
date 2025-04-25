@@ -98,6 +98,14 @@ impl fmt::Display for AccountAddress {
     }
 }
 
+// Contains a reference to "uploaded" IDL's 
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct IdlRecord {
+    pub program_id: String,
+    pub program_name: String,
+    pub file_path: String,
+}
+
 /// IDL that is compatible with what anchor and shank extract from a solana program.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Idl {
@@ -206,41 +214,6 @@ pub enum IdlTypeDefinitionTy {
     Alias { value: IdlType },
 }
 
-impl IdlTypeDefinitionTy {
-    pub fn is_struct(&self) -> bool {
-        matches!(self, IdlTypeDefinitionTy::Struct { .. })
-    }
-
-    pub fn is_enum(&self) -> bool {
-        matches!(self, IdlTypeDefinitionTy::Enum { .. })
-    }
-
-    pub fn is_alias(&self) -> bool {
-        matches!(self, IdlTypeDefinitionTy::Alias { .. })
-    }
-
-    pub fn fields(&self) -> Option<&Vec<IdlField>> {
-        match self {
-            IdlTypeDefinitionTy::Struct { fields } => Some(fields),
-            _ => None,
-        }
-    }
-
-    pub fn variants(&self) -> Option<&Vec<IdlEnumVariant>> {
-        match self {
-            IdlTypeDefinitionTy::Enum { variants } => Some(variants),
-            _ => None,
-        }
-    }
-
-    pub fn value(&self) -> Option<&IdlType> {
-        match self {
-            IdlTypeDefinitionTy::Alias { value } => Some(value),
-            _ => None,
-        }
-    }
-}
-
 /// Types that can be included in accounts or user defined structs or instruction args of an IDL.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -281,3 +254,11 @@ pub enum Defined {
     String(String),
     Object { name: String },
 }
+
+// First 4 bytes -- discriminator 
+// Arg 1 -- F32
+// Arg 2 -- String 
+// Arg 3 - I128
+// Arg 2 -- String
+// Arg 3 - I128
+

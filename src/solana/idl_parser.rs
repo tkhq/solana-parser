@@ -1,43 +1,38 @@
 use serde_json::{from_str, from_value, Value, Map};
 use std::error::Error;
-use crate::solana::structs::{Idl, IdlAccount, IdlTypeDefinition, IdlInstruction, IdlType, IdlField, IdlTypeDefinitionTy};
+use crate::solana::structs::{Idl, IdlTypeDefinition, IdlInstruction, IdlRecord, IdlType, Defined, EnumFields, IdlTypeDefinitionTy};
+use crate::solana::idl_db::IDL_DB;
 use sha2::{Sha256, Digest};
+use std::collections::HashMap;
+use byteorder::{LittleEndian, ReadBytesExt};
+use std::io::{Cursor, Read};
+use bs58;
+
+use solana_sdk::instruction::CompiledInstruction;
 
 // Top Level Required Fields 
 const IDL_INSTRUCTIONS_KEY: &str = "instructions";
 const IDL_TYPES_KEY: &str = "types";
 
-// // Instructions Required Fields
-// const IDL_INST_NAME_KEY: &str = "name";
-// const IDL_INST_ACCTS_KEY: &str = "accounts";
-// const IDL_INST_ARGS_KEY: &str = "args";
-
-// // Instructions NON-Required Fields
-// const IDL_INST_DISC_KEY: &str = "discriminator";
 const IDL_INST_DEFAULT_DISC_LEN: usize = 8;
 
-// // Accounts Fields
-// const IDL_ACCT_NAME_KEY: &str = "name";
-// static IDL_ACCOUNT_MUTABLE_KEYS: &[&str] = &["isMut", "writable"];
-// static IDL_ACCOUNT_SIGNER_KEYS: &[&str] = &["isSigner", "signer"];
-// static IDL_ACCOUNT_OPTIONAL_KEYS: &[&str] = &["isOptional", "optional"];
-
-// // Args Fields 
-// const IDL_ARG_NAME_KEY: &str = "name";
-// const IDL_ARG_TYPE_KEY: &str = "type";
-
-// // Types fields 
-// const IDL_TYPES_NAME_KEY: &str = "name";
-// const IDL_TYPES_TYPE_KEY: &str = "type";
-
-// // Defined TypeFields
-// const IDL_DEF_TYPES_KIND_KEY: &str = "kind";
-// const IDL_DEF_TYPES_ENUM_KIND: &str = "enum";
-// const IDL_DEF_TYPES_ALIAS_KIND: &str = "alias";
-// const IDL_DEF_TYPES_STRUCT_KIND: &str = "struct";
-
-// const IDL_INNER_TYPES_ENUM_VAR: &str = "variants";
-
+pub fn construct_custom_idl_records_map() -> Result<HashMap<String, IdlRecord>, Box<dyn Error>> {
+    let mut idl_map = HashMap::new();
+    
+    for entry in IDL_DB {
+        let program_id = entry.1.to_string(); 
+        let idl_record = IdlRecord {
+            program_name: entry.0.to_string(),
+            program_id: entry.1.to_string(),
+            file_path: entry.2.to_string(),
+        };
+        
+        // Use insert() instead of indexing syntax
+        idl_map.insert(program_id, idl_record);
+    }
+    
+    Ok(idl_map)
+}
 
 pub fn decode_idl_data (idl_json: &str, program_id: &str, program_name: &str) -> Result<Idl, Box<dyn Error>> {
     // Parse IDL from JSON string into Maps
@@ -89,231 +84,233 @@ fn compute_discriminator(instruction_name: &str) -> Result<Vec<u8>, Box<dyn Erro
 // TODO TESTS 
 // TEST correct parsing of isMut/writable, isSigner/signer, isOptional/optional
 // TEST discriminators
+// Add comments 
 
-
-
-
-
-// fn validate_idl_string(idl_map: &Map<String, Value>, key: &str) -> Result<String, Box<dyn Error>> {
-//     let value = idl_map.get(key).ok_or_else(|| format!("Key '{}' not found in expected place IDL", key))?;
-//     let checked_value = value.as_str()
-//         .ok_or_else(|| format!("Value for Key '{}' must be a JSON string", key))?;
-//     Ok(checked_value.to_string())
-// }
-
-// fn validate_idl_obj(idl_map: &Map<String, Value>, key: &str) -> Result<Map<String, Value>, Box<dyn Error>> {
-//     let value = idl_map.get(key).ok_or_else(|| format!("Key '{}' not found in expected place IDL", key))?;
-//     let checked_value = value.as_object()
-//         .ok_or_else(|| format!("Value for Key '{}' must be a JSON object", key))?;
-//     Ok(checked_value.to_owned())
-// }
-
-// fn check_for_idl_bools_or_false(idl_map: &Map<String, Value>, keys: &[&str]) -> bool {
-//     keys.iter()
-//     .filter_map(|&key| idl_map.get(key))
-//     .find_map(|val| match val {
-//         Value::Bool(b) => Some(*b),
-//         _ => None,
-//     })
-//     .unwrap_or(false)
-// }
-
-// fn validate_or_calculate_discriminator_bytes(idl_map: &Map<String, Value>, name: String) -> Result<Vec<u8>, Box<dyn Error>> {
-//     let explicit_discriminator = idl_map.get(IDL_INST_DISC_KEY);
-//     match explicit_discriminator {
-//         Some(value) => {
-//             // Validate array format
-//             let arr = value.as_array().ok_or("Discriminator must be an array of bytes")?;
-            
-//             // Convert each value to u8 with range checking
-//             let mut bytes = Vec::with_capacity(arr.len());
-//             for (idx, v) in arr.iter().enumerate() {
-//                 let n = v.as_u64()
-//                     .ok_or_else(|| format!("Invalid byte at position {}: not a number", idx))?;
-        
-//                 if n > 255 {
-//                     return Err(format!("Value {} at position {} exceeds byte range", n, idx).into());
-//                 }
-
-//                 bytes.push(n as u8);
-//             }
-            
-//             Ok(bytes)
-//         }
-//         None => compute_discriminator(&name)
-//     }
-// }
-
-// fn parse_single_defined_type(idl_type: Value) -> Result<IdlTypeDefinition, Box<dyn Error>> {
-//     let type_map = idl_type.as_object().ok_or_else(|| "Each Type within the IDL must be a JSON object")?;
-
-//     // Parse type name
-//     let name = validate_idl_string(type_map, IDL_TYPES_NAME_KEY)?;
-
-//     // Parse type kind
-//     let kind = validate_idl_string(&type_map, IDL_TYPES_NAME_KEY)?;
-
-//     // // Parse defined type inner object
-//     // let parse_single_defined_type(type_map, kind)?;
+pub fn process_instruction_data(
+    instruction_data: Vec<u8>,
+    idl: Idl,
+) -> Option<serde_json::Value> {
+    // TODO ADD SAFETY CHECK
+    // 2. Extract discriminator 
+    let discriminator = &instruction_data[..8];
     
+    // 3. Find matching instruction
+    let instruction = idl.instructions.iter().find(|i| {
+        i.discriminator.as_ref().map(|d| &d[..]) == Some(discriminator)
+    })?;
 
+    // 4. Parse data
+    parse_data(&instruction_data, instruction, &idl).ok()
+}
 
+fn parse_data(
+    data: &[u8],
+    idl_instruction: &IdlInstruction,
+    idl: &Idl,
+) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+    let mut cursor = Cursor::new(data);
+    let resolver = TypeResolver::new(idl);
+    
+    // Skip discriminator (first 8 bytes)
+    cursor.set_position(8);
+    
+    let mut args = serde_json::Map::new();
+    for arg in &idl_instruction.args {
+        args.insert(arg.name.clone(), parse_type(&mut cursor, &arg.ty, &resolver)?);
+    }
+    
+    Ok(serde_json::Value::Object(args))
+}
 
+fn parse_type<R: Read>(
+    reader: &mut R,
+    ty: &IdlType,
+    resolver: &TypeResolver,
+) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+    match ty {
+        // Primitive types
+        IdlType::Bool => Ok(reader.read_u8()?.into()),
+        IdlType::I8 => Ok(reader.read_i8()?.into()),
+        IdlType::I16 => Ok(reader.read_i16::<LittleEndian>()?.into()),
+        IdlType::I32 => Ok(reader.read_i32::<LittleEndian>()?.into()),
+        IdlType::I64 => Ok(reader.read_i64::<LittleEndian>()?.into()),
+        IdlType::I128 => {
+            let mut buf = [0u8; 16];
+            reader.read_exact(&mut buf)?;
+            Ok(i128::from_le_bytes(buf).to_string().into())
+        }
+        IdlType::U8 => Ok(reader.read_u8()?.into()),
+        IdlType::U16 => Ok(reader.read_u16::<LittleEndian>()?.into()),
+        IdlType::U32 => Ok(reader.read_u32::<LittleEndian>()?.into()),
+        IdlType::U64 => Ok(reader.read_u64::<LittleEndian>()?.into()),
+        IdlType::U128 => {
+            let mut buf = [0u8; 16];
+            reader.read_exact(&mut buf)?;
+            Ok(u128::from_le_bytes(buf).to_string().into())
+        }
+        IdlType::F32 => Ok(reader.read_f32::<LittleEndian>()?.into()),
+        IdlType::F64 => Ok(reader.read_f64::<LittleEndian>()?.into()),
+        
+        // Composite types
+        IdlType::PublicKey => {
+            let mut buf = [0u8; 32];
+            reader.read_exact(&mut buf)?;
+            Ok(bs58::encode(buf).into_string().into())
+        },
+        IdlType::String => {
+            let len = reader.read_u32::<LittleEndian>()? as usize;
+            let mut buf = vec![0u8; len];
+            reader.read_exact(&mut buf)?;
+            Ok(String::from_utf8(buf)?.into())
+        },
+        IdlType::Bytes => {
+            let len = reader.read_u32::<LittleEndian>()? as usize;
+            let mut buf = vec![0u8; len];
+            reader.read_exact(&mut buf)?;
+            Ok(serde_json::Value::String(hex::encode(&buf)))
+        },
+        
+        // Container types
+        IdlType::Array(ty, size) => {
+            let mut arr = Vec::with_capacity(*size);
+            for _ in 0..*size {
+                arr.push(parse_type(reader, ty, resolver)?);
+            }
+            Ok(arr.into())
+        },
+        IdlType::Vec(ty) => {
+            let len = reader.read_u32::<LittleEndian>()?;
+            let mut vec = Vec::with_capacity(len as usize);
+            for _ in 0..len {
+                vec.push(parse_type(reader, ty, resolver)?);
+            }
+            Ok(vec.into())
+        },
+        IdlType::Option(ty) => {
+            let flag = reader.read_u8()?;
+            Ok(if flag == 0 {
+                serde_json::Value::Null
+            } else {
+                parse_type(reader, ty, resolver)?
+            })
+        },
+        IdlType::COption(ty) => {
+            let flag = reader.read_u32::<LittleEndian>()?;
+            Ok(if flag == 0 {
+                serde_json::Value::Null
+            } else {
+                parse_type(reader, ty, resolver)?
+            })
+        },
+        IdlType::Tuple(tys) => {
+            let mut values = Vec::with_capacity(tys.len());
+            for ty in tys {
+                values.push(parse_type(reader, ty, resolver)?);
+            }
+            Ok(values.into())
+        },
+        
+        // Collection types
+        IdlType::HashMap(k_ty, v_ty) | IdlType::BTreeMap(k_ty, v_ty) => {
+            let len = reader.read_u32::<LittleEndian>()?;
+            let mut entries = Vec::with_capacity(len as usize);
+            for _ in 0..len {
+                entries.push(serde_json::json!({
+                    "key": parse_type(reader, k_ty, resolver)?,
+                    "value": parse_type(reader, v_ty, resolver)?
+                }));
+            }
+            Ok(entries.into())
+        },
+        IdlType::HashSet(ty) | IdlType::BTreeSet(ty) => {
+            let len = reader.read_u32::<LittleEndian>()?;
+            let mut items = Vec::with_capacity(len as usize);
+            for _ in 0..len {
+                items.push(parse_type(reader, ty, resolver)?);
+            }
+            Ok(items.into())
+        },
+        // Custom types
+        IdlType::Defined(defined) => {
+            let type_name = match defined {
+                Defined::String(s) => s,
+                Defined::Object { name } => name,
+            };
+            parse_defined_type(reader, type_name, resolver)
+        },
+    }
+}
 
-//     return Err("Parsing all types succeeded (so farrrr)".into())
-// }
+fn parse_defined_type<R: Read>(
+    reader: &mut R,
+    type_name: &str,
+    resolver: &TypeResolver,
+) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+    let ty_def = resolver.resolve(type_name)
+        .ok_or_else(|| format!("Type {} not found in IDL", type_name))?;
 
-// // fn parse_single_defined_type(type_map: &Map<String, Value>, kind: String) -> Result<IdlTypeDefinitionTy, Box<dyn Error>> {
-// //     // validate the inner type key
-// //     let inner_type_obj = validate_idl_obj(type_map, IDL_TYPES_TYPE_KEY)?;
-// //     let name = validate_idl_string(type_map, IDL_TYPES_NAME_KEY)?;
-// //     match kind.as_str() {
-// //         IDL_DEF_TYPES_ENUM_KIND => {
-// //             let variants = validate_idl_array(&inner_type_obj, )
-// //         }
-// //         IDL_DEF_TYPES_STRUCT_KIND => Err("fake".into()),
-// //         IDL_DEF_TYPES_ALIAS_KIND => Err("fake".into()),
-// //         _ => Err("fake".into()),
-// //     }
-// // }
+    match &ty_def.ty {
+        IdlTypeDefinitionTy::Struct { fields } => {
+            let mut map = serde_json::Map::new();
+            for field in fields {
+                map.insert(
+                    field.name.clone(),
+                    parse_type(reader, &field.ty, resolver)?
+                );
+            }
+            Ok(map.into())
+        }
+        IdlTypeDefinitionTy::Enum { variants } => {
+            let variant_index = reader.read_u8()?;
+            let variant = variants.get(variant_index as usize)
+                .ok_or("Invalid variant index")?;
+            
+            let value = match &variant.fields {
+                Some(EnumFields::Tuple(types)) => {
+                    let mut vec = Vec::new();
+                    for ty in types {
+                        vec.push(parse_type(reader, ty, resolver)?);
+                    }
+                    serde_json::Value::Array(vec)
+                }
+                Some(EnumFields::Named(fields)) => {
+                    let mut map = serde_json::Map::new();
+                    for field in fields {
+                        map.insert(
+                            field.name.clone(),
+                            parse_type(reader, &field.ty, resolver)?
+                        );
+                    }
+                    serde_json::Value::Object(map)
+                }
+                None => serde_json::Value::Null,
+            };
+            
+            Ok(serde_json::json!({
+                variant.name.clone(): value
+            }))
+        }
+        IdlTypeDefinitionTy::Alias { value } => {
+            parse_type(reader, value, resolver)
+        }
+    }
+}
 
+struct TypeResolver<'a> {
+    idl: &'a Idl,
+    type_cache: HashMap<String, &'a IdlTypeDefinition>,
+}
 
-// fn parse_single_instruction(instruction: Value) -> Result<IdlInstruction, Box<dyn Error>> {
-//     let inst_map = instruction.as_object().ok_or_else(|| "Each Instruction within the IDL must be a JSON object")?;
+impl<'a> TypeResolver<'a> {
+    fn new(idl: &'a Idl) -> Self {
+        let mut type_cache = HashMap::new();
+        for ty in &idl.types {
+            type_cache.insert(ty.name.clone(), ty);
+        }
+        Self { idl, type_cache }
+    }
 
-//     // Parse instruction name
-//     let name = validate_idl_string(inst_map, IDL_INST_NAME_KEY)?;
-
-//     // Parse instruction discriminator
-//     let discriminator = validate_or_calculate_discriminator_bytes(&inst_map, name.clone())?;
-
-//     // Parse all instruction accounts
-//     let accounts = validate_idl_array(inst_map, IDL_INST_ACCTS_KEY)?;
-//     let parsed_accounts: Vec<IdlAccount> = accounts
-//     .iter()
-//     .map(|account_value| parse_single_account(account_value.clone()))
-//     .collect::<Result<Vec<_>, _>>()?;
-
-//     // Parse all instruction args
-//     let args = validate_idl_array(inst_map, IDL_INST_ARGS_KEY)?;
-//     let parsed_args: Vec<IdlField> = args
-//     .iter()
-//     .map(|a| parse_single_arg(a.clone()))
-//     .collect::<Result<Vec<_>, _>>()?;
-
-//     Ok(IdlInstruction {
-//         name: name.clone(),
-//         discriminator,
-//         accounts: parsed_accounts,
-//         args: parsed_args,
-//     })
-// }
-
-// fn parse_single_account(account: Value) -> Result<IdlAccount, Box<dyn Error>> {
-//     let acct_map = account.as_object().ok_or_else(|| "Each Instruction within the IDL must be a JSON object")?;
-//     let name = validate_idl_string(acct_map, IDL_ACCT_NAME_KEY)?;
-//     let is_mut = check_for_idl_bools_or_false(acct_map, IDL_ACCOUNT_MUTABLE_KEYS);
-//     let is_signer = check_for_idl_bools_or_false(acct_map, IDL_ACCOUNT_SIGNER_KEYS);
-//     let is_optional = check_for_idl_bools_or_false(acct_map, IDL_ACCOUNT_OPTIONAL_KEYS);
-//     Ok(IdlAccount{
-//         name,
-//         is_mut,
-//         is_signer,
-//         is_optional
-//     })
-// }
-
-// fn parse_single_arg(arg: Value) -> Result<IdlField, Box<dyn Error>> {
-//     let acct_map = arg.as_object().ok_or_else(|| "Each Arg within the IDL must be a JSON object")?;
-//     let name = validate_idl_string(acct_map, IDL_ARG_NAME_KEY)?;
-//     let acct_type = validate_and_parse_idl_type(acct_map)?;
-//     Ok(IdlField {
-//         name,
-//         ty: acct_type
-//     })
-// }
-
-// fn validate_and_parse_idl_type(idl_map: &Map<String, Value>) -> Result<IdlType, Box<dyn std::error::Error>> {
-//     let value = idl_map.get(IDL_ARG_TYPE_KEY).ok_or_else(|| format!("Key '{}' not found in IDL ", IDL_ARG_TYPE_KEY))?;
-//     parse_idl_type(value)
-// }
-
-// // fn parse_idl_type(value: &Value) -> Result<IdlType, Box<dyn Error>> {
-// //     match value {
-// //         Value::String(s) => match s.as_str() {
-// //             "bool" => Ok(IdlType::Bool),
-// //             "bytes" => Ok(IdlType::Bytes),
-// //             "f32" => Ok(IdlType::F32),
-// //             "f64" => Ok(IdlType::F64),
-// //             "i128" => Ok(IdlType::I128),
-// //             "i16" => Ok(IdlType::I16),
-// //             "i32" => Ok(IdlType::I32),
-// //             "i64" => Ok(IdlType::I64),
-// //             "i8" => Ok(IdlType::I8),
-// //             "publicKey" | "pubkey" => Ok(IdlType::PublicKey),
-// //             "string" => Ok(IdlType::String),
-// //             "u128" => Ok(IdlType::U128),
-// //             "u16" => Ok(IdlType::U16),
-// //             "u32" => Ok(IdlType::U32),
-// //             "u64" => Ok(IdlType::U64),
-// //             "u8" => Ok(IdlType::U8),
-// //             _ => Err(format!("Invalid IDL argument type: {}", s).into()),
-// //         },
-// //         Value::Object(obj) => {
-// //             if let Some(defined) = obj.get("defined") {
-// //                 match defined {
-// //                     Value::String(s) => {
-// //                         return Ok(IdlType::Defined(s.to_string()))
-// //                     }
-// //                     Value::Object(o) => {
-// //                         if let Some(s) = o.get("name") {
-// //                             return Ok(IdlType::Defined(s.to_string()))
-// //                         } else {
-// //                             return Err("Invalid Defined type in IDL".into())
-// //                         }
-// //                     }
-// //                     _ => return Err("Invalid Defined type in IDL".into())
-// //                 }
-// //             }
-// //             if let Some(option) = obj.get("option") {
-// //                 return Ok(IdlType::Option(Box::new(parse_idl_type(option)?)));
-// //             }
-// //             if let Some(coption) = obj.get("coption") {
-// //                 return Ok(IdlType::COption(Box::new(parse_idl_type(coption)?)));
-// //             }
-// //             if let Some(vec) = obj.get("vec") {
-// //                 return Ok(IdlType::Vec(Box::new(parse_idl_type(vec)?)));
-// //             }
-// //             if let Some(array) = obj.get("array") {
-// //                 let arr = array.as_array()
-// //                     .ok_or_else(|| "Invalid array format")?;
-                
-// //                 let inner = parse_idl_type(&arr[0])?;
-// //                 let len = arr[1].as_u64()
-// //                     .ok_or_else(|| "Invalid array length")?
-// //                     as usize;
-                
-// //                 return Ok(IdlType::Array(Box::new(inner), len));
-// //             }
-// //             if let Some(tuple) = obj.get("tuple") {
-// //                 let types = tuple.as_array()
-// //                     .ok_or_else(|| "Tuple must be an array")?
-// //                     .iter()
-// //                     .map(parse_idl_type)
-// //                     .collect::<Result<Vec<_>, _>>()?;
-                
-// //                 return Ok(IdlType::Tuple(types));
-// //             }
-// //             if let Some(map) = obj.get("hashMap") {
-// //                 let map_arr = map.as_array()
-// //                     .ok_or_else(|| "HashMap requires [key, value]")?;
-                
-// //                 let key = parse_idl_type(&map_arr[0])?;
-// //                 let value = parse_idl_type(&map_arr[1])?;
-// //                 return Ok(IdlType::HashMap(Box::new(key), Box::new(value)));
-// //             }
-// //             Err(format!("Unsupported type object: {:?}", obj).into())
-// //         }
-// //         _ => Err("Invalid IDL type format".into()),
-// //     }
-// // }
+    fn resolve(&self, name: &str) -> Option<&IdlTypeDefinition> {
+        self.type_cache.get(name).copied()
+    }
+}

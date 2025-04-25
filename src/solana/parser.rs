@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, collections::HashMap, fs};
 use hex;
 use solana_sdk::{
     hash::Hash,
@@ -10,7 +10,10 @@ use solana_sdk::{
     pubkey::Pubkey,
     system_instruction::SystemInstruction, 
 };
-use super::structs::{AccountAddress, SolTransfer, SolanaAccount, SolanaAddressTableLookup, SolanaInstruction, SolanaMetadata, SolanaParseResponse, SolanaParsedTransaction, SolanaParsedTransactionPayload, SolanaSingleAddressTableLookup, SplTransfer};
+use super::structs::{AccountAddress, SolTransfer, SolanaAccount, SolanaAddressTableLookup, SolanaInstruction, SolanaMetadata, SolanaParseResponse, SolanaParsedTransaction, SolanaParsedTransactionPayload, SolanaSingleAddressTableLookup, SplTransfer, IdlRecord};
+use crate::solana::idl_parser;
+
+pub const IDL_DIRECTORY: &str = "src/solana/idls/";
 
 // Length of a solana signature in bytes (64 bytes long)
 pub const LEN_SOL_SIGNATURE_BYTES: usize = 64;
@@ -68,19 +71,21 @@ fn parse_solana_transaction(
         .collect::<Result<Vec<u8>, _>>()
         .map_err(|_| "unsigned transaction provided is invalid when converted to bytes")?;
 
+    let custom_idl_records = idl_parser::construct_custom_idl_records_map()?;
+
     if full_transaction {
         let (signatures, tx_body) = parse_signatures(unsigned_tx_bytes)?;
         let message = match tx_body[0] {
             V0_TRANSACTION_INDICATOR => parse_solana_v0_transaction(&tx_body[LEN_ARRAY_HEADER_BYTES..tx_body.len()]).map_err(|e| format!("Error parsing full transaction. If this is just a message instead of a full transaction, parse using the --message flag. Parsing Error: {:#?}", e))?,
             _ => parse_solana_legacy_transaction(tx_body).map_err(|e| format!("Error parsing full transaction. If this is just a message instead of a full transaction, parse using the --message flag. Parsing Error: {:#?}", e))?,
         };
-        return Ok(SolanaTransaction{ message, signatures });
+        return Ok(SolanaTransaction{ message, signatures, custom_idl_records });
     }
     let message = match unsigned_tx_bytes[0] {
         V0_TRANSACTION_INDICATOR => parse_solana_v0_transaction(&unsigned_tx_bytes[LEN_ARRAY_HEADER_BYTES..unsigned_tx_bytes.len()]).map_err(|e| format!("Error parsing message. If this is a serialized Solana transaction with signatures, parse using the --transaction flag. Parsing error: {:#?}", e))?,
         _ => parse_solana_legacy_transaction(unsigned_tx_bytes).map_err(|e| format!("Error parsing message. If this is a full solana transaction with signatures or signature placeholders, parse using the --transaction flag. Parsing Error: {:#?}", e))?,
     };
-    return Ok(SolanaTransaction{ message, signatures: vec![] }); // Signatures array is empty when we are parsing a message (using --message) as opposed to a full transaction
+    return Ok(SolanaTransaction{ message, signatures: vec![], custom_idl_records }); // Signatures array is empty when we are parsing a message (using --message) as opposed to a full transaction
 
 }
 
@@ -478,10 +483,11 @@ fn unpack_u64(input: &[u8]) -> Result<(u64, &[u8]), Box<dyn std::error::Error>> 
 // Each signature is a Vec<u8> of 64 bytes
 pub type Signature = Vec<u8>;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SolanaTransaction {
     message: VersionedMessage,
     signatures: Vec<Signature>,
+    custom_idl_records: HashMap<String, IdlRecord> 
 }
 impl SolanaTransaction {
     pub fn new(hex_tx: &str, full_transaction: bool) -> Result<Self, Box<dyn Error>> {
@@ -652,7 +658,20 @@ impl SolanaTransaction {
                         None => (),
                     }
                 }
-                _ => {}
+                _ => {
+                    println!("are we getting here");
+                    println!("{:#?}", program_key);
+                    println!("{:#?}", self.custom_idl_records);
+
+                    if self.custom_idl_records.contains_key(&program_key) {
+                        let idl_record = self.custom_idl_records[&program_key].clone();
+                        let idl_json_string = fs::read_to_string(IDL_DIRECTORY.to_string() + &idl_record.file_path).map_err(|e| Box::<dyn std::error::Error>::from(format!("Unable to parse IDL from file {} -- Invalid JSON: {}", idl_record.file_path.clone(), e)))?;
+                        let idl = idl_parser::decode_idl_data(&idl_json_string, &idl_record.program_id, &idl_record.program_name)?;
+                        let parsed_inst = idl_parser::process_instruction_data(i.data.clone(), idl);
+                        println!("PRINTING PARSED INSTRUCTION: ");
+                        println!("{:#?}", parsed_inst);
+                    }
+                }
             }
             let instruction_data_hex: String = hex::encode(&i.data);
             let inst = SolanaInstruction {
