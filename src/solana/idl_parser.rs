@@ -1,9 +1,9 @@
 use serde_json::{from_str, from_value, Value, Map};
 use std::error::Error;
-use crate::solana::structs::{Idl, IdlTypeDefinition, IdlInstruction, IdlRecord, IdlType, Defined, EnumFields, IdlTypeDefinitionTy};
+use crate::solana::structs::{Idl, IdlTypeDefinition, IdlInstruction, IdlRecord, IdlType, Defined, EnumFields, IdlTypeDefinitionTy, AccountAddress};
 use crate::solana::idl_db::IDL_DB;
 use sha2::{Sha256, Digest};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::io::{Cursor, Read};
 use bs58;
@@ -36,8 +36,8 @@ pub fn construct_custom_idl_records_map() -> Result<HashMap<String, IdlRecord>, 
 // the Decode IDL Data method takes an idl json string and parses it into IDL rust structs to be used to parse passed in instruction data
 pub fn decode_idl_data (idl_json: &str, program_id: &str, program_name: &str) -> Result<Idl, Box<dyn Error>> {
     // Parse IDL from JSON string into Maps
-    let idl_map: Map<String, Value> = from_str(idl_json).map_err(|_| {
-        Box::<dyn std::error::Error>::from("Unable to parse IDL: Invalid JSON")
+    let idl_map: Map<String, Value> = from_str(idl_json).map_err(|e| {
+        Box::<dyn std::error::Error>::from(format!("Unable to parse IDL: Invalid JSON with error: {}", e))
     })?;
 
     // Parse instructions array
@@ -74,7 +74,8 @@ fn validate_idl_array(idl_map: &Map<String, Value>, key: &str) -> Result<Vec<Val
     Ok(checked_value.clone())
 }
 
-// This method computes the anchor 
+// This method computes the default anchor discriminator for an instruction using it's instruction name (only computes if the instruction discriminators are not EXPLICITLY provided)
+// Reference for calculating the default discriminator - https://www.anchor-lang.com/docs/basics/idl#discriminators
 pub fn compute_default_anchor_discriminator(instruction_name: &str) -> Result<Vec<u8>, Box<dyn Error>> {
     if instruction_name.is_empty() {
         return Err("Attempted to compute the default anchor instruction discriminator for an instruction with no name".into())
@@ -93,28 +94,31 @@ pub fn compute_default_anchor_discriminator(instruction_name: &str) -> Result<Ve
     result[..IDL_INST_DEFAULT_DISC_LEN].try_into().map_err(|_| Box::<dyn Error>::from(format!("Failed to compute instruction byte discriminator for instruction: {}", instruction_name)))
 }
 
+// This method takes in a parsed IDL object and uses it to parse an instruction's call data that is a call to an instruction of the IDL passed in
 pub fn process_instruction_data(
     instruction_data: Vec<u8>,
     idl: Idl,
-) -> Option<serde_json::Value> {
-    
-
-
-    // TODO ADD SAFETY CHECK
-    // 2. Extract discriminator 
-    let discriminator = &instruction_data[..8];
-    
-    // 3. Find matching instruction
-    let instruction = idl.instructions.iter().find(|i| {
-        i.discriminator.as_ref().map(|d| &d[..]) == Some(discriminator)
-    })?;
-
-    // 4. Parse data
-    parse_data(&instruction_data, instruction, &idl).ok()
+) -> Result<(serde_json::Value, IdlInstruction), Box<dyn std::error::Error>> {
+    let instruction = find_instruction_by_discriminator(instruction_data.clone(), idl.instructions.clone())?;
+    let parsed_instruction = parse_data(&instruction_data, &instruction, &idl).map_err(|e| Box::<dyn Error>::from(format!("Failed to parse instruction call data into IDL instruction for instrucion name: {} with error: {}", instruction.name, e)))?;
+    return Ok((parsed_instruction, instruction))
 }
 
-pub fn find_instruction_by_discriminator(instruction_data: Vec<u8>, idl: Idl) -> Result<IdlInstruction, Box<dyn std::error::Error>> {
-    for i in idl.instructions {
+pub fn create_accounts_map(accounts: Vec<AccountAddress>, instruction_spec: IdlInstruction) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
+    if accounts.len() < instruction_spec.accounts.len() {
+        return Err(format!("Too few accounts provided in transaction payload for instruction {}", instruction_spec.name).into());
+    }
+
+    let mut acct_map: HashMap<String, String> = HashMap::new();
+    for i in 0..instruction_spec.accounts.len() {
+        acct_map.insert(instruction_spec.accounts[i].name.clone(), accounts[i].to_string());
+    }
+    Ok(acct_map)
+}
+
+// This method compares all instructions in the chosen IDL against the instruction call data to be parsed to find the correct instruction being called, handling error cases appropriately
+pub fn find_instruction_by_discriminator(instruction_data: Vec<u8>, instructions: Vec<IdlInstruction>) -> Result<IdlInstruction, Box<dyn std::error::Error>> {
+    for i in instructions {
         let disc = i.clone().discriminator.ok_or_else(|| format!("No discriminator found for instruction {} not found in IDL", i.name))?;
 
         // Validate length of instruction data, to make sure it has enough bytes for the discriminator
@@ -122,6 +126,7 @@ pub fn find_instruction_by_discriminator(instruction_data: Vec<u8>, idl: Idl) ->
             continue
         }
 
+        // Check for matching instruction
         if instruction_data[..disc.len()] == disc {
             return Ok(i)
         }
@@ -136,15 +141,28 @@ fn parse_data(
 ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     let mut cursor = Cursor::new(data);
     let resolver = TypeResolver::new(idl);
-    
-    // Skip discriminator (first 8 bytes)
-    cursor.set_position(8);
-    
-    let mut args = serde_json::Map::new();
-    for arg in &idl_instruction.args {
-        args.insert(arg.name.clone(), parse_type(&mut cursor, &arg.ty, &resolver)?);
+
+    // Validate discriminator length and set cursor to correct position
+    let disc = idl_instruction.clone().discriminator.ok_or_else(|| format!("No discriminator found for instruction {} not found in IDL", idl_instruction.name))?;
+    if data.len() < disc.len() {
+        // we should not get here since we've checked the length of the discriminator
+        return Err(format!("Error while parsing data into instruction with name: {}. Discriminator longer than data bytes", idl_instruction.name).into())
     }
     
+    // set cursor to the correct position
+    cursor.set_position(disc.len() as u64);
+    
+    // parse all arguments
+    let mut args = serde_json::Map::new();
+    for arg in &idl_instruction.args {
+        args.insert(arg.name.clone(), parse_type(&mut cursor, &arg.ty, &resolver).map_err(|e| Box::<dyn Error>::from(format!("Failed to parse idl argument with error: {}", e)))?);
+    }
+    
+    // Error if data bytes still remaining after parsing all expected arguments
+    if cursor.position() as usize != data.len() {
+        return Err("Extra unexpected bytes remainging at the end of instruction call data".into())
+    }
+
     Ok(serde_json::Value::Object(args))
 }
 
@@ -279,7 +297,7 @@ fn parse_defined_type<R: Read>(
     type_name: &str,
     resolver: &TypeResolver,
 ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
-    let ty_def = resolver.resolve(type_name)
+    let ty_def = resolver.resolve(type_name)?
         .ok_or_else(|| format!("Type {} not found in IDL", type_name))?;
 
     match &ty_def.ty {
@@ -330,8 +348,8 @@ fn parse_defined_type<R: Read>(
 }
 
 struct TypeResolver<'a> {
-    idl: &'a Idl,
     type_cache: HashMap<String, &'a IdlTypeDefinition>,
+    checked_types: HashSet<String>,
 }
 
 impl<'a> TypeResolver<'a> {
@@ -340,26 +358,34 @@ impl<'a> TypeResolver<'a> {
         for ty in &idl.types {
             type_cache.insert(ty.name.clone(), ty);
         }
-        Self { idl, type_cache }
+        let checked_types: HashSet<String> = HashSet::new();
+        Self { type_cache,  checked_types }
     }
 
-    fn resolve(&self, name: &str) -> Option<&IdlTypeDefinition> {
-        self.type_cache.get(name).copied()
+    fn resolve(&self, name: &str) -> Result<Option<&IdlTypeDefinition>, Box<dyn Error>>{
+        if self.checked_types.contains(name) {
+            return Err(format!("Found a cycle while resolving defined types with defined type: {}", name).into());
+        }
+        Ok(self.type_cache.get(name).copied())
     }
 }
 
 // TODO TESTS
 
 // FINISH FEATURES
-// add instruction accounts 
+// add instruction accounts - DONE 
+// an error in parsing instruction call data into a transaction should NOT result in a solana parsing error
 
 // CLEANUP 
 // Add comments to each function
 // overall clean up 
-// ERROR for extraneous bytes
-// cycle checking
+// ERROR for extraneous bytes - DONE 
+// cycle checking - DONE
 
 // TESTING 
 // test idl parsing from json --> IDL object
 // test each type including discrepancies - isMut/writable, isSigner/signer, isOptional/optional
+// Add tests for extra extraneous bytes at the end 
+// Test cycle checking 
 // test discriminators calculation + snake case - DONE 
+// Test instruction account naming
