@@ -783,7 +783,7 @@ use crate::solana::parser::IDL_DIRECTORY;
 
         // Test Program called in the instruction
         assert_eq!(tx_metadata.instructions[1].program_key, TOKEN_PROGRAM_KEY);
-        assert_eq!(tx_metadata.instructions[1].instruction_data_hex, TOKEN_PROGRAM_KEY)
+        assert_eq!(tx_metadata.instructions[1].instruction_data_hex, "03a086010000000000")
     }
 
     #[test]
@@ -1250,7 +1250,7 @@ use crate::solana::parser::IDL_DIRECTORY;
             let idl_json_string = fs::read_to_string(IDL_DIRECTORY.to_string() + &idl_record.file_path).unwrap();
 
             let idl = idl_parser::decode_idl_data(&idl_json_string, &idl_record.program_id, &idl_record.program_name).unwrap();
-            let value = idl_parser::process_instruction_data(data, idl).unwrap();
+            let (value, _) = idl_parser::process_instruction_data(data, idl).unwrap();
             return Ok(value)
         }
         Err("Idl Not found".into())
