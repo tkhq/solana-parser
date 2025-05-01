@@ -7,15 +7,14 @@ use std::collections::HashMap;
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::io::{Cursor, Read};
 use bs58;
+use heck::ToSnakeCase;
 
-use solana_sdk::instruction::CompiledInstruction;
-
-// Top Level Required Fields 
+// Top Level Required Fields  within an IDL
 const IDL_INSTRUCTIONS_KEY: &str = "instructions";
 const IDL_TYPES_KEY: &str = "types";
-
 const IDL_INST_DEFAULT_DISC_LEN: usize = 8;
 
+// This method takes all IDL's that have been uploaded to the IDL DB and constructs a mapping from PROGRAM_ID --> IDL_RECORD_INFO
 pub fn construct_custom_idl_records_map() -> Result<HashMap<String, IdlRecord>, Box<dyn Error>> {
     let mut idl_map = HashMap::new();
     
@@ -34,6 +33,7 @@ pub fn construct_custom_idl_records_map() -> Result<HashMap<String, IdlRecord>, 
     Ok(idl_map)
 }
 
+// the Decode IDL Data method takes an idl json string and parses it into IDL rust structs to be used to parse passed in instruction data
 pub fn decode_idl_data (idl_json: &str, program_id: &str, program_name: &str) -> Result<Idl, Box<dyn Error>> {
     // Parse IDL from JSON string into Maps
     let idl_map: Map<String, Value> = from_str(idl_json).map_err(|_| {
@@ -51,11 +51,11 @@ pub fn decode_idl_data (idl_json: &str, program_id: &str, program_name: &str) ->
     // Create discriminators using default anchor for all instructions without explicitly included discriminators
     for i in 0..parsed_instructions.len() {
         if parsed_instructions[i].discriminator.is_none() {
-            parsed_instructions[i].discriminator = Some(compute_discriminator(&parsed_instructions[i].name)?);
+            parsed_instructions[i].discriminator = Some(compute_default_anchor_discriminator(&parsed_instructions[i].name)?);
         }
     }
 
-    // Parse types array
+    // Parse defined types array
     let types = validate_idl_array(&idl_map, IDL_TYPES_KEY)?;
     let mut parsed_types: Vec<IdlTypeDefinition> = vec![];
     for t in types {
@@ -66,6 +66,7 @@ pub fn decode_idl_data (idl_json: &str, program_id: &str, program_name: &str) ->
     Ok(Idl { program_id: program_id.to_string(), name: program_name.to_string(), instructions: parsed_instructions, types: parsed_types })
 }
 
+// This method takes in a json object, and validates the existance of an ARRAY at a particular key (for example the top level instructions array within all IDL Json's)
 fn validate_idl_array(idl_map: &Map<String, Value>, key: &str) -> Result<Vec<Value>, Box<dyn Error>> {
     let value = idl_map.get(key).ok_or_else(|| format!("Key '{}' not found in uploaded IDL", key))?;
     let checked_value = value.as_array()
@@ -73,23 +74,32 @@ fn validate_idl_array(idl_map: &Map<String, Value>, key: &str) -> Result<Vec<Val
     Ok(checked_value.clone())
 }
 
-fn compute_discriminator(instruction_name: &str) -> Result<Vec<u8>, Box<dyn Error>> {
-    let seed = format!("global:{}", instruction_name);
+// This method computes the anchor 
+pub fn compute_default_anchor_discriminator(instruction_name: &str) -> Result<Vec<u8>, Box<dyn Error>> {
+    if instruction_name.is_empty() {
+        return Err("Attempted to compute the default anchor instruction discriminator for an instruction with no name".into())
+    }
+
+    // All anchor generated IDL's use the snake_case represesntation of instruction names to generate the default function discriminator (not officially documented)
+    let snake_case = instruction_name.to_snake_case();
+    let seed = format!("global:{}", snake_case);
     let mut hasher = Sha256::new();
     hasher.update(seed.as_bytes());
     let result = hasher.finalize();
+    if result.len() < IDL_INST_DEFAULT_DISC_LEN {
+        return Err(format!("Error calculating default anchor instruction discriminator for instruction with name: {}", snake_case).into())
+    }
+
     result[..IDL_INST_DEFAULT_DISC_LEN].try_into().map_err(|_| Box::<dyn Error>::from(format!("Failed to compute instruction byte discriminator for instruction: {}", instruction_name)))
 }
-
-// TODO TESTS 
-// TEST correct parsing of isMut/writable, isSigner/signer, isOptional/optional
-// TEST discriminators
-// Add comments 
 
 pub fn process_instruction_data(
     instruction_data: Vec<u8>,
     idl: Idl,
 ) -> Option<serde_json::Value> {
+    
+
+
     // TODO ADD SAFETY CHECK
     // 2. Extract discriminator 
     let discriminator = &instruction_data[..8];
@@ -101,6 +111,22 @@ pub fn process_instruction_data(
 
     // 4. Parse data
     parse_data(&instruction_data, instruction, &idl).ok()
+}
+
+pub fn find_instruction_by_discriminator(instruction_data: Vec<u8>, idl: Idl) -> Result<IdlInstruction, Box<dyn std::error::Error>> {
+    for i in idl.instructions {
+        let disc = i.clone().discriminator.ok_or_else(|| format!("No discriminator found for instruction {} not found in IDL", i.name))?;
+
+        // Validate length of instruction data, to make sure it has enough bytes for the discriminator
+        if instruction_data.len() < disc.len() {
+            continue
+        }
+
+        if instruction_data[..disc.len()] == disc {
+            return Ok(i)
+        }
+    }
+    return Err(format!("No instruction discriminator found for instruction data: {:?}", instruction_data).into());
 }
 
 fn parse_data(
@@ -129,7 +155,14 @@ fn parse_type<R: Read>(
 ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     match ty {
         // Primitive types
-        IdlType::Bool => Ok(reader.read_u8()?.into()),
+        IdlType::Bool => {
+            let bool_val = reader.read_u8()?;
+            Ok(if bool_val == 0 {
+                serde_json::Value::Bool(false)
+            } else {
+                serde_json::Value::Bool(true)
+            })
+        },
         IdlType::I8 => Ok(reader.read_i8()?.into()),
         IdlType::I16 => Ok(reader.read_i16::<LittleEndian>()?.into()),
         IdlType::I32 => Ok(reader.read_i32::<LittleEndian>()?.into()),
@@ -314,3 +347,19 @@ impl<'a> TypeResolver<'a> {
         self.type_cache.get(name).copied()
     }
 }
+
+// TODO TESTS
+
+// FINISH FEATURES
+// add instruction accounts 
+
+// CLEANUP 
+// Add comments to each function
+// overall clean up 
+// ERROR for extraneous bytes
+// cycle checking
+
+// TESTING 
+// test idl parsing from json --> IDL object
+// test each type including discrepancies - isMut/writable, isSigner/signer, isOptional/optional
+// test discriminators calculation + snake case - DONE 
