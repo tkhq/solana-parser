@@ -1,5 +1,7 @@
 use std::fmt;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SolanaMetadata {
@@ -19,6 +21,7 @@ pub struct SolanaInstruction {
     pub accounts: Vec<SolanaAccount>,
     pub instruction_data_hex: String,
     pub address_table_lookups: Vec<SolanaSingleAddressTableLookup>,
+    pub parsed_instruction: Option<SolanaParsedInstruction>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -52,6 +55,13 @@ pub struct SplTransfer {
     pub token_mint: Option<String>, 
     pub decimals: Option<String>,
     pub fee: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SolanaParsedInstruction {
+    pub instruction_name: String, 
+    pub named_accounts: HashMap<String, String>, 
+    pub args: serde_json::Map<std::string::String, Value>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -193,6 +203,18 @@ pub enum EnumFields {
     Tuple(Vec<IdlType>),
 }
 
+impl EnumFields {
+    pub fn types(&self) -> Vec<IdlType> {
+        match self {
+            EnumFields::Named(fields) => fields
+                .iter()
+                .map(|f| f.ty.clone())
+                .collect(),
+            EnumFields::Tuple(types) => types.clone(),
+        }
+    }
+}
+
 /// An enum variant which could be scalar (withouth fields) or tuple/struct (with fields).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct IdlEnumVariant {
@@ -253,6 +275,15 @@ pub enum IdlType {
 pub enum Defined {
     String(String),
     Object { name: String },
+}
+
+impl Defined {
+    pub fn to_string(&self) -> String {
+        match self {
+            Defined::String(s) => s.clone(),
+            Defined::Object { name } => name.clone(),
+        }
+    }
 }
 
 // First 4 bytes -- discriminator 
