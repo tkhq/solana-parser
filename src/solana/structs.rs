@@ -108,6 +108,14 @@ impl fmt::Display for AccountAddress {
     }
 }
 
+/*
+    SOLANA IDL TYPES 
+    - All types below are used in Solana IDL data parsing for custom uploaded IDL's
+    - Some structs are vendored from an idl parsing library with some modifications
+    - vendor docs reference: https://crates.io/crates/solana_idl
+*/
+
+
 // Contains a reference to "uploaded" IDL's 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct IdlRecord {
@@ -133,6 +141,7 @@ pub struct Idl {
     pub types: Vec<IdlTypeDefinition>,
 }
 
+/// IdlInstruction outlines all information required to parse data into a particular instruction to a program
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct IdlInstruction {
     /// Name of the instruction.
@@ -179,9 +188,8 @@ pub struct IdlTypeDefinition {
     pub name: String,
 
     /// Underlying type description.
-    /// Note: This is named ty and not type because type is a type is a reserved name in rust
     #[serde(rename = "type")]
-    pub ty: IdlTypeDefinitionTy,
+    pub r#type: IdlTypeDefinitionType,
 }
 
 /// A field in a struct, enum variant or [IdlInstruction] args.
@@ -192,7 +200,7 @@ pub struct IdlField {
 
     /// Type of the field.
     #[serde(rename = "type")]
-    pub ty: IdlType,
+    pub r#type: IdlType,
 }
 
 /// Underlying fields of a tuple or struct [IdlEnumVariant].
@@ -208,7 +216,7 @@ impl EnumFields {
         match self {
             EnumFields::Named(fields) => fields
                 .iter()
-                .map(|f| f.ty.clone())
+                .map(|f| f.r#type.clone())
                 .collect(),
             EnumFields::Tuple(types) => types.clone(),
         }
@@ -227,12 +235,15 @@ pub struct IdlEnumVariant {
 }
 
 
-
+/// IdlTypeDefinitionType defines the different forms in which a type definition can come in 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase", tag = "kind")]
-pub enum IdlTypeDefinitionTy {
+pub enum IdlTypeDefinitionType {
+    /// The Struct variant parses Idl Defined types that are formatted as structs
     Struct { fields: Vec<IdlField> },
+    /// The Enum variant parses Idl Defined types that are formatted as enums
     Enum { variants: Vec<IdlEnumVariant> },
+    /// The Alias variant parses Idl Defined types that are formatted as aliases
     Alias { value: IdlType },
 }
 
@@ -270,10 +281,13 @@ pub enum IdlType {
     BTreeSet(Box<IdlType>),
 }
 
+/// The Defined type enum outlines the different formats in which Defined types can be referred to in the arguments to instructions
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum Defined {
+    /// The String variant parses defined types that are formatted as strings
     String(String),
+    /// The Object variant parses defined types that are formatted as objects with the defined type name under the key 'name'
     Object { name: String },
 }
 
@@ -285,11 +299,3 @@ impl Defined {
         }
     }
 }
-
-// First 4 bytes -- discriminator 
-// Arg 1 -- F32
-// Arg 2 -- String 
-// Arg 3 - I128
-// Arg 2 -- String
-// Arg 3 - I128
-

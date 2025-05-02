@@ -1,6 +1,6 @@
 use serde_json::{from_str, from_value, Value, Map};
 use std::error::Error;
-use crate::solana::structs::{Idl, IdlTypeDefinition, IdlInstruction, IdlRecord, IdlType, Defined, EnumFields, IdlTypeDefinitionTy, AccountAddress};
+use crate::solana::structs::{Idl, IdlTypeDefinition, IdlInstruction, IdlRecord, IdlType, Defined, EnumFields, IdlTypeDefinitionType, AccountAddress};
 use crate::solana::idl_db::IDL_DB;
 use sha2::{Sha256, Digest};
 use std::collections::{HashMap, HashSet};
@@ -162,7 +162,7 @@ fn parse_data_into_args(
     // parse all arguments
     let mut args = serde_json::Map::new();
     for arg in &idl_instruction.args {
-        args.insert(arg.name.clone(), parse_type(&mut cursor, &arg.ty, &resolver).map_err(|e| Box::<dyn Error>::from(format!("Failed to parse idl argument with error: {}", e)))?);
+        args.insert(arg.name.clone(), parse_type(&mut cursor, &arg.r#type, &resolver).map_err(|e| Box::<dyn Error>::from(format!("Failed to parse idl argument with error: {}", e)))?);
     }
     
     // Error if data bytes still remaining after parsing all expected arguments
@@ -309,18 +309,18 @@ fn parse_defined_type<R: Read>(
     let ty_def = resolver.resolve(type_name)?
         .ok_or_else(|| format!("Type {} not found in IDL", type_name))?;
 
-    match &ty_def.ty {
-        IdlTypeDefinitionTy::Struct { fields } => {
+    match &ty_def.r#type {
+        IdlTypeDefinitionType::Struct { fields } => {
             let mut map = serde_json::Map::new();
             for field in fields {
                 map.insert(
                     field.name.clone(),
-                    parse_type(reader, &field.ty, resolver)?
+                    parse_type(reader, &field.r#type, resolver)?
                 );
             }
             Ok(map.into())
         }
-        IdlTypeDefinitionTy::Enum { variants } => {
+        IdlTypeDefinitionType::Enum { variants } => {
             let variant_index = reader.read_u8()?;
             let variant = variants.get(variant_index as usize)
                 .ok_or("Invalid variant index")?;
@@ -338,7 +338,7 @@ fn parse_defined_type<R: Read>(
                     for field in fields {
                         map.insert(
                             field.name.clone(),
-                            parse_type(reader, &field.ty, resolver)?
+                            parse_type(reader, &field.r#type, resolver)?
                         );
                     }
                     serde_json::Value::Object(map)
@@ -350,13 +350,14 @@ fn parse_defined_type<R: Read>(
                 variant.name.clone(): value
             }))
         }
-        IdlTypeDefinitionTy::Alias { value } => {
+        IdlTypeDefinitionType::Alias { value } => {
             parse_type(reader, value, resolver)
         }
     }
 }
 
 
+// The TypeResolver struct helps resolved defined types within an IDL during the parsing of instruction call data
 struct TypeResolver<'a> {
     type_cache: HashMap<String, &'a IdlTypeDefinition>,
 }
@@ -379,7 +380,7 @@ impl<'a> TypeResolver<'a> {
     }
 }
 
-
+// Check IDL for Cycles -- takes in an IDL and checks to see whether the defined types contains any cycles (invalid case)
 fn check_idl_for_cycles(idl: Idl, type_cache: HashMap<String, &IdlTypeDefinition>) -> Result<(), Box<dyn Error>> {
     for t in idl.types {
         cycle_recursive_check(type_cache.clone(), &t.name, HashSet::new())?;
@@ -387,6 +388,7 @@ fn check_idl_for_cycles(idl: Idl, type_cache: HashMap<String, &IdlTypeDefinition
     Ok(())
 }
 
+// Cycle Recursive Check -- is a recursive helper function that checks a parsed IDL for cycles
 fn cycle_recursive_check(type_cache: HashMap<String, &IdlTypeDefinition>, type_name: &str, mut path: HashSet<String>) -> Result<(), Box<dyn Error>> {
     if path.contains(type_name) {
         return Err(format!("Defined types cycle check failed on name: {}", type_name).into());
@@ -395,17 +397,17 @@ fn cycle_recursive_check(type_cache: HashMap<String, &IdlTypeDefinition>, type_n
 
     let ty_def = type_cache.get(type_name).copied().ok_or_else(|| format!("Type {} not found in IDL", type_name))?;
 
-    match &ty_def.ty {
-        IdlTypeDefinitionTy::Struct { fields } => {
+    match &ty_def.r#type {
+        IdlTypeDefinitionType::Struct { fields } => {
             for field in fields {
-                if let IdlType::Defined(defined) = &field.ty {
+                if let IdlType::Defined(defined) = &field.r#type {
                     let type_name = defined.to_string();
                     cycle_recursive_check(type_cache.clone(), &type_name, path.clone())?;
                 }
             }
             Ok(())
         }
-        IdlTypeDefinitionTy::Enum { variants } => {
+        IdlTypeDefinitionType::Enum { variants } => {
             for variant in variants {
                 if let Some(fields) = &variant.fields {
                     for ty in fields.types() {
@@ -418,7 +420,7 @@ fn cycle_recursive_check(type_cache: HashMap<String, &IdlTypeDefinition>, type_n
             }
             Ok(())
         }
-        IdlTypeDefinitionTy::Alias { value } => {
+        IdlTypeDefinitionType::Alias { value } => {
             if let IdlType::Defined(defined) = value {
                 let type_name = defined.to_string();
                 cycle_recursive_check(type_cache, &type_name, path.clone())?;
@@ -433,23 +435,25 @@ fn cycle_recursive_check(type_cache: HashMap<String, &IdlTypeDefinition>, type_n
 
 // FINISH FEATURES
 // add instruction accounts - DONE 
-// an error in parsing instruction call data into a transaction should NOT result in a solana parsing error
+// an error in parsing instruction call data into a transaction should NOT result in a solana parsing error - DONE
 
 // CLEANUP 
-// Add comments to each function
-// overall clean up 
+// Add comments to each function - DONE 
+// overall clean up - DONE 
 // ERROR for extraneous bytes - DONE 
 // cycle checking - DONE
+// comments on all structs - DONE 
+// Add vendored files references - DONE 
 
 // TESTING 
 // Test cycle checking - DONE
 // test discriminators calculation + snake case - DONE 
 // test defined type naming collision - DONE 
-// Add tests for extra extraneous bytes at the end
+// Add tests for extra extraneous bytes at the end - DONE
+
 // test idl parsing from json --> IDL object
-// test each type including discrepancies - isMut/writable, isSigner/signer, isOptional/optional
 // Test instruction account naming
 
 // GRANULAR IDL parsing tests
-// TYPES test -- Strings, Bools, All Number types available, tuple, option, vector, Array 
+// TYPES test -- Strings, Bools, All Number types available, tuple, option, vector, Array -- discrepancies - isMut/writable, isSigner/signer, isOptional/optional
 // Two completion tests for instruction parsing

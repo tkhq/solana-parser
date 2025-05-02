@@ -1280,9 +1280,17 @@ use crate::solana::parser::IDL_DIRECTORY;
     // Test detection of extraneous bytes at the end of an instruction
     #[test]
     fn test_extraneous_bytes() {
-        let idl_json_string = fs::read_to_string("src/solana/test_idls/collision.json").unwrap();
-        let cyclic_err_str = idl_parser::decode_idl_data(&idl_json_string, "COLLIDING-PROGRAM-ID", "Test Name Colliding Program").unwrap_err().to_string();
-        assert_eq!(cyclic_err_str, "Multiple types with the same name detected: TypeA".to_string());
+        let kamino_pid = "6LtLpnUFNByNXLyCoK9wA2MykKAmQNZKBdY8s47dehDc";
+        // Below is Kamino instruction data with an extra byte "00" added on to the end
+        // Original instruction #3 at this link -- https://solscan.io/tx/oYVVbND3bbpBuL3eb9jyyET2wWu1nEKxacC6BsRHP4KdsA9WHNjD7tHSEcNJkt4R83NFTquESp2xrhR92DRFCEW
+        let kamino_extra_bytes_err = get_idl_parsed_value_given_data(kamino_pid, hex::decode("0df5b467feb6790400").unwrap()).unwrap_err().to_string();
+        assert_eq!(kamino_extra_bytes_err, "Failed to parse instruction call data into IDL instruction for instrucion name: invest with error: Extra unexpected bytes remainging at the end of instruction call data".to_string());
+
+        let rd_pid = "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C";
+        // Below is Raydium instruction data with some extra bytes "0012" added on to the end
+        // Original Instruction #4 at this link -- https://solscan.io/tx/1FyuW7Pwxip4RZ5BpR3jwnDZQ5z9uUQ4Pa74hBUZw2z1k4eVWgAGBkXptSamNCkWxV58a4aXt4UHWywCERRP54a
+        let raydium_extra_bytes_err = get_idl_parsed_value_given_data(rd_pid, hex::decode("8fbe5adac41e33de1027000000000000b80d0202000000000012").unwrap()).unwrap_err().to_string();
+        assert_eq!(raydium_extra_bytes_err, "Failed to parse instruction call data into IDL instruction for instrucion name: swapBaseInput with error: Extra unexpected bytes remainging at the end of instruction call data".to_string());
     }
 
 
@@ -1291,10 +1299,10 @@ use crate::solana::parser::IDL_DIRECTORY;
         let record_map = idl_parser::construct_custom_idl_records_map()?;
         if record_map.contains_key(program_id) {
             let idl_record = record_map[program_id].clone();
-            let idl_json_string = fs::read_to_string(IDL_DIRECTORY.to_string() + &idl_record.file_path).unwrap();
+            let idl_json_string = fs::read_to_string(IDL_DIRECTORY.to_string() + &idl_record.file_path)?;
 
-            let idl = idl_parser::decode_idl_data(&idl_json_string, &idl_record.program_id, &idl_record.program_name).unwrap();
-            let (value, _) = idl_parser::process_instruction_data(data, idl).unwrap();
+            let idl = idl_parser::decode_idl_data(&idl_json_string, &idl_record.program_id, &idl_record.program_name)?;
+            let (value, _) = idl_parser::process_instruction_data(data, idl)?;
             return Ok(value)
         }
         Err("Idl Not found".into())
