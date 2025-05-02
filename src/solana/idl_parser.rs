@@ -62,8 +62,13 @@ pub fn decode_idl_data (idl_json: &str, program_id: &str, program_name: &str) ->
         let parsed_t: IdlTypeDefinition = from_value(t).map_err(|e| Box::<dyn Error>::from(format!("Failed to parse types array in uploaded IDL with error: {}", e)))?;
         parsed_types.push(parsed_t)
     }
+
+    let parsed_idl = Idl { program_id: program_id.to_string(), name: program_name.to_string(), instructions: parsed_instructions, types: parsed_types };
     
-    Ok(Idl { program_id: program_id.to_string(), name: program_name.to_string(), instructions: parsed_instructions, types: parsed_types })
+    // Validate IDL by checking for type cycles by creating a type resolver -- which checks for cycles during initialization
+    TypeResolver::new(&parsed_idl)?;
+    
+    Ok(parsed_idl)
 }
 
 // This method takes in a json object, and validates the existance of an ARRAY at a particular key (for example the top level instructions array within all IDL Json's)
@@ -94,16 +99,17 @@ pub fn compute_default_anchor_discriminator(instruction_name: &str) -> Result<Ve
     result[..IDL_INST_DEFAULT_DISC_LEN].try_into().map_err(|_| Box::<dyn Error>::from(format!("Failed to compute instruction byte discriminator for instruction: {}", instruction_name)))
 }
 
-// This method takes in a parsed IDL object and uses it to parse an instruction's call data that is a call to an instruction of the IDL passed in
+// Process Instruction Data takes in a parsed IDL object and uses it to parse an instruction's call data that is a call to an instruction of the IDL passed in
 pub fn process_instruction_data(
     instruction_data: Vec<u8>,
     idl: Idl,
-) -> Result<(serde_json::Value, IdlInstruction), Box<dyn std::error::Error>> {
+) -> Result<(Map<String, Value>, IdlInstruction), Box<dyn std::error::Error>> {
     let instruction = find_instruction_by_discriminator(instruction_data.clone(), idl.instructions.clone())?;
-    let parsed_instruction = parse_data(&instruction_data, &instruction, &idl).map_err(|e| Box::<dyn Error>::from(format!("Failed to parse instruction call data into IDL instruction for instrucion name: {} with error: {}", instruction.name, e)))?;
+    let parsed_instruction = parse_data_into_args(&instruction_data, &instruction, &idl).map_err(|e| Box::<dyn Error>::from(format!("Failed to parse instruction call data into IDL instruction for instrucion name: {} with error: {}", instruction.name, e)))?;
     return Ok((parsed_instruction, instruction))
 }
 
+// Create Accounts Map takes in all accounts provided to this instruction, as parsed by our transaction parser (both static and look ups) and creates a map of the names of addresses (as specified by the IDL) to the address public keys (if they are statically included) or ADDRESS-TABLE-LOOKUP if not
 pub fn create_accounts_map(accounts: Vec<AccountAddress>, instruction_spec: IdlInstruction) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
     if accounts.len() < instruction_spec.accounts.len() {
         return Err(format!("Too few accounts provided in transaction payload for instruction {}", instruction_spec.name).into());
@@ -134,13 +140,14 @@ pub fn find_instruction_by_discriminator(instruction_data: Vec<u8>, instructions
     return Err(format!("No instruction discriminator found for instruction data: {:?}", instruction_data).into());
 }
 
-fn parse_data(
+// Parse data into args -- takes in the idl instruction object corresponding to the instruction call data, as well as the instruction call data and parses the data into a vector of arguments
+fn parse_data_into_args(
     data: &[u8],
     idl_instruction: &IdlInstruction,
     idl: &Idl,
-) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+) -> Result<Map<String, Value>, Box<dyn std::error::Error>> {
     let mut cursor = Cursor::new(data);
-    let resolver = TypeResolver::new(idl);
+    let resolver = TypeResolver::new(idl)?;
 
     // Validate discriminator length and set cursor to correct position
     let disc = idl_instruction.clone().discriminator.ok_or_else(|| format!("No discriminator found for instruction {} not found in IDL", idl_instruction.name))?;
@@ -163,9 +170,10 @@ fn parse_data(
         return Err("Extra unexpected bytes remainging at the end of instruction call data".into())
     }
 
-    Ok(serde_json::Value::Object(args))
+    Ok(args)
 }
 
+// Parse Type -- given a type, this method attempts to parse the next part of the intruction call data (as tracked by the cursor) into that type 
 fn parse_type<R: Read>(
     reader: &mut R,
     ty: &IdlType,
@@ -292,6 +300,7 @@ fn parse_type<R: Read>(
     }
 }
 
+// Parse Defined Type -- if the type being parsed is a defined type (it should have been defined in the IDL), this method resolves it recursively using parse_type
 fn parse_defined_type<R: Read>(
     reader: &mut R,
     type_name: &str,
@@ -347,27 +356,77 @@ fn parse_defined_type<R: Read>(
     }
 }
 
+
 struct TypeResolver<'a> {
     type_cache: HashMap<String, &'a IdlTypeDefinition>,
-    checked_types: HashSet<String>,
 }
 
 impl<'a> TypeResolver<'a> {
-    fn new(idl: &'a Idl) -> Self {
+    fn new(idl: &'a Idl) -> Result<Self, Box<dyn Error>> {
         let mut type_cache = HashMap::new();
         for ty in &idl.types {
+            if type_cache.contains_key(&ty.name) {
+                return Err(format!("Multiple types with the same name detected: {}", &ty.name).into())
+            }
             type_cache.insert(ty.name.clone(), ty);
         }
-        let checked_types: HashSet<String> = HashSet::new();
-        Self { type_cache,  checked_types }
+        check_idl_for_cycles(idl.clone(), type_cache.clone())?;
+        Ok(Self { type_cache })
     }
 
     fn resolve(&self, name: &str) -> Result<Option<&IdlTypeDefinition>, Box<dyn Error>>{
-        if self.checked_types.contains(name) {
-            return Err(format!("Found a cycle while resolving defined types with defined type: {}", name).into());
-        }
         Ok(self.type_cache.get(name).copied())
     }
+}
+
+
+fn check_idl_for_cycles(idl: Idl, type_cache: HashMap<String, &IdlTypeDefinition>) -> Result<(), Box<dyn Error>> {
+    for t in idl.types {
+        cycle_recursive_check(type_cache.clone(), &t.name, HashSet::new())?;
+    }
+    Ok(())
+}
+
+fn cycle_recursive_check(type_cache: HashMap<String, &IdlTypeDefinition>, type_name: &str, mut path: HashSet<String>) -> Result<(), Box<dyn Error>> {
+    if path.contains(type_name) {
+        return Err(format!("Defined types cycle check failed on name: {}", type_name).into());
+    }
+    path.insert(type_name.to_string());
+
+    let ty_def = type_cache.get(type_name).copied().ok_or_else(|| format!("Type {} not found in IDL", type_name))?;
+
+    match &ty_def.ty {
+        IdlTypeDefinitionTy::Struct { fields } => {
+            for field in fields {
+                if let IdlType::Defined(defined) = &field.ty {
+                    let type_name = defined.to_string();
+                    cycle_recursive_check(type_cache.clone(), &type_name, path.clone())?;
+                }
+            }
+            Ok(())
+        }
+        IdlTypeDefinitionTy::Enum { variants } => {
+            for variant in variants {
+                if let Some(fields) = &variant.fields {
+                    for ty in fields.types() {
+                        if let IdlType::Defined(defined) = ty {
+                            let type_name = defined.to_string();
+                            cycle_recursive_check(type_cache.clone(), &type_name, path.clone())?;
+                        }
+                    }
+                }
+            }
+            Ok(())
+        }
+        IdlTypeDefinitionTy::Alias { value } => {
+            if let IdlType::Defined(defined) = value {
+                let type_name = defined.to_string();
+                cycle_recursive_check(type_cache, &type_name, path.clone())?;
+            }
+            Ok(())
+        }
+    }
+    
 }
 
 // TODO TESTS
@@ -383,9 +442,14 @@ impl<'a> TypeResolver<'a> {
 // cycle checking - DONE
 
 // TESTING 
+// Test cycle checking - DONE
+// test discriminators calculation + snake case - DONE 
+// test defined type naming collision - DONE 
+// Add tests for extra extraneous bytes at the end
 // test idl parsing from json --> IDL object
 // test each type including discrepancies - isMut/writable, isSigner/signer, isOptional/optional
-// Add tests for extra extraneous bytes at the end 
-// Test cycle checking 
-// test discriminators calculation + snake case - DONE 
 // Test instruction account naming
+
+// GRANULAR IDL parsing tests
+// TYPES test -- Strings, Bools, All Number types available, tuple, option, vector, Array 
+// Two completion tests for instruction parsing

@@ -259,6 +259,7 @@ use crate::solana::parser::IDL_DIRECTORY;
             accounts: vec![],
             address_table_lookups: vec![],
             instruction_data_hex: "02c05c1500".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_1, transaction_metadata.instructions[0]);
 
@@ -268,12 +269,14 @@ use crate::solana::parser::IDL_DIRECTORY;
             accounts: vec![],
             address_table_lookups: vec![],
             instruction_data_hex: "03caa2000000000000".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_2, transaction_metadata.instructions[1]);
 
         // Instruction 3 - CreateIdempotent
         let exp_instruction_3 = SolanaInstruction {
             program_key: assoc_token_acct_key.to_string(),
+            parsed_instruction: None,
             accounts: vec![
                 signer_acct.clone(),
                 receiving_acct.clone(),
@@ -296,6 +299,7 @@ use crate::solana::parser::IDL_DIRECTORY;
             accounts: vec![signer_acct.clone(), receiving_acct.clone()],
             address_table_lookups: vec![],
             instruction_data_hex: "0200000080f0fa0200000000".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_4, transaction_metadata.instructions[3]);
 
@@ -305,6 +309,7 @@ use crate::solana::parser::IDL_DIRECTORY;
             accounts: vec![receiving_acct.clone()],
             address_table_lookups: vec![],
             instruction_data_hex: "11".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_5, transaction_metadata.instructions[4]);
 
@@ -321,6 +326,7 @@ use crate::solana::parser::IDL_DIRECTORY;
             ],
             address_table_lookups: vec![],
             instruction_data_hex: "01".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_6, transaction_metadata.instructions[5]);
 
@@ -357,6 +363,7 @@ use crate::solana::parser::IDL_DIRECTORY;
             instruction_data_hex:
                 "e517cb977ae3ad2a01000000120064000180f0fa02000000005d34700000000000320000"
                     .to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_7, transaction_metadata.instructions[6]);
 
@@ -370,6 +377,7 @@ use crate::solana::parser::IDL_DIRECTORY;
             ],
             address_table_lookups: vec![],
             instruction_data_hex: "09".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_8, transaction_metadata.instructions[7]);
 
@@ -534,6 +542,7 @@ use crate::solana::parser::IDL_DIRECTORY;
             accounts: vec![],
             address_table_lookups: vec![],
             instruction_data_hex: "02605f0400".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_1, transaction_metadata.instructions[0]);
 
@@ -543,6 +552,7 @@ use crate::solana::parser::IDL_DIRECTORY;
             accounts: vec![],
             address_table_lookups: vec![],
             instruction_data_hex: "032753050000000000".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_2, transaction_metadata.instructions[1]);
 
@@ -559,6 +569,7 @@ use crate::solana::parser::IDL_DIRECTORY;
             ],
             address_table_lookups: vec![],
             instruction_data_hex: "01".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_3, transaction_metadata.instructions[2]);
 
@@ -568,6 +579,7 @@ use crate::solana::parser::IDL_DIRECTORY;
             accounts: vec![signer_acct.clone(), wsol_mint_acct.clone()],
             address_table_lookups: vec![],
             instruction_data_hex: "020000008096980000000000".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_4, transaction_metadata.instructions[3]);
 
@@ -577,12 +589,14 @@ use crate::solana::parser::IDL_DIRECTORY;
             accounts: vec![wsol_mint_acct.clone()],
             address_table_lookups: vec![],
             instruction_data_hex: "11".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_5, transaction_metadata.instructions[4]);
 
         // Instruction 6 -- Jupiter Aggregator v6: sharedAccountsRoute
         let exp_instruction_6 = SolanaInstruction {
             program_key: jupiter_program_acct_key.to_string(),
+            parsed_instruction: None,
             accounts: vec![
                 token_acct.clone(),
                 jupiter_event_authority_acct.clone(),
@@ -706,6 +720,7 @@ use crate::solana::parser::IDL_DIRECTORY;
             accounts: vec![wsol_mint_acct.clone(), signer_acct.clone(), signer_acct.clone()],
             address_table_lookups: vec![],
             instruction_data_hex: "09".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_7, transaction_metadata.instructions[6]);
 
@@ -1195,6 +1210,11 @@ use crate::solana::parser::IDL_DIRECTORY;
         // Instruction #3 at this link -- https://solscan.io/tx/oYVVbND3bbpBuL3eb9jyyET2wWu1nEKxacC6BsRHP4KdsA9WHNjD7tHSEcNJkt4R83NFTquESp2xrhR92DRFCEW
         // Instruction Name: invest
         let _ = get_idl_parsed_value_given_data(kamino_pid, hex::decode("0df5b467feb67904").unwrap()).unwrap();
+
+        // Instruction #2 at this link -- https://solscan.io/tx/yWdjGMsPP4zNVFpbqXRSVTwZJQogXzqjpV4kFLMH5G7T4Dc6hjrQ8QCkJpKLPi2sq8PyEBgedntRLVervR8Eg6o
+        // Instruction Name: initializeSharesMetadata
+        let value = get_idl_parsed_value_given_data(kamino_pid, hex::decode("030fac72c8008320180000004b616d696e6f20774d2d5553444320285261796469756d29080000006b574d2d555344435800000068747470733a2f2f6170692e6b616d696e6f2e66696e616e63652f6b746f6b656e732f4273334c5757747165435641714b75315032574839674b5a344d4a736b57484e786631453666686f7667597a2f6d65746164617461").unwrap()).unwrap();
+        println!("{:#?}", value);
     }
 
     // Meteora Program -- IDL PARSING TESTS
@@ -1240,10 +1260,34 @@ use crate::solana::parser::IDL_DIRECTORY;
         assert_eq!(empty_err_str, "Attempted to compute the default anchor instruction discriminator for an instruction with no name".to_string());
     }
 
+    // Test cycle detection in defined types resolution 
+    #[test]
+    fn test_cyclic_types_idl() {
+        let idl_json_string = fs::read_to_string("src/solana/test_idls/cyclic.json").unwrap();
+        let cyclic_err_str = idl_parser::decode_idl_data(&idl_json_string, "CYCLIC-PROGRAM-ID", "Test Cyclic Program").unwrap_err().to_string();
+        assert_eq!(cyclic_err_str, "Defined types cycle check failed on name: TypeA".to_string());
+    }
+
+
+    // Test type name collision detection
+    #[test]
+    fn test_type_names_collision() {
+        let idl_json_string = fs::read_to_string("src/solana/test_idls/collision.json").unwrap();
+        let cyclic_err_str = idl_parser::decode_idl_data(&idl_json_string, "COLLIDING-PROGRAM-ID", "Test Name Colliding Program").unwrap_err().to_string();
+        assert_eq!(cyclic_err_str, "Multiple types with the same name detected: TypeA".to_string());
+    }
+
+    // Test detection of extraneous bytes at the end of an instruction
+    #[test]
+    fn test_extraneous_bytes() {
+        let idl_json_string = fs::read_to_string("src/solana/test_idls/collision.json").unwrap();
+        let cyclic_err_str = idl_parser::decode_idl_data(&idl_json_string, "COLLIDING-PROGRAM-ID", "Test Name Colliding Program").unwrap_err().to_string();
+        assert_eq!(cyclic_err_str, "Multiple types with the same name detected: TypeA".to_string());
+    }
 
 
     // ******* IDL TESTING HELPER FUNCTIONS ****
-    fn get_idl_parsed_value_given_data(program_id: &str, data: Vec<u8>) -> Result<Value, Box<dyn Error>> {
+    fn get_idl_parsed_value_given_data(program_id: &str, data: Vec<u8>) -> Result<serde_json::Map<String, Value>, Box<dyn Error>> {
         let record_map = idl_parser::construct_custom_idl_records_map()?;
         if record_map.contains_key(program_id) {
             let idl_record = record_map[program_id].clone();
