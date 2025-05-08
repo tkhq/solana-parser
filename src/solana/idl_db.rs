@@ -11,5 +11,5 @@ pub const IDL_DB: [(&str, &str, &str); 13] = [
     ("Orca Whirlpool", "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc", "orca.json"),
     ("Raydium", "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C", "raydium.json"),
     ("Stabble", "swapNyd8XiQwJ6ianp9snpu4brUqFxadzvHebnAXjJZ", "stabble.json"),
-    ("Jupiter Other", "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4", "jupiter_agg_v6.json"),
+    ("Jupiter Aggregator V6", "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4", "jupiter_agg_v6.json"),
 ];

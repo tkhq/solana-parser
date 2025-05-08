@@ -3,7 +3,7 @@ use std::env;
 mod solana;
 
 use crate::solana::parser::parse_transaction;
-use crate::solana::structs::SolanaParsedTransactionPayload;
+use crate::solana::structs::{SolanaParsedTransactionPayload, SolanaParsedInstruction};
 
 
 fn main() {
@@ -55,6 +55,7 @@ fn print_parsed_transaction(transaction_payload: SolanaParsedTransactionPayload)
             println!("        Accounts: {:?}", instruction.accounts);
             println!("        Instruction Data (hex): {}", instruction.instruction_data_hex);
             println!("        Address Table Lookups: {:?}", instruction.address_table_lookups);
+            print_parsed_instruction_data(instruction.parsed_instruction.clone());
         }
         println!("    Transfers:");
         for (i, transfer) in metadata.transfers.iter().enumerate() {
@@ -84,5 +85,24 @@ fn print_parsed_transaction(transaction_payload: SolanaParsedTransactionPayload)
             }
         }
         println!("    Address Table Lookups: {:?}", metadata.address_table_lookups);
+    }
+}
+
+fn print_parsed_instruction_data(p_inst_data: Option<SolanaParsedInstruction>) {
+    println!("        Parsed Instruction Data:");
+    if let Some(parsed_data) = p_inst_data {
+        println!("          Instruction Name: {}", parsed_data.instruction_name);
+        println!("          Named Accounts:");
+        for k in parsed_data.named_accounts.keys() {
+            let acct_string = parsed_data.named_accounts[k].clone();
+            println!("            {}: {}", k, acct_string);
+        }
+        println!("          Args:");
+        for k in parsed_data.args.keys() {
+            let arg_json = parsed_data.args[k].clone();
+            println!("            {}: {:#?}", k, arg_json);
+        }
+    } else {
+        println!("          NO PARSED INSTRUCTION DATA -- NO MATCHING IDL")
     }
 }

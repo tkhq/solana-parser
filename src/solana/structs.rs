@@ -247,6 +247,8 @@ pub enum IdlTypeDefinitionType {
     Alias { value: IdlType },
 }
 
+/// NOTE: The below vendored type has been modified to support ONLY the types supported by Anchor IDL's
+/// Reference to Anchor types: https://www.anchor-lang.com/docs/references/type-conversion
 /// Types that can be included in accounts or user defined structs or instruction args of an IDL.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -263,9 +265,6 @@ pub enum IdlType {
     I64,
     I8,
     Option(Box<IdlType>),
-    #[serde(rename = "coption")]
-    COption(Box<IdlType>),
-    Tuple(Vec<IdlType>),
     #[serde(alias = "pubkey")]
     PublicKey,
     String,
@@ -275,10 +274,6 @@ pub enum IdlType {
     U64,
     U8,
     Vec(Box<IdlType>),
-    HashMap(Box<IdlType>, Box<IdlType>),
-    BTreeMap(Box<IdlType>, Box<IdlType>),
-    HashSet(Box<IdlType>),
-    BTreeSet(Box<IdlType>),
 }
 
 /// The Defined type enum outlines the different formats in which Defined types can be referred to in the arguments to instructions
