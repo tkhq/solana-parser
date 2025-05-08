@@ -1,10 +1,13 @@
-use std::vec;
+use std::{fs, vec, error::Error};
+use serde_json::Value;
 
 use super::*;
 use parser::SOL_SYSTEM_PROGRAM_KEY;
 use structs::SolanaMetadata;
 use crate::solana::structs::{SolanaInstruction, SolanaAccount, SolanaAddressTableLookup, SolanaSingleAddressTableLookup, SolTransfer};
 use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PROGRAM_KEY};
+use crate::solana::idl_parser;
+use crate::solana::parser::IDL_DIRECTORY;
 
 
     #[test]
@@ -256,6 +259,7 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             accounts: vec![],
             address_table_lookups: vec![],
             instruction_data_hex: "02c05c1500".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_1, transaction_metadata.instructions[0]);
 
@@ -265,12 +269,14 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             accounts: vec![],
             address_table_lookups: vec![],
             instruction_data_hex: "03caa2000000000000".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_2, transaction_metadata.instructions[1]);
 
         // Instruction 3 - CreateIdempotent
         let exp_instruction_3 = SolanaInstruction {
             program_key: assoc_token_acct_key.to_string(),
+            parsed_instruction: None,
             accounts: vec![
                 signer_acct.clone(),
                 receiving_acct.clone(),
@@ -293,6 +299,7 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             accounts: vec![signer_acct.clone(), receiving_acct.clone()],
             address_table_lookups: vec![],
             instruction_data_hex: "0200000080f0fa0200000000".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_4, transaction_metadata.instructions[3]);
 
@@ -302,6 +309,7 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             accounts: vec![receiving_acct.clone()],
             address_table_lookups: vec![],
             instruction_data_hex: "11".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_5, transaction_metadata.instructions[4]);
 
@@ -318,6 +326,7 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             ],
             address_table_lookups: vec![],
             instruction_data_hex: "01".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_6, transaction_metadata.instructions[5]);
 
@@ -354,6 +363,7 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             instruction_data_hex:
                 "e517cb977ae3ad2a01000000120064000180f0fa02000000005d34700000000000320000"
                     .to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_7, transaction_metadata.instructions[6]);
 
@@ -367,6 +377,7 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             ],
             address_table_lookups: vec![],
             instruction_data_hex: "09".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_8, transaction_metadata.instructions[7]);
 
@@ -531,6 +542,7 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             accounts: vec![],
             address_table_lookups: vec![],
             instruction_data_hex: "02605f0400".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_1, transaction_metadata.instructions[0]);
 
@@ -540,6 +552,7 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             accounts: vec![],
             address_table_lookups: vec![],
             instruction_data_hex: "032753050000000000".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_2, transaction_metadata.instructions[1]);
 
@@ -556,6 +569,7 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             ],
             address_table_lookups: vec![],
             instruction_data_hex: "01".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_3, transaction_metadata.instructions[2]);
 
@@ -565,6 +579,7 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             accounts: vec![signer_acct.clone(), wsol_mint_acct.clone()],
             address_table_lookups: vec![],
             instruction_data_hex: "020000008096980000000000".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_4, transaction_metadata.instructions[3]);
 
@@ -574,12 +589,14 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             accounts: vec![wsol_mint_acct.clone()],
             address_table_lookups: vec![],
             instruction_data_hex: "11".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_5, transaction_metadata.instructions[4]);
 
         // Instruction 6 -- Jupiter Aggregator v6: sharedAccountsRoute
         let exp_instruction_6 = SolanaInstruction {
             program_key: jupiter_program_acct_key.to_string(),
+            parsed_instruction: None,
             accounts: vec![
                 token_acct.clone(),
                 jupiter_event_authority_acct.clone(),
@@ -703,6 +720,7 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             accounts: vec![wsol_mint_acct.clone(), signer_acct.clone(), signer_acct.clone()],
             address_table_lookups: vec![],
             instruction_data_hex: "09".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_7, transaction_metadata.instructions[6]);
 
@@ -779,7 +797,8 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
         assert_eq!(spl_transfer.fee, None);
 
         // Test Program called in the instruction
-        assert_eq!(tx_metadata.instructions[1].program_key, TOKEN_PROGRAM_KEY)
+        assert_eq!(tx_metadata.instructions[1].program_key, TOKEN_PROGRAM_KEY);
+        assert_eq!(tx_metadata.instructions[1].instruction_data_hex, "03a086010000000000")
     }
 
     #[test]
@@ -1087,3 +1106,235 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
         );
         assert_eq!(spl_transfer_2.owner, "ADDRESS_TABLE_LOOKUP".to_string()); // Shows the flag ADDRESS_TABLE_LOOKUP because an ATLU is used for this address in the transaction
     }
+
+    // JUPITER AGGREGATOR V6 TESTS -- IDL PARSING
+    #[test]
+    fn test_idl_parsing_jupiter_instruction_1() {
+        let jup_pid = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4";
+
+        // Instruction #3 at this link -- https://solscan.io/tx/JcGkMSRd5iyXH5dar6MnjyrpEhQi5XR9mV2TfQpxLbTZH53geZsToDY4nzbcLGnvV32RvuEe4BPTSTkobV6rjEx
+        // Instruction Name: route     
+        let _ = get_idl_parsed_value_given_data(&jup_pid, hex::decode("e517cb977ae3ad2a0200000007640001266401026ca35b0400000000a5465c0400000000000000").unwrap()).unwrap();
+
+        // Instruction #6 at this link -- https://solscan.io/tx/eQqquSewgVCP3jBkKeTstnEGGMuGaT7g7G7uPL9kfFgJk163BYFHhqE3hxNTsaoWWX6gJHRYNr2sSeRtEP3nnA3
+        // Instruction Name: shared_accounts_route
+        let _ = get_idl_parsed_value_given_data(&jup_pid, hex::decode("c1209b3341d69c810502000000266400014701006401028a28000000000000f405000000000000460014").unwrap()).unwrap();
+
+        // Instruction #5 at this link -- https://solscan.io/tx/huK6BK5iUUvGZHHGJZbPrTjQrWgQY7vDQ4umFQTw8he1rvxPV6DH41XcwgEMZWXr9irgGKomxotQGzueCARqfkM
+        // Instruction Name: set_token_ledger
+        let _ = get_idl_parsed_value_given_data(&jup_pid, hex::decode("e455b9704e4f4d02").unwrap()).unwrap();
+
+        // Instruction #14 at this link -- https://solscan.io/tx/huK6BK5iUUvGZHHGJZbPrTjQrWgQY7vDQ4umFQTw8he1rvxPV6DH41XcwgEMZWXr9irgGKomxotQGzueCARqfkM
+        // Instruction Name: shared_account_route_with_token_ledger
+        let _ = get_idl_parsed_value_given_data(&jup_pid, hex::decode("e6798f50779f6aaa0402000000076400012f0000640102201fd10200000000080700").unwrap()).unwrap();
+
+        // Instruction #9 at this link -- https://solscan.io/tx/34JeXyn1YgX2VXFeasJwFhp135dWN4xaHJquYUNP6ymgHksvM9wi4GSR6DRXmHwJ2vguB5swuauG9GPP9zEDCMds
+        // Instruction Name: route_with_token_ledger
+        let _ = get_idl_parsed_value_given_data(&jup_pid, hex::decode("96564774a75d0e680300000011006400013d016401021a6402036142950900000000320000").unwrap()).unwrap();
+
+        // Instruction #3 at this link -- https://solscan.io/tx/DB5hZyNoUSo7JxNmpZkrx3Fz4rUPRLhyfkvBSp2RaqiMnEaJkgV7gUhrUAcKKtoJFzGpmsBQdmUuka2fQHY4WyR
+        // Instruction Name: shared_accounts_exact_out_route
+        let _ = get_idl_parsed_value_given_data(&jup_pid, hex::decode("b0d169a89a7d453e07020000001a6400011a6401028beb033902000000ec0a3e0500000000f40100").unwrap()).unwrap();
+
+        // Instruction #3 at this link -- https://solscan.io/tx/dUQfdooGYYxRRMNYYD3fCJ6aPVCK8aEcHsgZiujZK9yZqaS3zWTfFmygQHWSRdcKYwz19u7HtHqcxvuUrbQBa79
+        // Instruction Name: claim_token
+        let _ = get_idl_parsed_value_given_data(&jup_pid, hex::decode("74ce1bbfa613004908").unwrap()).unwrap();
+    }
+
+    // APE PRO SMART WALLET PROGRAM -- IDL PARSING TESTS
+    #[test]
+    fn test_idl_ape_pro() {
+        let ape_pid = "JSW99DKmxNyREQM14SQLDykeBvEUG63TeohrvmofEiw";
+
+        // Instruction #4 at this link -- https://solscan.io/tx/5Yifk8KmHjGWxLP3haiMsyzuUBT7EUoqzHphW5qQoazvAqhzREf3Lwu5mRFEK7o9xHMrLuM1UavDGmRetP8sDKrB
+        // Instruction Name:  preFlashSwapApprove
+        let _ = get_idl_parsed_value_given_data(ape_pid, hex::decode("315e88b6bffd5c280246218496010000cd6e86c4290c162621bd683dcf8de9da5aed6ffcbe1c3e0fb03581739510ba8137e3cba7093f1e888c7726a4f56809f90d38ed4cf1d85e2aae04b51016dee2ec01809698000000000000ca9a3b000000000000000000000000092d00000000ffffffffffffffff").unwrap()).unwrap();
+
+        // Instruction #4 at this link -- https://solscan.io/tx/4JwtqYCqan3DPSbjGqwxYKzuhSZndSdX5b1JEieJr4AZD2pm1nEzCnGHKRNPRf7NvurvnvNSiECy1jV9hxiPgvy7
+        // Instruction Name:  postSwap
+        let _ = get_idl_parsed_value_given_data(ape_pid, hex::decode("9fd5b739b38a75a1").unwrap()).unwrap();
+
+        // Instruction #3 at this link -- https://solscan.io/tx/4K89QAFV5EiB4AEp344XxKYxB2gdqDEcFEWj8jN6F8teKURY8zwGQbNkGoP1vFN6JvDBo9Z9M6V97qX9RG4xBYh4
+        // Instruction Name:  withdrawToken
+        let _ = get_idl_parsed_value_given_data(ape_pid, hex::decode("88ebb505656d395121353b84960100009ef7641be0a9b34d7f8a97129c3f5711a7eaa5d35d9b7fc5b09f5746cec2165378babd55434c969c16946f4414ef59e78136f2c3c0a7bf619ecb08b4361d0af301bfa79caf05000000").unwrap()).unwrap();
+        
+        // Instruction #3 at this link -- https://solscan.io/tx/5BoC44EDb33DAhxmkZrFkQsBnG6ALJ3A5VzYXYkeCvkcWSLEXorZ2X4jeHP8V42kST8tNCxDkTE4cnt1efjSAFSn
+        // Instruction Name:  flashSwapApprove
+        let _ = get_idl_parsed_value_given_data(ape_pid, hex::decode("f5d2c7fb443c609454baaf9492010000ed4f9590d2243e5fe524dcf665c758b4567a5e1e58949f504f1688fcd77fdc3b4a552d0e8caf9499d41c6b013bc1a6f39ec1191b8ba6e97a3bea0e5fc22453750040420f00000000004c38c175510000000000000000000000").unwrap()).unwrap();
+    }
+
+    // RaydiumCMPP -- IDL PARSING TESTS
+    #[test]
+    fn test_idl_raydium() {
+        let rd_pid = "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C";
+
+        // Instruction #4 at this link -- https://solscan.io/tx/1FyuW7Pwxip4RZ5BpR3jwnDZQ5z9uUQ4Pa74hBUZw2z1k4eVWgAGBkXptSamNCkWxV58a4aXt4UHWywCERRP54a
+        // Instruction Name: swapBaseInput
+        let _ = get_idl_parsed_value_given_data(rd_pid, hex::decode("8fbe5adac41e33de1027000000000000b80d020200000000").unwrap()).unwrap();
+
+        // Instruction #5 at this link -- https://solscan.io/tx/5LETS5M435N9tEUynZy2DZX5PToNJSZZ4Cxab89zF9iHk5p6PPpgPFUsKn2aa8GVGyCHukQ7a69tafweYGS3Rk2A
+        // Instruction Name: withdraw
+        let _ = get_idl_parsed_value_given_data(rd_pid, hex::decode("b712469c946da1229c2fef7dba0200007679e100000000000a90393145d5fa08").unwrap()).unwrap();
+    
+        // Instruction #3.1 at this link -- https://solscan.io/tx/4s6ajUvRdsLLorb6w1N9GyJDmmzDksUrSgHHLfdZ4NPjgDe7emGWTFBt2JSWMxq9pq1bxx6bMqfgGGZ68pPb5LjU
+        // Instruction Name: createAmmConfig
+        let _ = get_idl_parsed_value_given_data(rd_pid, hex::decode("8934edd4d7756c6804008813000000000000c0d4010000000000409c00000000000080d1f00800000000").unwrap()).unwrap();
+
+        // Instruction #3 at this link -- https://solscan.io/tx/5frS5mvdNJvnnLH4VhboGKzGMWTnL1HPuc9jbgpFTRavC7qZjcV92LNQBCPQLUhpsUybjfXqxy9xWgwgjuu4Hy9h
+        // Instruction Name: collectProtocolFee
+        let _ = get_idl_parsed_value_given_data(rd_pid, hex::decode("8888fcddc2427e59ffffffffffffffffffffffffffffffff").unwrap()).unwrap();
+    }
+
+    // Kamino Program -- IDL PARSING TESTS
+    #[test]
+    fn test_idl_kamino() {
+        let kamino_pid = "6LtLpnUFNByNXLyCoK9wA2MykKAmQNZKBdY8s47dehDc";
+
+        // Instruction #3 at this link -- https://solscan.io/tx/2RhYLjmRbKry2tyHKpaTfGYaEXSUmUtBTxWLRZ347nfKVVknBGgYNf5BrcykjVRjcmc8zNwhanLDcQy8ex6SfS3s
+        // Instruction Name: initializeStrategy
+        let _ = get_idl_parsed_value_given_data(kamino_pid, hex::decode("d0779091b23969fc0100000000000000ea000000000000000000000000000000").unwrap()).unwrap();
+
+        // Instruction #3.1 at this link -- https://solscan.io/tx/2qWFsUVJKkKYz19fzQnf2eaapYEXQXgnvmHvNZksmw7Co89Ez9BTZB7bkBrP6CicjbpwvM1VLmHwshQV58WVUsUF
+        // Instruction Name: insertCollateralInfo
+        let _ = get_idl_parsed_value_given_data(kamino_pid, hex::decode("1661044ea6bc33beea000000000000000b86be66bc1f98b47d20a3be615a4905a825b826864e2a0f4c948467d33ee7090000000000000000000000000000000000000000000000000000000000000000e2003e00ffffffffe0001400ffffffff774d0000000000000000000000000000000000000000000000000000000000002c010000000000004001000000000000000000000000000000ffffffffffffffff").unwrap()).unwrap();
+        
+        // Instruction #3 at this link -- https://solscan.io/tx/PuKd8JeLhvSwA8VxN7hkeV5ZHdyj1hk8EoFawjn2X9YVu9GrHza93yPT1AxvMgTFzckkSBCVXhtc4eocwVxx68u
+        // Instruction Name: flashSwapUnevenVaultsStart
+        let _ = get_idl_parsed_value_given_data(kamino_pid, hex::decode("816fae0c0a3c95c19786991c0000000000").unwrap()).unwrap();
+        
+        // Instruction #3 at this link -- https://solscan.io/tx/5fJXiyDoUxffhPm2riHTugu2zSsx16Rq1ezGv4oomjw6jEUgyrPLG3vrFkGazXgDspQpcFsJ8UapAUuNX8ph6yD8
+        // Instruction Name: collectFeesAndRewards
+        let _ = get_idl_parsed_value_given_data(kamino_pid, hex::decode("71124b08b61f69ba").unwrap()).unwrap();
+
+        // Instruction #3 at this link -- https://solscan.io/tx/oYVVbND3bbpBuL3eb9jyyET2wWu1nEKxacC6BsRHP4KdsA9WHNjD7tHSEcNJkt4R83NFTquESp2xrhR92DRFCEW
+        // Instruction Name: invest
+        let _ = get_idl_parsed_value_given_data(kamino_pid, hex::decode("0df5b467feb67904").unwrap()).unwrap();
+
+        // Instruction #2 at this link -- https://solscan.io/tx/yWdjGMsPP4zNVFpbqXRSVTwZJQogXzqjpV4kFLMH5G7T4Dc6hjrQ8QCkJpKLPi2sq8PyEBgedntRLVervR8Eg6o
+        // Instruction Name: initializeSharesMetadata
+        let value = get_idl_parsed_value_given_data(kamino_pid, hex::decode("030fac72c8008320180000004b616d696e6f20774d2d5553444320285261796469756d29080000006b574d2d555344435800000068747470733a2f2f6170692e6b616d696e6f2e66696e616e63652f6b746f6b656e732f4273334c5757747165435641714b75315032574839674b5a344d4a736b57484e786631453666686f7667597a2f6d65746164617461").unwrap()).unwrap();
+        println!("{:#?}", value);
+    }
+
+    // Meteora Program -- IDL PARSING TESTS
+    #[test]
+    fn test_idl_candy() {
+        let mtr_pid = "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo";
+
+        // Instruction #3.6 at this link -- https://solscan.io/tx/3Veo71aP5mVi4VT35hYDQRaxqvdkEbcgPmjh9dsBVNK2XLVusrvk3PLzrS36sYsY2h3wL2S7Z76DYW3B13uispv4
+        // Instruction Name: swap
+        let _ = get_idl_parsed_value_given_data(mtr_pid, hex::decode("f8c69e91e17587c8d0b49c7a000000000000000000000000").unwrap()).unwrap();
+    }
+
+    // Test Calculating Default Anchor discriminator across different contracts
+    #[test]
+    fn test_anchor_default_discriminator_generation() {
+        // Test Ape Pro contract instruction
+        // Check that the instruction name collectFeesAndRewards parses to the correct instruction discriminator 
+        // Reference for the correct instruction discriminator is the first 8 bytes of instruction #3 at this link - https://solscan.io/tx/5fJXiyDoUxffhPm2riHTugu2zSsx16Rq1ezGv4oomjw6jEUgyrPLG3vrFkGazXgDspQpcFsJ8UapAUuNX8ph6yD8
+        let inst_name = "collectFeesAndRewards";
+        let exp_disc = hex::decode("71124b08b61f69ba").unwrap();
+        let calc_disc = idl_parser::compute_default_anchor_discriminator(inst_name).unwrap();
+        assert_eq!(exp_disc, calc_disc);
+
+        // Test Orca Whirlpools contract instruction
+        // Check that the instruction name openPosition parses to the correct instruction discriminator 
+        // Reference for the correct instruction discriminator is the first 8 bytes of instruction #3.5 at this link - https://solscan.io/tx/3TxJ1wMMBpfXucDzv5wbgXY2qx5W6pbxRGwPmkNgAhBRBqZViZNUwBWBzi2UXvsbpPf4rjQj3j2GFLT4gmX9WpKQ
+        let inst_name = "openPosition";
+        let exp_disc = hex::decode("87802f4d0f98f031").unwrap();
+        let calc_disc = idl_parser::compute_default_anchor_discriminator(inst_name).unwrap();
+        assert_eq!(exp_disc, calc_disc);
+
+        // Test OpenBook instruction
+        // Check that the instruction name consumeEvents parses to the correct instruction discriminator 
+        // Reference for the correct instruction discriminator is the first 8 bytes of instruction #4.1 at this link - https://solscan.io/tx/sCJp1GLAZfGNVGBZxhCE3ZQ4uyXPy8ui7L63bWF2bSPbEUhEkzPtztzr7G18DaJK64yR88RojTXPwDdvkNeDgzL
+        let inst_name = "consumeEvents";
+        let exp_disc = hex::decode("dd91b1341f2f3fc9").unwrap();
+        let calc_disc = idl_parser::compute_default_anchor_discriminator(inst_name).unwrap();
+        assert_eq!(exp_disc, calc_disc);
+
+        // Test empty instruction name -- ERROR CASE
+        let empty_inst_name = "";
+        let empty_err_str = idl_parser::compute_default_anchor_discriminator(empty_inst_name).unwrap_err().to_string();
+        assert_eq!(empty_err_str, "Attempted to compute the default anchor instruction discriminator for an instruction with no name".to_string());
+    }
+
+    // Test cycle detection in defined types resolution 
+    #[test]
+    fn test_cyclic_types_idl() {
+        let idl_json_string = fs::read_to_string("src/solana/test_idls/cyclic.json").unwrap();
+        let cyclic_err_str = idl_parser::decode_idl_data(&idl_json_string, "CYCLIC-PROGRAM-ID", "Test Cyclic Program").unwrap_err().to_string();
+        assert_eq!(cyclic_err_str, "Defined types cycle check failed on name: TypeA".to_string());
+    }
+
+
+    // Test type name collision detection
+    #[test]
+    fn test_type_names_collision() {
+        let idl_json_string = fs::read_to_string("src/solana/test_idls/collision.json").unwrap();
+        let cyclic_err_str = idl_parser::decode_idl_data(&idl_json_string, "COLLIDING-PROGRAM-ID", "Test Name Colliding Program").unwrap_err().to_string();
+        assert_eq!(cyclic_err_str, "Multiple types with the same name detected: TypeA".to_string());
+    }
+
+    // Test detection of extraneous bytes at the end of an instruction
+    #[test]
+    fn test_extraneous_bytes() {
+        let kamino_pid = "6LtLpnUFNByNXLyCoK9wA2MykKAmQNZKBdY8s47dehDc";
+        // Below is Kamino instruction data with an extra byte "00" added on to the end
+        // Original instruction #3 at this link -- https://solscan.io/tx/oYVVbND3bbpBuL3eb9jyyET2wWu1nEKxacC6BsRHP4KdsA9WHNjD7tHSEcNJkt4R83NFTquESp2xrhR92DRFCEW
+        let kamino_extra_bytes_err = get_idl_parsed_value_given_data(kamino_pid, hex::decode("0df5b467feb6790400").unwrap()).unwrap_err().to_string();
+        assert_eq!(kamino_extra_bytes_err, "Failed to parse instruction call data into IDL instruction for instrucion name: invest with error: Extra unexpected bytes remainging at the end of instruction call data".to_string());
+
+        let rd_pid = "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C";
+        // Below is Raydium instruction data with some extra bytes "0012" added on to the end
+        // Original Instruction #4 at this link -- https://solscan.io/tx/1FyuW7Pwxip4RZ5BpR3jwnDZQ5z9uUQ4Pa74hBUZw2z1k4eVWgAGBkXptSamNCkWxV58a4aXt4UHWywCERRP54a
+        let raydium_extra_bytes_err = get_idl_parsed_value_given_data(rd_pid, hex::decode("8fbe5adac41e33de1027000000000000b80d0202000000000012").unwrap()).unwrap_err().to_string();
+        assert_eq!(raydium_extra_bytes_err, "Failed to parse instruction call data into IDL instruction for instrucion name: swapBaseInput with error: Extra unexpected bytes remainging at the end of instruction call data".to_string());
+    }
+
+
+    // ******* IDL TESTING HELPER FUNCTIONS ****
+    fn get_idl_parsed_value_given_data(program_id: &str, data: Vec<u8>) -> Result<serde_json::Map<String, Value>, Box<dyn Error>> {
+        let record_map = idl_parser::construct_custom_idl_records_map()?;
+        if record_map.contains_key(program_id) {
+            let idl_record = record_map[program_id].clone();
+            let idl_json_string = fs::read_to_string(IDL_DIRECTORY.to_string() + &idl_record.file_path)?;
+
+            let idl = idl_parser::decode_idl_data(&idl_json_string, &idl_record.program_id, &idl_record.program_name)?;
+            let (value, _) = idl_parser::process_instruction_data(data, idl)?;
+            return Ok(value)
+        }
+        Err("Idl Not found".into())
+    }
+
+    // // REVISIT
+    // fn are_equivalent(user: &Value, explorer: &Value) -> Result<bool, Box<dyn Error>> {
+    //     let user_map = user.as_object().ok_or_else(|| Box::<dyn Error>::from("user value is not an object"))?;
+    //     let explorer_map = explorer.as_object().ok_or_else(|| Box::<dyn Error>::from("explorer value is not an object"))?;
+
+    //     // After (collected vectors)
+    //     let user_keys: Vec<_> = user_map.keys().collect();
+    //     let explorer_keys: Vec<_> = explorer_map.keys().collect();
+
+    //     if user_keys.len() != explorer_keys.len() || user_keys.iter().any(|k| !explorer_map.contains_key(*k)) {
+    //         return Ok(false);
+    //     }
+        
+    //     for key in user_keys {
+    //         let exp_obj = explorer_map[key].clone();
+    //         let exp_map = exp_obj.as_object().ok_or_else(|| Box::<dyn Error>::from("explorer parameter is not an object"))?;
+    //         if !exp_map.contains_key("data") {
+    //             return Err("unexpectedly formatted explorer object".into());
+    //         }
+
+    //         let user_val = user_map[key].clone();
+    //         let exp_val = exp_map["data"].clone();
+    //         println!("{:#?}", user_val.to_string());
+    //         println!("{:#?}", exp_val.to_string());
+
+    //         if !(user_val.to_string() == exp_val.to_string()) {
+    //             return Ok(false)
+    //         }
+    //     }
+    //     return Ok(true)
+    // }
