@@ -253,42 +253,6 @@ fn parse_type<R: Read>(
                 parse_type(reader, ty, resolver)?
             })
         },
-        IdlType::COption(ty) => {
-            let flag = reader.read_u32::<LittleEndian>()?;
-            Ok(if flag == 0 {
-                serde_json::Value::Null
-            } else {
-                parse_type(reader, ty, resolver)?
-            })
-        },
-        IdlType::Tuple(tys) => {
-            let mut values = Vec::with_capacity(tys.len());
-            for ty in tys {
-                values.push(parse_type(reader, ty, resolver)?);
-            }
-            Ok(values.into())
-        },
-        
-        // Collection types
-        IdlType::HashMap(k_ty, v_ty) | IdlType::BTreeMap(k_ty, v_ty) => {
-            let len = reader.read_u32::<LittleEndian>()?;
-            let mut entries = Vec::with_capacity(len as usize);
-            for _ in 0..len {
-                entries.push(serde_json::json!({
-                    "key": parse_type(reader, k_ty, resolver)?,
-                    "value": parse_type(reader, v_ty, resolver)?
-                }));
-            }
-            Ok(entries.into())
-        },
-        IdlType::HashSet(ty) | IdlType::BTreeSet(ty) => {
-            let len = reader.read_u32::<LittleEndian>()?;
-            let mut items = Vec::with_capacity(len as usize);
-            for _ in 0..len {
-                items.push(parse_type(reader, ty, resolver)?);
-            }
-            Ok(items.into())
-        },
         // Custom types
         IdlType::Defined(defined) => {
             let type_name = match defined {

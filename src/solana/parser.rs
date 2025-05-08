@@ -687,6 +687,7 @@ impl SolanaTransaction {
         if self.custom_idl_records.contains_key(&program_key) {
             // Parse the instruction call data using the idl of the uploaded program
             let idl_record = self.custom_idl_records[&program_key].clone();
+            
             let idl_json_string = fs::read_to_string(IDL_DIRECTORY.to_string() + &idl_record.file_path).map_err(|e| Box::<dyn std::error::Error>::from(format!("Unable to parse IDL from file {} -- Invalid JSON: {}", idl_record.file_path.clone(), e)))?;
             let idl = idl_parser::decode_idl_data(&idl_json_string, &idl_record.program_id, &idl_record.program_name)?;
             let (parsed_inst, instruction_spec) = idl_parser::process_instruction_data(data.clone(), idl)?;

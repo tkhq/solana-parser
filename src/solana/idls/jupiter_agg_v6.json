@@ -1728,7 +1728,37 @@
             "name": "MeteoraDammV2"
           },
           {
-            "name": "MeteoraVirtualCurveSwap"
+            "name": "MeteoraDynamicBondingCurveSwap"
+          },
+          {
+            "name": "StabbleStableSwapV2"
+          },
+          {
+            "name": "StabbleWeightedSwapV2"
+          },
+          {
+            "fields": [
+              {
+                "name": "share_fee_rate",
+                "type": "u64"
+              }
+            ],
+            "name": "RaydiumLaunchlabBuy"
+          },
+          {
+            "fields": [
+              {
+                "name": "share_fee_rate",
+                "type": "u64"
+              }
+            ],
+            "name": "RaydiumLaunchlabSell"
+          },
+          {
+            "name": "BoopdotfunWrappedBuy"
+          },
+          {
+            "name": "BoopdotfunWrappedSell"
           }
         ]
       }

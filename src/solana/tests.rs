@@ -1161,7 +1161,6 @@ use crate::solana::parser::IDL_DIRECTORY;
         // Instruction #3 at this link -- https://solscan.io/tx/5BoC44EDb33DAhxmkZrFkQsBnG6ALJ3A5VzYXYkeCvkcWSLEXorZ2X4jeHP8V42kST8tNCxDkTE4cnt1efjSAFSn
         // Instruction Name:  flashSwapApprove
         let _ = get_idl_parsed_value_given_data(ape_pid, hex::decode("f5d2c7fb443c609454baaf9492010000ed4f9590d2243e5fe524dcf665c758b4567a5e1e58949f504f1688fcd77fdc3b4a552d0e8caf9499d41c6b013bc1a6f39ec1191b8ba6e97a3bea0e5fc22453750040420f00000000004c38c175510000000000000000000000").unwrap()).unwrap();
-    
     }
 
     // RaydiumCMPP -- IDL PARSING TESTS
