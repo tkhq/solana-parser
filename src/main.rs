@@ -9,7 +9,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     
     if args.len() != 4 {
-        println!("Usage: `cargo run parse <unsigned transaction> --message OR cargo run parse <unsinged transaction> --transaction`");
+        println!("Usage: `cargo run parse <unsigned transaction> --message OR cargo run parse <unsigned transaction> --transaction`");
         return;
     }
 

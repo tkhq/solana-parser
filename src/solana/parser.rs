@@ -449,7 +449,7 @@ impl SplInstructionData {
             }
             26 => {
                 let (&transfer_fee_tag, rest) = rest.split_first().ok_or("Error while parsing spl instruction TransferCheckedWithFee -- instruction index")?;
-                // Given the extension prefix of 26 ensure that we're calling instruciton 01, which is TransferCheckedWithFee
+                // Given the extension prefix of 26 ensure that we're calling instruction 01, which is TransferCheckedWithFee
                 let (amount, decimals, fee) = match transfer_fee_tag {
                     1 => {
                         let (amount, rest) = unpack_u64(rest).map_err(|_| format!("Error while parsing spl instruction TransferCheckedWithFee -- amount"))?;
