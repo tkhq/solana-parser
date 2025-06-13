@@ -39,6 +39,11 @@ pub fn parse_transaction(unsigned_tx: String, full_transaction: bool) -> Result<
         Box::<dyn std::error::Error>::from(format!("Unable to parse transaction: {}", e))
     })?;
 
+    // use the sanitize message to check for malformed transactions
+    tx.message.sanitize().map_err(|e| {
+        Box::<dyn std::error::Error>::from(format!("Solana transaction message failed sanitization check: {}", e))
+    })?;
+
     let payload = SolanaParsedTransactionPayload {
         transaction_metadata: Some(tx.transaction_metadata()?),
         unsigned_payload: unsigned_tx,
@@ -59,17 +64,18 @@ fn parse_solana_transaction(
     unsigned_tx: &str,
     full_transaction: bool,
 ) -> Result<SolanaTransaction, Box<dyn std::error::Error>> {
-    if unsigned_tx.len() % 2 != 0 {
-        return Err("unsigned transaction provided is invalid when converted to bytes".into());
+    let unsigned_tx_bytes: Vec<u8> = hex::decode(unsigned_tx).map_err(|_| {
+            "unsigned Solana transaction provided is invalid hex"
+    })?;
+
+    if unsigned_tx_bytes.is_empty() {
+        return Err(
+            Box::<dyn std::error::Error>::from("unsigned Solana transaction provided must be non-empty"),
+        );
     }
-    let unsigned_tx_bytes: &[u8] = &(0..unsigned_tx.len())
-        .step_by(2)
-        .map(|i| u8::from_str_radix(&unsigned_tx[i..i + 2], 16))
-        .collect::<Result<Vec<u8>, _>>()
-        .map_err(|_| "unsigned transaction provided is invalid when converted to bytes")?;
 
     if full_transaction {
-        let (signatures, tx_body) = parse_signatures(unsigned_tx_bytes)?;
+        let (signatures, tx_body) = parse_signatures(&unsigned_tx_bytes)?;
         let message = match tx_body[0] {
             V0_TRANSACTION_INDICATOR => parse_solana_v0_transaction(&tx_body[LEN_ARRAY_HEADER_BYTES..tx_body.len()]).map_err(|e| format!("Error parsing full transaction. If this is just a message instead of a full transaction, parse using the --message flag. Parsing Error: {:#?}", e))?,
             _ => parse_solana_legacy_transaction(tx_body).map_err(|e| format!("Error parsing full transaction. If this is just a message instead of a full transaction, parse using the --message flag. Parsing Error: {:#?}", e))?,
@@ -78,7 +84,7 @@ fn parse_solana_transaction(
     }
     let message = match unsigned_tx_bytes[0] {
         V0_TRANSACTION_INDICATOR => parse_solana_v0_transaction(&unsigned_tx_bytes[LEN_ARRAY_HEADER_BYTES..unsigned_tx_bytes.len()]).map_err(|e| format!("Error parsing message. If this is a serialized Solana transaction with signatures, parse using the --transaction flag. Parsing error: {:#?}", e))?,
-        _ => parse_solana_legacy_transaction(unsigned_tx_bytes).map_err(|e| format!("Error parsing message. If this is a full solana transaction with signatures or signature placeholders, parse using the --transaction flag. Parsing Error: {:#?}", e))?,
+        _ => parse_solana_legacy_transaction(&unsigned_tx_bytes).map_err(|e| format!("Error parsing message. If this is a full solana transaction with signatures or signature placeholders, parse using the --transaction flag. Parsing Error: {:#?}", e))?,
     };
     return Ok(SolanaTransaction{ message, signatures: vec![] }); // Signatures array is empty when we are parsing a message (using --message) as opposed to a full transaction
 
@@ -585,6 +591,10 @@ impl SolanaTransaction {
     fn all_instructions_and_transfers(
         &self,
     ) -> Result<(Vec<SolanaInstruction>, Vec<SolTransfer>, Vec<SplTransfer>), Box<dyn std::error::Error>> {
+        // use the sanitize message to check for malformed transactions
+        self.message.sanitize().map_err(|e| {
+            Box::<dyn std::error::Error>::from(format!("Solana transaction message failed sanitization check while parsing instructions: {}", e))
+        })?;
         let mut instructions: Vec<SolanaInstruction> = vec![];
         let mut transfers: Vec<SolTransfer> = vec![];
         let mut spl_transfers: Vec<SplTransfer> = vec![];
@@ -618,6 +628,10 @@ impl SolanaTransaction {
                 // push the parsed static account to both the static account array AND the combined all transaction address array
                 static_accounts.push(acct.clone());
                 all_transaction_addresses.push(AccountAddress::Static(acct.clone()));
+            }
+            // Make sure that program id is a statically included address -- Including program ID's as Address Table Lookups is INVALID
+            if i.program_id_index as usize >= self.message.static_account_keys().len() {
+                return Err(Box::<dyn std::error::Error>::from("Solana Instruction program index must be within static account keys"))
             }
             let program_key = i.program_id(self.message.static_account_keys()).to_string();
             match program_key.as_str() {
@@ -820,6 +834,96 @@ mod tests {
         assert_eq!(
             decoding_err_2.to_string(),
             "error parsing unsigned transaction: unable to parse compact array header, not enough bytes",
+        );
+    }
+
+    #[test]
+    fn solana_fuzzer_regression_test1() {
+        // This test tests fixes for inputs that would potentially cause Panics in the Solana Parser
+
+        // Test 1: Empty input to parse_solana_transaction()
+        let unsigned_tx_too_short1 = "";
+        let empty_err = parse_solana_transaction(unsigned_tx_too_short1, false).unwrap_err();
+        assert_eq!(
+            empty_err.to_string(),
+            "unsigned Solana transaction provided must be non-empty"
+        );
+        let unsigned_tx_too_short2 = "0x";
+        let empty_err = parse_solana_transaction(unsigned_tx_too_short2, false).unwrap_err();
+        assert_eq!(
+            empty_err.to_string(),
+            "unsigned Solana transaction provided is invalid hex"
+        );
+    }
+
+    #[test]
+    fn solana_fuzzer_regression_test2() {
+        // Test 2: Parsing hex bytes with characters with multi-byte widths
+        let unsigned_tx_2 = ".ё%";
+        let empty_err = parse_solana_transaction(unsigned_tx_2, false).unwrap_err();
+        assert_eq!(
+            empty_err.to_string(),
+            "unsigned Solana transaction provided is invalid hex"
+        );
+    }
+
+    #[test]
+    fn solana_fuzzer_regression_test3() {
+        // Test 3: fatal problem with the Solana instruction parsing
+
+        // data extracted from fuzz case
+        let unsigned_tx_instruction_problem1_raw = vec![
+            0x01, 0x01, 0x03, 0x00, 0x0a, 0x0a, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x66, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x8e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x82, 0x82, 0x82, 0x82, 0x82,
+            0x82, 0x82, 0x00, 0x00, 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00,
+            0x00, 0x00, 0x66, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x8e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0x00, 0x00, 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xef, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00,
+        ];
+        let unsigned_tx_instruction_problem1_hex_string = hex::encode(&unsigned_tx_instruction_problem1_raw);
+        let unsigned_tx_instruction_problem1 =
+            parse_solana_transaction(&unsigned_tx_instruction_problem1_hex_string, true).unwrap();
+
+        // symptom: this panics with "index out of bounds: the len is 0 but the index is 0"
+        let fuzz_err = unsigned_tx_instruction_problem1
+            .all_instructions_and_transfers()
+            .unwrap_err();
+
+        assert_eq!(
+            fuzz_err.to_string(),
+            "Solana transaction message failed sanitization check while parsing instructions: index out of bounds"
+        );
+    }
+
+    #[test]
+    fn solana_fuzzer_regression_test4() {
+        // Test 4: fatal problem with the Solana instruction parsing
+
+        // data extracted from fuzz case
+        let unsigned_tx_instruction_problem2_string = String::from_utf8(vec![
+            0x30, 0x30, 0x30, 0x30, 0x30, 0x31, 0x30, 0x30, 0x30, 0x31, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+            0x30, 0x35, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x30, 0x30, 0x30, 0x31, 0x30, 0x30,
+            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+            0x30, 0x30, 0x30, 0x35, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x30, 0x30, 0x30, 0x31,
+            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x35, 0x46, 0x46, 0x46,
+            0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x30, 0x30, 0x30, 0x31, 0x30, 0x30, 0x30, 0x31, 0x30, 0x30, 0x30,
+            0x30, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x30, 0x30, 0x30, 0x31, 0x30, 0x30, 0x30, 0x31,
+            0x30, 0x30, 0x30, 0x30,
+        ])
+        .unwrap();
+        let unsigned_tx_instruction_problem2 =
+            parse_solana_transaction(&unsigned_tx_instruction_problem2_string, true).unwrap();
+
+        // symptom: this panics with "attempt to subtract with overflow"
+        let fuzz_err = unsigned_tx_instruction_problem2
+            .all_instructions_and_transfers()
+            .unwrap_err();
+
+        assert_eq!(
+            fuzz_err.to_string(),
+            "Solana transaction message failed sanitization check while parsing instructions: index out of bounds"
         );
     }
 }

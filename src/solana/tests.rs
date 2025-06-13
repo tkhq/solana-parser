@@ -105,7 +105,7 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
         let inst_error_message = parsed_tx.unwrap_err().to_string(); // Unwrap the error
         assert_eq!(
             inst_error_message,
-            "unsigned transaction provided is invalid when converted to bytes"
+            "unsigned Solana transaction provided is invalid hex"
         );
 
         // Invalid length for Instruction Data Array
