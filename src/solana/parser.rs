@@ -251,7 +251,7 @@ Parse Block Hash
 fn parse_block_hash(tx_body_remainder: &[u8]) -> Result<(Hash, &[u8]), Box<dyn std::error::Error>> {
     validate_length(tx_body_remainder, LEN_SOL_ACCOUNT_KEY_BYTES, "Block Hash")?;
     let hash_bytes: &[u8] = &tx_body_remainder[0..LEN_SOL_ACCOUNT_KEY_BYTES];
-    let block_hash = Hash::new(hash_bytes);
+    let block_hash = Hash::new_from_array(hash_bytes.try_into().unwrap());
     Ok((
         block_hash,
         &tx_body_remainder[LEN_SOL_ACCOUNT_KEY_BYTES..tx_body_remainder.len()],
