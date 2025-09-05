@@ -1,4 +1,6 @@
-use std::fmt;
+use std::{fmt, collections::HashMap};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SolanaMetadata {
@@ -18,6 +20,7 @@ pub struct SolanaInstruction {
     pub accounts: Vec<SolanaAccount>,
     pub instruction_data_hex: String,
     pub address_table_lookups: Vec<SolanaSingleAddressTableLookup>,
+    pub parsed_instruction: Option<SolanaParsedInstructionData>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -51,6 +54,14 @@ pub struct SplTransfer {
     pub token_mint: Option<String>, 
     pub decimals: Option<String>,
     pub fee: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SolanaParsedInstructionData {
+    pub instruction_name: String, 
+    pub discriminator: String,
+    pub named_accounts: HashMap<String, String>, 
+    pub program_call_args: serde_json::Map<std::string::String, Value>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -96,3 +107,187 @@ impl fmt::Display for AccountAddress {
         }
     }
 }
+
+/*
+    SOLANA IDL TYPE DEFINITIONS
+    - All types below are used in Solana IDL data parsing for custom uploaded IDL's
+    - Some structs are vendored from an IDL parsing library with some modifications
+    - vendor docs reference: <https://github.com/metaplex-foundation/shank/blob/9a8f2a77f6000d2d00e04f5aaa8c36a36765f567/shank-idl/src/idl_type.rs>
+*/
+
+// Contains a reference to "uploaded" IDL's
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct IdlRecord {
+    pub program_id: String,
+    pub program_name: String,
+    pub file_path: String,
+}
+
+/// IDL that is compatible with what anchor and shank extract from a solana program.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Idl {
+    /// Instructions that are handled by the program defined by this IDL
+    pub instructions: Vec<IdlInstruction>,
+
+    /// Types defined in the program defined by this IDL that are used by account structs.
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub types: Vec<IdlTypeDefinition>,
+}
+
+/// `IdlInstruction` outlines all information required to parse data into a particular instruction to a program
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct IdlInstruction {
+    /// Name of the instruction.
+    pub name: String,
+
+    /*
+       ABI/IDL Discriminators
+       - While some IDL's explicitly provide each instruction's discriminator, many do not. This is because Anchor has a standard way of calculating instruction discriminators.
+       - Reference for calculating the default discriminator - https://www.anchor-lang.com/docs/basics/idl#discriminators
+    */
+    /// discriminator that denotes the unique instruction
+    pub discriminator: Option<Vec<u8>>,
+
+    /// Accounts that need to be supplied in order to process the instruction.
+    pub accounts: Vec<IdlAccount>,
+
+    /// Instruction args.
+    pub args: Vec<IdlField>,
+}
+
+/// Metadata of an account that is provided when calling an instruction.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct IdlAccount {
+    /// Name of the account used for documentation and by code generators.
+    pub name: String,
+
+    /// Whether the account is writable.
+    #[serde(alias = "writable", skip_serializing_if = "is_false", default)]
+    pub is_mut: bool,
+
+    /// Whether the account is signer.
+    #[serde(alias = "signer", skip_serializing_if = "is_false", default)]
+    pub is_signer: bool,
+
+    /// Whether the account is optional or not.
+    #[serde(alias = "optional", skip_serializing_if = "is_false", default)]
+    pub is_optional: bool,
+}
+
+#[allow(clippy::trivially_copy_pass_by_ref)]
+fn is_false(x: &bool) -> bool {
+    !x
+}
+
+/// Custom type definition.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct IdlTypeDefinition {
+    /// Name of the struct or enum.
+    pub name: String,
+
+    /// Underlying type description.
+    #[serde(rename = "type")]
+    pub r#type: IdlTypeDefinitionType,
+}
+
+/// A field in a struct, enum variant or [`IdlInstruction`] args.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct IdlField {
+    /// Name of the field.
+    pub name: String,
+
+    /// Type of the field.
+    #[serde(rename = "type")]
+    pub r#type: IdlType,
+}
+
+/// Underlying fields of a tuple or struct [`IdlEnumVariant`].
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum EnumFields {
+    Named(Vec<IdlField>),
+    Tuple(Vec<IdlType>),
+}
+
+impl EnumFields {
+    pub fn types(&self) -> Vec<IdlType> {
+        match self {
+            EnumFields::Named(fields) => fields.iter().map(|f| f.r#type.clone()).collect(),
+            EnumFields::Tuple(types) => types.clone(),
+        }
+    }
+}
+
+/// An enum variant which could be scalar (without fields) or tuple/struct (with fields).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct IdlEnumVariant {
+    /// Name of the variant.
+    pub name: String,
+
+    /// Optional fields of the variant, only present when it is a tuple or a struct variant.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub fields: Option<EnumFields>,
+}
+
+/// `IdlTypeDefinitionType` defines the different forms in which a type definition can come in
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase", tag = "kind")]
+pub enum IdlTypeDefinitionType {
+    /// The Struct variant parses IDL Defined types that are formatted as structs
+    Struct { fields: Vec<IdlField> },
+    /// The Enum variant parses IDL Defined types that are formatted as enums
+    Enum { variants: Vec<IdlEnumVariant> },
+    /// The Alias variant parses IDL Defined types that are formatted as aliases
+    Alias { value: IdlType },
+}
+
+/// NOTE: The below vendored type has been modified to support ONLY the types supported by Anchor IDL's
+/// Reference to Anchor types: <https://www.anchor-lang.com/docs/references/type-conversion>
+/// Reference commit for type: <https://github.com/metaplex-foundation/shank/blob/9a8f2a77f6000d2d00e04f5aaa8c36a36765f567/shank-idl/src/idl_type.rs>
+/// Types that can be included in accounts or user defined structs or instruction args of an IDL.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum IdlType {
+    Array(Box<IdlType>, usize),
+    Bool,
+    Bytes,
+    Defined(Defined),
+    F32,
+    F64,
+    I128,
+    I16,
+    I32,
+    I64,
+    I8,
+    Option(Box<IdlType>),
+    #[serde(alias = "pubkey")]
+    PublicKey,
+    String,
+    U128,
+    U16,
+    U32,
+    U64,
+    U8,
+    Vec(Box<IdlType>),
+}
+
+/// The Defined type enum outlines the different formats in which Defined types can be referred to in the arguments to instructions
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum Defined {
+    /// The String variant parses defined types that are formatted as strings
+    String(String),
+    /// The Object variant parses defined types that are formatted as objects with the defined type name under the key 'name'
+    Object { name: String },
+}
+
+impl fmt::Display for Defined {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Defined::String(s) => write!(f, "{s}"),
+            Defined::Object { name } => write!(f, "{name}"),
+        }
+    }
+}
+

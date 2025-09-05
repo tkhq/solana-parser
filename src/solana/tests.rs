@@ -1,10 +1,12 @@
-use std::vec;
+use std::{vec, collections::HashMap};
+use serde_json::{Value, Number, Map};
 
 use super::*;
 use parser::SOL_SYSTEM_PROGRAM_KEY;
 use structs::SolanaMetadata;
 use crate::solana::structs::{SolanaInstruction, SolanaAccount, SolanaAddressTableLookup, SolanaSingleAddressTableLookup, SolTransfer};
-use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PROGRAM_KEY};
+use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PROGRAM_KEY, IDL_DIRECTORY};
+use crate::solana::idl_parser;
 
 
     #[test]
@@ -256,6 +258,7 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             accounts: vec![],
             address_table_lookups: vec![],
             instruction_data_hex: "02c05c1500".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_1, transaction_metadata.instructions[0]);
 
@@ -265,12 +268,14 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             accounts: vec![],
             address_table_lookups: vec![],
             instruction_data_hex: "03caa2000000000000".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_2, transaction_metadata.instructions[1]);
 
         // Instruction 3 - CreateIdempotent
         let exp_instruction_3 = SolanaInstruction {
             program_key: assoc_token_acct_key.to_string(),
+            parsed_instruction: None,
             accounts: vec![
                 signer_acct.clone(),
                 receiving_acct.clone(),
@@ -293,6 +298,7 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             accounts: vec![signer_acct.clone(), receiving_acct.clone()],
             address_table_lookups: vec![],
             instruction_data_hex: "0200000080f0fa0200000000".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_4, transaction_metadata.instructions[3]);
 
@@ -302,6 +308,7 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             accounts: vec![receiving_acct.clone()],
             address_table_lookups: vec![],
             instruction_data_hex: "11".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_5, transaction_metadata.instructions[4]);
 
@@ -318,6 +325,7 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             ],
             address_table_lookups: vec![],
             instruction_data_hex: "01".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_6, transaction_metadata.instructions[5]);
 
@@ -354,6 +362,7 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             instruction_data_hex:
                 "e517cb977ae3ad2a01000000120064000180f0fa02000000005d34700000000000320000"
                     .to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_7, transaction_metadata.instructions[6]);
 
@@ -367,6 +376,7 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             ],
             address_table_lookups: vec![],
             instruction_data_hex: "09".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_8, transaction_metadata.instructions[7]);
 
@@ -531,6 +541,7 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             accounts: vec![],
             address_table_lookups: vec![],
             instruction_data_hex: "02605f0400".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_1, transaction_metadata.instructions[0]);
 
@@ -540,6 +551,7 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             accounts: vec![],
             address_table_lookups: vec![],
             instruction_data_hex: "032753050000000000".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_2, transaction_metadata.instructions[1]);
 
@@ -556,6 +568,7 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             ],
             address_table_lookups: vec![],
             instruction_data_hex: "01".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_3, transaction_metadata.instructions[2]);
 
@@ -565,6 +578,7 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             accounts: vec![signer_acct.clone(), wsol_mint_acct.clone()],
             address_table_lookups: vec![],
             instruction_data_hex: "020000008096980000000000".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_4, transaction_metadata.instructions[3]);
 
@@ -574,12 +588,14 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             accounts: vec![wsol_mint_acct.clone()],
             address_table_lookups: vec![],
             instruction_data_hex: "11".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_5, transaction_metadata.instructions[4]);
 
         // Instruction 6 -- Jupiter Aggregator v6: sharedAccountsRoute
         let exp_instruction_6 = SolanaInstruction {
             program_key: jupiter_program_acct_key.to_string(),
+            parsed_instruction: None,
             accounts: vec![
                 token_acct.clone(),
                 jupiter_event_authority_acct.clone(),
@@ -703,6 +719,7 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
             accounts: vec![wsol_mint_acct.clone(), signer_acct.clone(), signer_acct.clone()],
             address_table_lookups: vec![],
             instruction_data_hex: "09".to_string(),
+            parsed_instruction: None,
         };
         assert_eq!(exp_instruction_7, transaction_metadata.instructions[6]);
 
@@ -779,7 +796,8 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
         assert_eq!(spl_transfer.fee, None);
 
         // Test Program called in the instruction
-        assert_eq!(tx_metadata.instructions[1].program_key, TOKEN_PROGRAM_KEY)
+        assert_eq!(tx_metadata.instructions[1].program_key, TOKEN_PROGRAM_KEY);
+        assert_eq!(tx_metadata.instructions[1].instruction_data_hex, "03a086010000000000")
     }
 
     #[test]
@@ -1087,3 +1105,829 @@ use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PRO
         );
         assert_eq!(spl_transfer_2.owner, "ADDRESS_TABLE_LOOKUP".to_string()); // Shows the flag ADDRESS_TABLE_LOOKUP because an ATLU is used for this address in the transaction
     }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use std::fs;
+    
+        // JUPITER AGGREGATOR V6 TESTS -- IDL PARSING
+        #[test]
+        fn test_idl_parsing_jupiter_instruction_1() {
+            let jup_idl_file = "jupiter_agg_v6.json";
+    
+            // Instruction #3 at this link -- https://solscan.io/tx/JcGkMSRd5iyXH5dar6MnjyrpEhQi5XR9mV2TfQpxLbTZH53geZsToDY4nzbcLGnvV32RvuEe4BPTSTkobV6rjEx
+            // Instruction Name: route
+            let _ = get_idl_parsed_value_given_data(
+                jup_idl_file,
+                &hex::decode("e517cb977ae3ad2a0200000007640001266401026ca35b0400000000a5465c0400000000000000").unwrap(),
+            )
+            .unwrap();
+    
+            // Instruction #6 at this link -- https://solscan.io/tx/eQqquSewgVCP3jBkKeTstnEGGMuGaT7g7G7uPL9kfFgJk163BYFHhqE3hxNTsaoWWX6gJHRYNr2sSeRtEP3nnA3
+            // Instruction Name: shared_accounts_route
+            let _ = get_idl_parsed_value_given_data(
+                jup_idl_file,
+                &hex::decode("c1209b3341d69c810502000000266400014701006401028a28000000000000f405000000000000460014")
+                    .unwrap(),
+            )
+            .unwrap();
+    
+            // Instruction #5 at this link -- https://solscan.io/tx/huK6BK5iUUvGZHHGJZbPrTjQrWgQY7vDQ4umFQTw8he1rvxPV6DH41XcwgEMZWXr9irgGKomxotQGzueCARqfkM
+            // Instruction Name: set_token_ledger
+            let _ = get_idl_parsed_value_given_data(jup_idl_file, &hex::decode("e455b9704e4f4d02").unwrap()).unwrap();
+    
+            // Instruction #14 at this link -- https://solscan.io/tx/huK6BK5iUUvGZHHGJZbPrTjQrWgQY7vDQ4umFQTw8he1rvxPV6DH41XcwgEMZWXr9irgGKomxotQGzueCARqfkM
+            // Instruction Name: shared_account_route_with_token_ledger
+            let _ = get_idl_parsed_value_given_data(
+                jup_idl_file,
+                &hex::decode("e6798f50779f6aaa0402000000076400012f0000640102201fd10200000000080700").unwrap(),
+            )
+            .unwrap();
+    
+            // Instruction #9 at this link -- https://solscan.io/tx/34JeXyn1YgX2VXFeasJwFhp135dWN4xaHJquYUNP6ymgHksvM9wi4GSR6DRXmHwJ2vguB5swuauG9GPP9zEDCMds
+            // Instruction Name: route_with_token_ledger
+            let _ = get_idl_parsed_value_given_data(
+                jup_idl_file,
+                &hex::decode("96564774a75d0e680300000011006400013d016401021a6402036142950900000000320000").unwrap(),
+            )
+            .unwrap();
+    
+            // Instruction #3 at this link -- https://solscan.io/tx/DB5hZyNoUSo7JxNmpZkrx3Fz4rUPRLhyfkvBSp2RaqiMnEaJkgV7gUhrUAcKKtoJFzGpmsBQdmUuka2fQHY4WyR
+            // Instruction Name: shared_accounts_exact_out_route
+            let _ = get_idl_parsed_value_given_data(
+                jup_idl_file,
+                &hex::decode("b0d169a89a7d453e07020000001a6400011a6401028beb033902000000ec0a3e0500000000f40100")
+                    .unwrap(),
+            )
+            .unwrap();
+    
+            // Instruction #3 at this link -- https://solscan.io/tx/dUQfdooGYYxRRMNYYD3fCJ6aPVCK8aEcHsgZiujZK9yZqaS3zWTfFmygQHWSRdcKYwz19u7HtHqcxvuUrbQBa79
+            // Instruction Name: claim_token
+            let _ = get_idl_parsed_value_given_data(jup_idl_file, &hex::decode("74ce1bbfa613004908").unwrap()).unwrap();
+        }
+    
+        // APE PRO SMART WALLET PROGRAM -- IDL PARSING TESTS
+        #[test]
+        fn test_idl_ape_pro() {
+            let ape_idl_file = "ape_pro.json";
+    
+            // Instruction #4 at this link -- https://solscan.io/tx/5Yifk8KmHjGWxLP3haiMsyzuUBT7EUoqzHphW5qQoazvAqhzREf3Lwu5mRFEK7o9xHMrLuM1UavDGmRetP8sDKrB
+            // Instruction Name:  preFlashSwapApprove
+            let _ = get_idl_parsed_value_given_data(ape_idl_file, &hex::decode("315e88b6bffd5c280246218496010000cd6e86c4290c162621bd683dcf8de9da5aed6ffcbe1c3e0fb03581739510ba8137e3cba7093f1e888c7726a4f56809f90d38ed4cf1d85e2aae04b51016dee2ec01809698000000000000ca9a3b000000000000000000000000092d00000000ffffffffffffffff").unwrap()).unwrap();
+    
+            // Instruction #4 at this link -- https://solscan.io/tx/4JwtqYCqan3DPSbjGqwxYKzuhSZndSdX5b1JEieJr4AZD2pm1nEzCnGHKRNPRf7NvurvnvNSiECy1jV9hxiPgvy7
+            // Instruction Name:  postSwap
+            let _ = get_idl_parsed_value_given_data(ape_idl_file, &hex::decode("9fd5b739b38a75a1").unwrap()).unwrap();
+    
+            // Instruction #3 at this link -- https://solscan.io/tx/4K89QAFV5EiB4AEp344XxKYxB2gdqDEcFEWj8jN6F8teKURY8zwGQbNkGoP1vFN6JvDBo9Z9M6V97qX9RG4xBYh4
+            // Instruction Name:  withdrawToken
+            let _ = get_idl_parsed_value_given_data(ape_idl_file, &hex::decode("88ebb505656d395121353b84960100009ef7641be0a9b34d7f8a97129c3f5711a7eaa5d35d9b7fc5b09f5746cec2165378babd55434c969c16946f4414ef59e78136f2c3c0a7bf619ecb08b4361d0af301bfa79caf05000000").unwrap()).unwrap();
+    
+            // Instruction #3 at this link -- https://solscan.io/tx/5BoC44EDb33DAhxmkZrFkQsBnG6ALJ3A5VzYXYkeCvkcWSLEXorZ2X4jeHP8V42kST8tNCxDkTE4cnt1efjSAFSn
+            // Instruction Name:  flashSwapApprove
+            let _ = get_idl_parsed_value_given_data(ape_idl_file, &hex::decode("f5d2c7fb443c609454baaf9492010000ed4f9590d2243e5fe524dcf665c758b4567a5e1e58949f504f1688fcd77fdc3b4a552d0e8caf9499d41c6b013bc1a6f39ec1191b8ba6e97a3bea0e5fc22453750040420f00000000004c38c175510000000000000000000000").unwrap()).unwrap();
+        }
+    
+        // RaydiumCMPP -- IDL PARSING TESTS
+        #[test]
+        fn test_idl_raydium() {
+            let rd_idl_file = "raydium.json";
+    
+            // Instruction #4 at this link -- https://solscan.io/tx/1FyuW7Pwxip4RZ5BpR3jwnDZQ5z9uUQ4Pa74hBUZw2z1k4eVWgAGBkXptSamNCkWxV58a4aXt4UHWywCERRP54a
+            // Instruction Name: swapBaseInput
+            let _ = get_idl_parsed_value_given_data(
+                rd_idl_file,
+                &hex::decode("8fbe5adac41e33de1027000000000000b80d020200000000").unwrap(),
+            )
+            .unwrap();
+    
+            // Instruction #5 at this link -- https://solscan.io/tx/5LETS5M435N9tEUynZy2DZX5PToNJSZZ4Cxab89zF9iHk5p6PPpgPFUsKn2aa8GVGyCHukQ7a69tafweYGS3Rk2A
+            // Instruction Name: withdraw
+            let _ = get_idl_parsed_value_given_data(
+                rd_idl_file,
+                &hex::decode("b712469c946da1229c2fef7dba0200007679e100000000000a90393145d5fa08").unwrap(),
+            )
+            .unwrap();
+    
+            // Instruction #3.1 at this link -- https://solscan.io/tx/4s6ajUvRdsLLorb6w1N9GyJDmmzDksUrSgHHLfdZ4NPjgDe7emGWTFBt2JSWMxq9pq1bxx6bMqfgGGZ68pPb5LjU
+            // Instruction Name: createAmmConfig
+            let _ = get_idl_parsed_value_given_data(
+                rd_idl_file,
+                &hex::decode("8934edd4d7756c6804008813000000000000c0d4010000000000409c00000000000080d1f00800000000")
+                    .unwrap(),
+            )
+            .unwrap();
+    
+            // Instruction #3 at this link -- https://solscan.io/tx/5frS5mvdNJvnnLH4VhboGKzGMWTnL1HPuc9jbgpFTRavC7qZjcV92LNQBCPQLUhpsUybjfXqxy9xWgwgjuu4Hy9h
+            // Instruction Name: collectProtocolFee
+            let _ = get_idl_parsed_value_given_data(
+                rd_idl_file,
+                &hex::decode("8888fcddc2427e59ffffffffffffffffffffffffffffffff").unwrap(),
+            )
+            .unwrap();
+        }
+    
+        // Kamino Program -- IDL PARSING TESTS
+        #[test]
+        fn test_idl_kamino() {
+            let kamino_idl_file = "kamino.json";
+    
+            // Instruction #3 at this link -- https://solscan.io/tx/2RhYLjmRbKry2tyHKpaTfGYaEXSUmUtBTxWLRZ347nfKVVknBGgYNf5BrcykjVRjcmc8zNwhanLDcQy8ex6SfS3s
+            // Instruction Name: initializeStrategy
+            let _ = get_idl_parsed_value_given_data(
+                kamino_idl_file,
+                &hex::decode("d0779091b23969fc0100000000000000ea000000000000000000000000000000").unwrap(),
+            )
+            .unwrap();
+    
+            // Instruction #3.1 at this link -- https://solscan.io/tx/2qWFsUVJKkKYz19fzQnf2eaapYEXQXgnvmHvNZksmw7Co89Ez9BTZB7bkBrP6CicjbpwvM1VLmHwshQV58WVUsUF
+            // Instruction Name: insertCollateralInfo
+            let _ = get_idl_parsed_value_given_data(kamino_idl_file, &hex::decode("1661044ea6bc33beea000000000000000b86be66bc1f98b47d20a3be615a4905a825b826864e2a0f4c948467d33ee7090000000000000000000000000000000000000000000000000000000000000000e2003e00ffffffffe0001400ffffffff774d0000000000000000000000000000000000000000000000000000000000002c010000000000004001000000000000000000000000000000ffffffffffffffff").unwrap()).unwrap();
+    
+            // Instruction #3 at this link -- https://solscan.io/tx/PuKd8JeLhvSwA8VxN7hkeV5ZHdyj1hk8EoFawjn2X9YVu9GrHza93yPT1AxvMgTFzckkSBCVXhtc4eocwVxx68u
+            // Instruction Name: flashSwapUnevenVaultsStart
+            let _ = get_idl_parsed_value_given_data(
+                kamino_idl_file,
+                &hex::decode("816fae0c0a3c95c19786991c0000000000").unwrap(),
+            )
+            .unwrap();
+    
+            // Instruction #3 at this link -- https://solscan.io/tx/5fJXiyDoUxffhPm2riHTugu2zSsx16Rq1ezGv4oomjw6jEUgyrPLG3vrFkGazXgDspQpcFsJ8UapAUuNX8ph6yD8
+            // Instruction Name: collectFeesAndRewards
+            let _ =
+                get_idl_parsed_value_given_data(kamino_idl_file, &hex::decode("71124b08b61f69ba").unwrap()).unwrap();
+    
+            // Instruction #3 at this link -- https://solscan.io/tx/oYVVbND3bbpBuL3eb9jyyET2wWu1nEKxacC6BsRHP4KdsA9WHNjD7tHSEcNJkt4R83NFTquESp2xrhR92DRFCEW
+            // Instruction Name: invest
+            let _ =
+                get_idl_parsed_value_given_data(kamino_idl_file, &hex::decode("0df5b467feb67904").unwrap()).unwrap();
+    
+            // Instruction #2 at this link -- https://solscan.io/tx/yWdjGMsPP4zNVFpbqXRSVTwZJQogXzqjpV4kFLMH5G7T4Dc6hjrQ8QCkJpKLPi2sq8PyEBgedntRLVervR8Eg6o
+            // Instruction Name: initializeSharesMetadata
+            let _ = get_idl_parsed_value_given_data(kamino_idl_file, &hex::decode("030fac72c8008320180000004b616d696e6f20774d2d5553444320285261796469756d29080000006b574d2d555344435800000068747470733a2f2f6170692e6b616d696e6f2e66696e616e63652f6b746f6b656e732f4273334c5757747165435641714b75315032574839674b5a344d4a736b57484e786631453666686f7667597a2f6d65746164617461").unwrap()).unwrap();
+        }
+    
+        // Meteora Program -- IDL PARSING TESTS
+        #[test]
+        fn test_idl_meteora() {
+            let mtr_idl_file = "meteora.json";
+    
+            // Instruction #3.6 at this link -- https://solscan.io/tx/3Veo71aP5mVi4VT35hYDQRaxqvdkEbcgPmjh9dsBVNK2XLVusrvk3PLzrS36sYsY2h3wL2S7Z76DYW3B13uispv4
+            // Instruction Name: swap
+            let _ = get_idl_parsed_value_given_data(
+                mtr_idl_file,
+                &hex::decode("f8c69e91e17587c8d0b49c7a000000000000000000000000").unwrap(),
+            )
+            .unwrap();
+        }
+    
+        // Test Calculating Default Anchor discriminator across different contracts
+        #[test]
+        fn test_anchor_default_discriminator_generation() {
+            // Test Ape Pro contract instruction
+            // Check that the instruction name collectFeesAndRewards parses to the correct instruction discriminator
+            // Reference for the correct instruction discriminator is the first 8 bytes of instruction #3 at this link - https://solscan.io/tx/5fJXiyDoUxffhPm2riHTugu2zSsx16Rq1ezGv4oomjw6jEUgyrPLG3vrFkGazXgDspQpcFsJ8UapAUuNX8ph6yD8
+            let inst_name = "collectFeesAndRewards";
+            let exp_disc = hex::decode("71124b08b61f69ba").unwrap();
+            let calc_disc = idl_parser::compute_default_anchor_discriminator(inst_name).unwrap();
+            assert_eq!(exp_disc, calc_disc);
+    
+            // Test Orca Whirlpools contract instruction
+            // Check that the instruction name openPosition parses to the correct instruction discriminator
+            // Reference for the correct instruction discriminator is the first 8 bytes of instruction #3.5 at this link - https://solscan.io/tx/3TxJ1wMMBpfXucDzv5wbgXY2qx5W6pbxRGwPmkNgAhBRBqZViZNUwBWBzi2UXvsbpPf4rjQj3j2GFLT4gmX9WpKQ
+            let inst_name = "openPosition";
+            let exp_disc = hex::decode("87802f4d0f98f031").unwrap();
+            let calc_disc = idl_parser::compute_default_anchor_discriminator(inst_name).unwrap();
+            assert_eq!(exp_disc, calc_disc);
+    
+            // Test OpenBook instruction
+            // Check that the instruction name consumeEvents parses to the correct instruction discriminator
+            // Reference for the correct instruction discriminator is the first 8 bytes of instruction #4.1 at this link - https://solscan.io/tx/sCJp1GLAZfGNVGBZxhCE3ZQ4uyXPy8ui7L63bWF2bSPbEUhEkzPtztzr7G18DaJK64yR88RojTXPwDdvkNeDgzL
+            let inst_name = "consumeEvents";
+            let exp_disc = hex::decode("dd91b1341f2f3fc9").unwrap();
+            let calc_disc = idl_parser::compute_default_anchor_discriminator(inst_name).unwrap();
+            assert_eq!(exp_disc, calc_disc);
+    
+            // Test empty instruction name -- ERROR CASE
+            let empty_inst_name = "";
+            let empty_err_str = idl_parser::compute_default_anchor_discriminator(empty_inst_name)
+                .unwrap_err()
+                .to_string();
+            assert_eq!(
+                empty_err_str,
+                "attempted to compute the default anchor instruction discriminator for an instruction with no name"
+                    .to_string()
+            );
+        }
+    
+        // Test cycle detection in defined types resolution
+        #[test]
+        fn test_cyclic_types_idl() {
+            let idl_json_string = fs::read_to_string(IDL_DIRECTORY.to_string() + "cyclic.json").unwrap();
+            let cyclic_err_str = idl_parser::decode_idl_data(&idl_json_string).unwrap_err().to_string();
+            assert_eq!(
+                cyclic_err_str,
+                "defined types cycle check failed. Recursive type found: TypeA".to_string()
+            );
+        }
+    
+        // Test type name collision detection
+        #[test]
+        fn test_type_names_collision() {
+            let idl_json_string = fs::read_to_string(IDL_DIRECTORY.to_string() + "collision.json").unwrap();
+            let cyclic_err_str = idl_parser::decode_idl_data(&idl_json_string).unwrap_err().to_string();
+            assert_eq!(
+                cyclic_err_str,
+                "multiple types with the same name detected: TypeA".to_string()
+            );
+        }
+    
+        // Test detection of extraneous bytes at the end of an instruction
+        #[test]
+        fn test_extraneous_bytes() {
+            let kamino_idl_file = "kamino.json";
+            // Below is Kamino instruction data with an extra byte "00" added on to the end
+            // Original instruction #3 at this link -- https://solscan.io/tx/oYVVbND3bbpBuL3eb9jyyET2wWu1nEKxacC6BsRHP4KdsA9WHNjD7tHSEcNJkt4R83NFTquESp2xrhR92DRFCEW
+            let kamino_extra_bytes_err =
+                get_idl_parsed_value_given_data(kamino_idl_file, &hex::decode("0df5b467feb6790400").unwrap())
+                    .unwrap_err()
+                    .to_string();
+            assert_eq!(
+                kamino_extra_bytes_err,
+                "extra unexpected bytes remaining at the end of instruction call data".to_string()
+            );
+    
+            let rd_pid = "raydium.json";
+            // Below is Raydium instruction data with some extra bytes "0012" added on to the end
+            // Original Instruction #4 at this link -- https://solscan.io/tx/1FyuW7Pwxip4RZ5BpR3jwnDZQ5z9uUQ4Pa74hBUZw2z1k4eVWgAGBkXptSamNCkWxV58a4aXt4UHWywCERRP54a
+            let raydium_extra_bytes_err = get_idl_parsed_value_given_data(
+                rd_pid,
+                &hex::decode("8fbe5adac41e33de1027000000000000b80d0202000000000012").unwrap(),
+            )
+            .unwrap_err()
+            .to_string();
+            assert_eq!(
+                raydium_extra_bytes_err,
+                "extra unexpected bytes remaining at the end of instruction call data".to_string()
+            );
+        }
+    
+        #[test]
+        fn test_insufficient_data_cases() {
+            let kamino_idl_file = "kamino.json";
+            // Below is Kamino instruction data with an extra byte "00" added on to the end
+            // Instruction #2 at this link -- https://solscan.io/tx/2RhYLjmRbKry2tyHKpaTfGYaEXSUmUtBTxWLRZ347nfKVVknBGgYNf5BrcykjVRjcmc8zNwhanLDcQy8ex6SfS3s
+            // Instruction Name: initializeStrategy
+            let u64_parse_err = get_idl_parsed_value_given_data(
+                kamino_idl_file,
+                &hex::decode("d0779091b23969fc0100000000000000ea0000000000000000000000000000").unwrap(),
+            )
+            .unwrap_err().to_string();
+            assert_eq!(
+                u64_parse_err,
+                "failed to parse IDL argument with error: failed to fill whole buffer"
+            );
+    
+            // Instruction #2 at this link -- https://solscan.io/tx/yWdjGMsPP4zNVFpbqXRSVTwZJQogXzqjpV4kFLMH5G7T4Dc6hjrQ8QCkJpKLPi2sq8PyEBgedntRLVervR8Eg6o
+            // Instruction Name: initializeSharesMetadata
+            let string_parse_err = get_idl_parsed_value_given_data(kamino_idl_file, &hex::decode("030fac72c8008320180000004b616d696e6f20774d2d5553444320285261796469756d29080000006b574d2d555344435800000068747470733a2f2f6170692e6b616d696e6f2e66696e616e63652f6b746f6b656e732f4273334c5757747165435641714b75315032574839674b5a344d4a736b57484e786631453666686f7667597a2f6d65746164").unwrap()).unwrap_err().to_string();
+            assert_eq!(string_parse_err, "failed to parse IDL argument with error: failed to fill whole buffer");
+        }
+    
+        // This test tests ALL the parsed values making sure all values for the below instruction parsed, as provided by instruction
+        #[allow(clippy::too_many_lines)]
+        #[test]
+        fn test_full_jupiter_idl_call() {
+            let jup_idl_file = "jupiter_agg_v6.json";
+    
+            // Instruction #3 at this link -- https://solscan.io/tx/JcGkMSRd5iyXH5dar6MnjyrpEhQi5XR9mV2TfQpxLbTZH53geZsToDY4nzbcLGnvV32RvuEe4BPTSTkobV6rjEx
+            // Instruction Name: route
+            let value_map = get_idl_parsed_value_given_data(
+                jup_idl_file,
+                &hex::decode("e517cb977ae3ad2a0200000007640001266401026ca35b0400000000a5465c0400000000000000").unwrap(),
+            )
+            .unwrap();
+        
+            // Initialize expected map
+            let expected_map = HashMap::from_iter([
+                ("slippage_bps".to_string(), Value::Number(Number::from(0))),
+                ("in_amount".to_string(), Value::Number(Number::from(73114476))),
+                ("platform_fee_bps".to_string(), Value::Number(Number::from(0))),
+                ("quoted_out_amount".to_string(), Value::Number(Number::from(73156261))),
+                ("route_plan".to_string(), Value::Array(vec![
+                    Value::Object(Map::from_iter([
+                        ("input_index".to_string(), Value::Number(Number::from(0))),
+                        ("output_index".to_string(), Value::Number(Number::from(1))),
+                        ("percent".to_string(), Value::Number(Number::from(100))),
+                        ("swap".to_string(), Value::Object(Map::from_iter([
+                            ("Raydium".to_string(), Value::Null)
+                        ])))
+                    ])),
+                    Value::Object(Map::from_iter([
+                        ("input_index".to_string(), Value::Number(Number::from(1))),
+                        ("output_index".to_string(), Value::Number(Number::from(2))),
+                        ("percent".to_string(), Value::Number(Number::from(100))),
+                        ("swap".to_string(), Value::Object(Map::from_iter([
+                            ("MeteoraDlmm".to_string(), Value::Null)
+                        ])))
+                    ]))
+                ]))
+            ]);
+
+            assert_eq!(value_map, expected_map);
+        }
+    
+        // this test tests some of the actual values within the ape pro contract call provided
+        #[allow(clippy::too_many_lines)]
+        #[test]
+        fn test_ape_pro_call_values() {
+            let ape_idl_file = "ape_pro.json";
+    
+            // Instruction #4 at this link -- https://solscan.io/tx/5Yifk8KmHjGWxLP3haiMsyzuUBT7EUoqzHphW5qQoazvAqhzREf3Lwu5mRFEK7o9xHMrLuM1UavDGmRetP8sDKrB
+            // Instruction Name:  preFlashSwapApprove
+            let value_map = get_idl_parsed_value_given_data(ape_idl_file, &hex::decode("315e88b6bffd5c280246218496010000cd6e86c4290c162621bd683dcf8de9da5aed6ffcbe1c3e0fb03581739510ba8137e3cba7093f1e888c7726a4f56809f90d38ed4cf1d85e2aae04b51016dee2ec01809698000000000000ca9a3b000000000000000000000000092d00000000ffffffffffffffff").unwrap()).unwrap();
+            
+            // initialize espected map
+            let expected_map = HashMap::from_iter([
+                    ("useDurableNonce".to_string(), Value::Bool(false)),
+                    ("postSwapIxIndex".to_string(), Value::Number(Number::from(9))),
+                    ("recoveryId".to_string(), Value::Number(Number::from(1))),
+                    ("feeBps".to_string(), Value::Number(Number::from(45))),
+                    ("inputAmount".to_string(), Value::Number(Number::from(1000000000))),
+                    ("priorityFeeLamports".to_string(), Value::Number(Number::from(10000000))),
+                    ("maxOut".to_string(), Value::Number(Number::from(18446744073709551615u64))),
+                    ("minOut".to_string(), Value::Number(Number::from(0))),
+                    ("nonce".to_string(), Value::Number(Number::from(1745973495298u64))),
+                    ("referralShareBps".to_string(), Value::Number(Number::from(0))),
+                    ("signature".to_string(), Value::Array(vec![
+                        Value::Number(Number::from(205)),
+                        Value::Number(Number::from(110)),
+                        Value::Number(Number::from(134)),
+                        Value::Number(Number::from(196)),
+                        Value::Number(Number::from(41)),
+                        Value::Number(Number::from(12)),
+                        Value::Number(Number::from(22)),
+                        Value::Number(Number::from(38)),
+                        Value::Number(Number::from(33)),
+                        Value::Number(Number::from(189)),
+                        Value::Number(Number::from(104)),
+                        Value::Number(Number::from(61)),
+                        Value::Number(Number::from(207)),
+                        Value::Number(Number::from(141)),
+                        Value::Number(Number::from(233)),
+                        Value::Number(Number::from(218)),
+                        Value::Number(Number::from(90)),
+                        Value::Number(Number::from(237)),
+                        Value::Number(Number::from(111)),
+                        Value::Number(Number::from(252)),
+                        Value::Number(Number::from(190)),
+                        Value::Number(Number::from(28)),
+                        Value::Number(Number::from(62)),
+                        Value::Number(Number::from(15)),
+                        Value::Number(Number::from(176)),
+                        Value::Number(Number::from(53)),
+                        Value::Number(Number::from(129)),
+                        Value::Number(Number::from(115)),
+                        Value::Number(Number::from(149)),
+                        Value::Number(Number::from(16)),
+                        Value::Number(Number::from(186)),
+                        Value::Number(Number::from(129)),
+                        Value::Number(Number::from(55)),
+                        Value::Number(Number::from(227)),
+                        Value::Number(Number::from(203)),
+                        Value::Number(Number::from(167)),
+                        Value::Number(Number::from(9)),
+                        Value::Number(Number::from(63)),
+                        Value::Number(Number::from(30)),
+                        Value::Number(Number::from(136)),
+                        Value::Number(Number::from(140)),
+                        Value::Number(Number::from(119)),
+                        Value::Number(Number::from(38)),
+                        Value::Number(Number::from(164)),
+                        Value::Number(Number::from(245)),
+                        Value::Number(Number::from(104)),
+                        Value::Number(Number::from(9)),
+                        Value::Number(Number::from(249)),
+                        Value::Number(Number::from(13)),
+                        Value::Number(Number::from(56)),
+                        Value::Number(Number::from(237)),
+                        Value::Number(Number::from(76)),
+                        Value::Number(Number::from(241)),
+                        Value::Number(Number::from(216)),
+                        Value::Number(Number::from(94)),
+                        Value::Number(Number::from(42)),
+                        Value::Number(Number::from(174)),
+                        Value::Number(Number::from(4)),
+                        Value::Number(Number::from(181)),
+                        Value::Number(Number::from(16)),
+                        Value::Number(Number::from(22)),
+                        Value::Number(Number::from(222)),
+                        Value::Number(Number::from(226)),
+                        Value::Number(Number::from(236))
+                    ]))
+                ]);
+
+            assert_eq!(value_map, expected_map);
+        }
+    
+        #[allow(clippy::cast_possible_truncation)]
+        // this test tests as many different arg types as possible
+        #[test]
+        fn test_different_arg_types() {
+            let meteora_idl_file = "meteora.json";
+    
+            // Instruction #2 at this link -- https://solscan.io/tx/5N9UR8ojzPwhWWQCwcYhU2ayL4tSjBqHG7uNgbhERYL44TD9qr61uipsugiBZTKYeHEobqPnvqauCcck872hamMD
+            // Instruction Name:  initializePosition
+            let inst_map_1 = get_idl_parsed_value_given_data(
+                meteora_idl_file,
+                &hex::decode("dbc0ea47bebf6650cefbffff45000000").unwrap(),
+            )
+            .unwrap();
+    
+            /*
+                testing the SIGNED INT types
+            */
+            let lower_bin_id = inst_map_1.get("lowerBinId").unwrap();
+            let exp_val = -1_074_i32;
+            assert_eq!(
+                lower_bin_id.clone(),
+                Value::Number(Number::from(exp_val))
+            );
+    
+            // Instruction #3 at this link -- https://solscan.io/tx/2wSFx1JvMsdqXgbvKYJu8a1mRGdzBRjpeg7TSsFi5y1xxfEF7nTsc7Uj2ZEfrtdWCaz9ndZRK6NnrCERHtuf5QM1
+            // Instruction Name: initializeBinArray
+            let inst_map_2 = get_idl_parsed_value_given_data(
+                meteora_idl_file,
+                &hex::decode("235613b94ed44bd3f5ffffffffffffff").unwrap(),
+            )
+            .unwrap();
+    
+            let index = inst_map_2.get("index").unwrap();
+            let exp_val = -11_i64;
+            assert_eq!(
+                index.clone(),
+                Value::Number(Number::from(exp_val))
+            );
+    
+            // Instruction #5 at this link -- https://solscan.io/tx/4852PmY5jz4XmqJVAEeF1kHMvkXYgGZqScMCCFDkH4tJAXt2cwh4k1rnvd5nGJFHyXToCMfyYFRc5C59zecewAdu
+            // Instruction Name: swapWithPriceImpact2
+            let inst_map_3 = get_idl_parsed_value_given_data(
+                meteora_idl_file,
+                &hex::decode("4a62c0d6b1334b338096980000000000018ffdffffe80300000000").unwrap(),
+            )
+            .unwrap();
+    
+            /*
+                testing the OPTION type
+            */
+            // active id is an optional field -- it is populated here
+            let active_id = inst_map_3.get("activeId").unwrap();
+            let exp_val = -625_i64;
+            assert_eq!(
+                active_id.clone(),
+                Value::Number(Number::from(exp_val))
+            );
+    
+            /*
+                testing the FLOAT type
+            */
+            let openb_idl_file = "openbook.json";           
+    
+            // Instruction #4 at this link -- https://solscan.io/tx/sBXgLUYZaPLHLNPDPsakVcHKYEbmp9YU9WvK4HZ3fXQL8sy7tg3EZpGc6rpnyKY69uABjtutvQQhytmDFvAaWxh
+            // Instruction Name: CreateMarket
+            let inst_map_5 = get_idl_parsed_value_given_data(openb_idl_file, &hex::decode("67e261ebc8bcfbfe080000005749462d55534443cdcccc3d010a00000001000000000000001027000000000000000000000000000000000000000000000000000000000000").unwrap()).unwrap();
+            
+            let expected_map = HashMap::from_iter([
+                ("takerFee".to_string(), Value::Number(Number::from(0))),
+                ("timeExpiry".to_string(), Value::Number(Number::from(0))),
+                ("oracleConfig".to_string(), Value::Object(Map::from_iter([
+                    ("confFilter".to_string(), Value::Number(Number::from_f64(0.10000000149011612).unwrap())),
+                    ("maxStalenessSlots".to_string(), Value::Number(Number::from(10)))
+                ]))),
+                ("makerFee".to_string(), Value::Number(Number::from(0))),
+                ("quoteLotSize".to_string(), Value::Number(Number::from(1))),
+                ("baseLotSize".to_string(), Value::Number(Number::from(10000))),
+                ("name".to_string(), Value::String("WIF-USDC".to_string()))
+            ]);
+
+            assert_eq!(inst_map_5, expected_map)
+    
+            // /*
+            //     NOTE: Currently, call data instances of the instruction below break our parsing, because of a bug (or oversight) in the SDK used to create the instruction call data
+            //         - Contract: Meteora DLMM
+            //         - Instruction Name: initializeCustomizablePermissionlessLbPair2
+    
+            //     Specifically:
+            //         - The IDL for this specifies a padding buffer of length 62 -- Reference: https://github.com/MeteoraAg/dlmm-sdk/blob/main/ts-client/src/dlmm/idl.ts#L5634
+            //         - But the SDK creates one of length 63 -- Reference: https://github.com/MeteoraAg/dlmm-sdk/blob/main/ts-client/src/dlmm/index.ts#L1389
+    
+            //     - This leads to our parsing buffer having one extraneous byte left over after parsing all expected arguments.
+            //     - NO TODO'S: At the current time I'm NOT going to add any exception cases here. I believe that block explorers can parse this
+            //       because they have laxer requirements and don't hard fail if extraneous bytes are leftover in transaction call data
+            //     - We should have tighter restrictions than block explorers given security implications and should fail in the case of one-off bugs like this and resort to us/our clients triaging
+            //       the specifics of functions as they come up, with potential for reevaluation if it happens to frequently, which I do not anticipate given testing volume
+            //     - Keeping this test case below commented out as a reference in case we ever need to use it.
+            // */
+            // // // ALT instance of instruction: https://solscan.io/tx/2hsUoPNtouChnkhDMUzYUQMqgyVA4zCuckZyCYwNi8SdAMx1LSE14t2QnSweU4P3GrimMxAaezeN54b2GQAeAmwA
+            // // // Instruction #1 at this link -- https://solscan.io/tx/4pjxruibNd4apBm7JqzFq8yKXWTxQRTPXNaEJY5zxZtTSULqmi3yp8jmxbbqKEdaHFTRxRUAL3jivzybqsysJyDZ
+            // // // Instruction Name: initializeCustomizablePermissionlessLbPair2
+            // // let inst_map_4 = get_idl_parsed_value_given_data(
+            // //     meteora_idl_file,
+            // //     &hex::decode("f349817e3313f16b34fcffff6400204e01000144e73e68000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            // // )
+            // // .unwrap();
+        }
+    
+        // ******* IDL TESTING HELPER FUNCTION ****
+        fn get_idl_parsed_value_given_data(
+            idl_file_name: &str,
+            data: &[u8],
+        ) -> Result<HashMap<String, Value>, Box<dyn std::error::Error>> {
+            let idl_json_string = fs::read_to_string(IDL_DIRECTORY.to_string() + idl_file_name).unwrap();
+    
+            // Parse the IDL
+            let idl = idl_parser::decode_idl_data(&idl_json_string).unwrap();
+    
+            // Find the correct instruction
+            let instruction = idl_parser::find_instruction_by_discriminator(data, idl.instructions.clone()).unwrap();
+    
+            // parse instruction call data
+            let parsed_args = idl_parser::parse_data_into_args(data, &instruction, &idl)?;
+    
+            // Create ArgMap from parsed args
+            let mut arg_map: HashMap<String, Value> = HashMap::new();
+            for a in parsed_args {
+                arg_map.insert(a.0, a.1);
+            }
+    
+            Ok(arg_map)
+        }
+    
+        #[test]
+        fn test_instruction_data_memory_allocation_guard_arrays() {
+            // bug discovered with fuzz testing
+    
+            let idl_definition =
+            "{\n  \"types\": [\n \n  ],\n  \"instructions\": [\n    {\n      \"name\": \"cyclciInstruction\",\n      \"accounts\": [],\n   \"args\": [    {\n           \"name\": \"vault\",     \"type\":{ \n          \"array\": [\"u16\", 20000001000]       }\n      }\n   ]\n    }\n ]}";
+            let instruction_data = vec![199, 102, 212, 229, 0, 145, 80, 22, 0, 116, 0, 0, 0];
+    
+            let idl = idl_parser::decode_idl_data(idl_definition).unwrap();
+    
+            // will crash with "memory allocation of 640000032000 bytes failed"
+            let instruction = idl_parser::find_instruction_by_discriminator(&instruction_data, idl.instructions.clone()).unwrap();
+            let array_err = idl_parser::parse_data_into_args(&instruction_data, &instruction, &idl).unwrap_err().to_string();
+            assert_eq!(array_err, "failed to parse IDL argument with error: memory allocation exceeded maximum allowed budget while parsing IDL call data -- check your uploaded IDL or call data");
+        }
+    
+        #[test]
+        fn test_instruction_data_memory_allocation_guard_string() {
+            // bug discovered with fuzz testing
+    
+            let malicious_string_idl = r#"
+                        {
+                        "types": [],
+                        "instructions": [
+                            {
+                            "name": "dangerousString",
+                            "accounts": [],
+                            "args": [
+                                {
+                                "name": "payload",
+                                "type": "string"
+                                }
+                            ]
+                            }
+                        ]
+                        }"#;
+    
+            // Instruction data: [discriminator] + [4-byte length] + [truncated data]
+            let string_data = vec![
+                77, 67, 244, 160, 33, 24, 166, 14, // Discriminator for 'dangerous_string'
+                255, 255, 255, 127, // 2,147,483,647 length (i32::MAX)
+                65,  // Single 'A' character (data truncated)
+            ];
+    
+            let idl = idl_parser::decode_idl_data(malicious_string_idl).unwrap();
+    
+            // will crash with "memory allocation failed"
+            let instruction = idl_parser::find_instruction_by_discriminator(&string_data, idl.instructions.clone()).unwrap();
+            let string_err = idl_parser::parse_data_into_args(&string_data, &instruction, &idl).unwrap_err().to_string();
+            assert_eq!(string_err, "failed to parse IDL argument with error: memory allocation exceeded maximum allowed budget while parsing IDL call data -- check your uploaded IDL or call data");
+        }
+    
+        #[test]
+        fn test_instruction_data_memory_allocation_guard_composite() {
+            // bug discovered with fuzz testing
+    
+            let composite_idl = r#"
+            {
+            "types": [],
+            "instructions": [
+                {
+                "name": "complexAttack",
+                "accounts": [],
+                "args": [
+                    {
+                    "name": "a",
+                    "type": { "vec": "string" }
+                    },
+                    {
+                    "name": "b",
+                    "type": { "vec": { "vec": "bytes" } }
+                    }
+                ]
+                }
+            ]
+            }"#;
+    
+            // Instruction data: [discriminator] + nested lengths
+            let composite_data = vec![
+                138, 103, 254, 47, 252, 195, 139, 174, // Discriminator
+                4, 0, 0, 0, // 4 strings
+                255, 255, 255, 127, // String 1 length (2,147,483,647)
+                255, 255, 255, 127, // String 2 length
+                255, 255, 255, 127, // String 3 length
+                255, 255, 255, 127, // String 4 length
+                4, 0, 0, 0, // 4 inner vectors
+                8, 0, 0, 0, // Each inner vector has 8 elements
+                255, 255, 255, 127, // Each element has 2GB size
+            ];
+    
+            let idl = idl_parser::decode_idl_data(composite_idl).unwrap();
+    
+            // will crash with "memory allocation failed"
+            let instruction = idl_parser::find_instruction_by_discriminator(&composite_data, idl.instructions.clone()).unwrap();
+            let composite_err = idl_parser::parse_data_into_args(&composite_data, &instruction, &idl)
+                .unwrap_err().to_string();
+            assert_eq!(composite_err, "failed to parse IDL argument with error: memory allocation exceeded maximum allowed budget while parsing IDL call data -- check your uploaded IDL or call data");
+        }
+    
+        #[allow(clippy::too_many_lines)]
+        #[test]
+        fn test_max_recursive_depth_of_idl() {
+            // bug discovered with fuzz testing
+    
+            let deep_idl = r#"
+                        {
+                "types": [
+                    {
+                    "name": "A",
+                    "type": {
+                        "kind": "struct",
+                        "fields": [
+                        {
+                            "name": "b",
+                            "type": { "defined": "B" }
+                        }
+                        ]
+                    }
+                    },
+                    {
+                    "name": "B",
+                    "type": {
+                        "kind": "struct",
+                        "fields": [
+                        {
+                            "name": "c",
+                            "type": { "defined": "C" }
+                        }
+                        ]
+                    }
+                    },
+                    {
+                    "name": "C",
+                    "type": {
+                        "kind": "struct",
+                        "fields": [
+                        {
+                            "name": "d",
+                            "type": { "defined": "D" }
+                        }
+                        ]
+                    }
+                    },
+                    {
+                    "name": "D",
+                    "type": {
+                        "kind": "struct",
+                        "fields": [
+                        {
+                            "name": "e",
+                            "type": { "defined": "E" }
+                        }
+                        ]
+                    }
+                    },
+                    {
+                    "name": "E",
+                    "type": {
+                        "kind": "struct",
+                        "fields": [
+                        {
+                            "name": "f",
+                            "type": { "defined": "F" }
+                        }
+                        ]
+                    }
+                    },
+                    {
+                    "name": "F",
+                    "type": {
+                        "kind": "struct",
+                        "fields": [
+                        {
+                            "name": "g",
+                            "type": { "defined": "G" }
+                        }
+                        ]
+                    }
+                    },
+                    {
+                    "name": "G",
+                    "type": {
+                        "kind": "struct",
+                        "fields": [
+                        {
+                            "name": "h",
+                            "type": { "defined": "H" }
+                        }
+                        ]
+                    }
+                    },
+                    {
+                    "name": "H",
+                    "type": {
+                        "kind": "struct",
+                        "fields": [
+                        {
+                            "name": "i",
+                            "type": { "defined": "I" }
+                        }
+                        ]
+                    }
+                    },
+                    {
+                    "name": "I",
+                    "type": {
+                        "kind": "struct",
+                        "fields": [
+                        {
+                            "name": "j",
+                            "type": { "defined": "J" }
+                        }
+                        ]
+                    }
+                    },
+                    {
+                    "name": "J",
+                    "type": {
+                        "kind": "struct",
+                        "fields": [
+                        {
+                            "name": "k",
+                            "type": { "defined": "K" }
+                        }
+                        ]
+                    }
+                    },
+                    {
+                    "name": "K",
+                    "type": {
+                        "kind": "struct",
+                        "fields": [
+                        {
+                            "name": "l",
+                            "type": { "defined": "L" }
+                        }
+                        ]
+                    }
+                    },
+                    {
+                    "name": "L",
+                    "type": {
+                        "kind": "struct",
+                        "fields": []
+                    }
+                    }
+                ],
+                "instructions": [
+                    {
+                    "name": "testMaxDepth",
+                    "accounts": [],
+                    "args": [
+                        {
+                        "name": "payload",
+                        "type": { "defined": "A" }
+                        }
+                    ]
+                    }
+                ]
+                }
+                "#;
+    
+            let depth_err = idl_parser::decode_idl_data(deep_idl).unwrap_err().to_string();
+            assert_eq!(depth_err, "defined types resolution max depth exceeded on type: L");
+        }
+    }
+    
