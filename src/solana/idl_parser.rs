@@ -93,7 +93,7 @@ impl SizeGuard {
     fn create_allocated_buffer(&mut self, len: usize) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         if len > self.remaining_budget {
             return Err(
-                "Memory allocation exceeded maximum allowed budget while parsing IDL call data -- check your uploaded IDL or call data".into(),
+                "memory allocation exceeded maximum allowed budget while parsing IDL call data -- check your uploaded IDL or call data".into(),
             );
         }
         self.remaining_budget -= len;
@@ -107,7 +107,7 @@ impl SizeGuard {
 
         if amount > self.remaining_budget {
             return Err(
-                "Memory allocation exceeded maximum allowed budget while parsing IDL call data -- check your uploaded IDL or call data".into());
+                "memory allocation exceeded maximum allowed budget while parsing IDL call data -- check your uploaded IDL or call data".into());
         }
         self.remaining_budget -= amount;
 
@@ -429,7 +429,7 @@ fn parse_defined_type<R: Read>(
     resolver: &TypeResolver,
     size_guard: &mut SizeGuard,
 ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
-    let ty_def = resolver.resolve(type_name).ok_or_else(|| format!("Type {} not found in IDL", type_name))?;
+    let ty_def = resolver.resolve(type_name).ok_or_else(|| format!("type {} not found in IDL", type_name))?;
 
     match &ty_def.r#type {
         IdlTypeDefinitionType::Struct { fields } => {
@@ -445,7 +445,7 @@ fn parse_defined_type<R: Read>(
         IdlTypeDefinitionType::Enum { variants } => {
             let variant_index = reader.read_u8()?;
             let variant = variants.get(variant_index as usize)
-                .ok_or("Invalid variant index")?;
+                .ok_or("invalid variant index")?;
 
             let value = match &variant.fields {
                 Some(EnumFields::Tuple(types)) => {

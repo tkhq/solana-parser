@@ -4,7 +4,7 @@ use serde_json::{Value, Number, Map};
 use super::*;
 use parser::SOL_SYSTEM_PROGRAM_KEY;
 use structs::SolanaMetadata;
-use crate::solana::structs::{SolanaInstruction, SolanaAccount, SolanaAddressTableLookup, SolanaSingleAddressTableLookup, SolTransfer, SolanaParsedInstructionData};
+use crate::solana::structs::{SolanaInstruction, SolanaAccount, SolanaAddressTableLookup, SolanaSingleAddressTableLookup, SolTransfer};
 use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PROGRAM_KEY, IDL_DIRECTORY};
 use crate::solana::idl_parser;
 
@@ -1677,7 +1677,7 @@ use crate::solana::idl_parser;
             // will crash with "memory allocation of 640000032000 bytes failed"
             let instruction = idl_parser::find_instruction_by_discriminator(&instruction_data, idl.instructions.clone()).unwrap();
             let array_err = idl_parser::parse_data_into_args(&instruction_data, &instruction, &idl).unwrap_err().to_string();
-            assert_eq!(array_err, "failed to parse IDL argument with error: Memory allocation exceeded maximum allowed budget while parsing IDL call data -- check your uploaded IDL or call data");
+            assert_eq!(array_err, "failed to parse IDL argument with error: memory allocation exceeded maximum allowed budget while parsing IDL call data -- check your uploaded IDL or call data");
         }
     
         #[test]
@@ -1713,7 +1713,7 @@ use crate::solana::idl_parser;
             // will crash with "memory allocation failed"
             let instruction = idl_parser::find_instruction_by_discriminator(&string_data, idl.instructions.clone()).unwrap();
             let string_err = idl_parser::parse_data_into_args(&string_data, &instruction, &idl).unwrap_err().to_string();
-            assert_eq!(string_err, "failed to parse IDL argument with error: Memory allocation exceeded maximum allowed budget while parsing IDL call data -- check your uploaded IDL or call data");
+            assert_eq!(string_err, "failed to parse IDL argument with error: memory allocation exceeded maximum allowed budget while parsing IDL call data -- check your uploaded IDL or call data");
         }
     
         #[test]
@@ -1760,7 +1760,7 @@ use crate::solana::idl_parser;
             let instruction = idl_parser::find_instruction_by_discriminator(&composite_data, idl.instructions.clone()).unwrap();
             let composite_err = idl_parser::parse_data_into_args(&composite_data, &instruction, &idl)
                 .unwrap_err().to_string();
-            assert_eq!(composite_err, "failed to parse IDL argument with error: Memory allocation exceeded maximum allowed budget while parsing IDL call data -- check your uploaded IDL or call data");
+            assert_eq!(composite_err, "failed to parse IDL argument with error: memory allocation exceeded maximum allowed budget while parsing IDL call data -- check your uploaded IDL or call data");
         }
     
         #[allow(clippy::too_many_lines)]

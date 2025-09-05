@@ -447,25 +447,25 @@ enum SplInstructionData {
 impl SplInstructionData {
     // Reference for instruction data parsing code: https://docs.rs/spl-token/latest/src/spl_token/instruction.rs.html#476
     fn parse_spl_transfer_data(instruction_data: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
-        let (&tag, rest) = instruction_data.split_first().ok_or("Error while parsing spl instruction data header")?;
+        let (&tag, rest) = instruction_data.split_first().ok_or("error while parsing spl instruction data header")?;
         Ok(match tag {
             3 => {
-                let (amount, _rest) = unpack_u64(rest).map_err(|_| format!("Error while parsing spl instruction Transfer -- amount"))?;
+                let (amount, _rest) = unpack_u64(rest).map_err(|_| format!("error while parsing spl instruction Transfer -- amount"))?;
                 Self::Transfer { amount }
             }
             12 => {
-                let (amount, rest) = unpack_u64(rest).map_err(|_| format!("Error while parsing spl instruction TransferChecked -- amount"))?;
-                let (&decimals, _rest) = rest.split_first().ok_or("Error while parsing spl instruction TransferChecked -- decimals")?;
+                let (amount, rest) = unpack_u64(rest).map_err(|_| format!("error while parsing spl instruction TransferChecked -- amount"))?;
+                let (&decimals, _rest) = rest.split_first().ok_or("error while parsing spl instruction TransferChecked -- decimals")?;
                 Self::TransferChecked { amount, decimals }
             }
             26 => {
-                let (&transfer_fee_tag, rest) = rest.split_first().ok_or("Error while parsing spl instruction TransferCheckedWithFee -- instruction index")?;
+                let (&transfer_fee_tag, rest) = rest.split_first().ok_or("error while parsing spl instruction TransferCheckedWithFee -- instruction index")?;
                 // Given the extension prefix of 26 ensure that we're calling instruciton 01, which is TransferCheckedWithFee
                 let (amount, decimals, fee) = match transfer_fee_tag {
                     1 => {
-                        let (amount, rest) = unpack_u64(rest).map_err(|_| format!("Error while parsing spl instruction TransferCheckedWithFee -- amount"))?;
-                        let (&decimals, rest) = rest.split_first().ok_or("Error while parsing spl instruction TransferCheckedWithFee -- decimals")?;
-                        let (fee, _rest) = unpack_u64(rest).map_err(|_| format!("Error while parsing spl instruction TransferCheckedWithFee -- fee"))?;
+                        let (amount, rest) = unpack_u64(rest).map_err(|_| format!("error while parsing spl instruction TransferCheckedWithFee -- amount"))?;
+                        let (&decimals, rest) = rest.split_first().ok_or("error while parsing spl instruction TransferCheckedWithFee -- decimals")?;
+                        let (fee, _rest) = unpack_u64(rest).map_err(|_| format!("error while parsing spl instruction TransferCheckedWithFee -- fee"))?;
                         (amount, decimals, fee)
                     }
                     _ => return Ok(Self::Unsupported),
@@ -482,7 +482,7 @@ fn unpack_u64(input: &[u8]) -> Result<(u64, &[u8]), Box<dyn std::error::Error>> 
         .get(..8)
         .and_then(|slice| slice.try_into().ok())
         .map(u64::from_le_bytes)
-        .ok_or("Error parsing u64 in spl instruction")?;
+        .ok_or("error parsing u64 in spl instruction")?;
     Ok((value, &input[8..]))
 }
 
@@ -560,7 +560,7 @@ impl SolanaTransaction {
     ) -> Result<SolanaSingleAddressTableLookup, Box<dyn Error>> {
         match &self.message {
             VersionedMessage::Legacy(_) => {
-                Err("Legacy transaction instruction account index out of bounds".into())
+                Err("legacy transaction instruction account index out of bounds".into())
             }
             VersionedMessage::V0(message) => {
                 let lookup_index = index - message.account_keys.len();
@@ -589,7 +589,7 @@ impl SolanaTransaction {
                     }
                     num_parsed_indexes += l.readonly_indexes.len();
                 }
-                Err("Versioned transaction instruction account index out of bounds".into())
+                Err("versioned transaction instruction account index out of bounds".into())
             }
         }
     }
@@ -624,7 +624,7 @@ impl SolanaTransaction {
                     .message
                     .static_account_keys()
                     .get(a as usize)
-                    .ok_or("Instruction account index out of bounds for account keys array")?
+                    .ok_or("instruction account index out of bounds for account keys array")?
                     .to_string();
                 let acct = SolanaAccount {
                     account_key,
@@ -640,12 +640,11 @@ impl SolanaTransaction {
                 return Err(Box::<dyn std::error::Error>::from("Solana Instruction program index must be within static account keys"))
             }
             let program_key = i.program_id(self.message.static_account_keys()).to_string();
-
             
             match program_key.as_str() {
                 SOL_SYSTEM_PROGRAM_KEY => {
                     let system_instruction: SystemInstruction = bincode::deserialize(&i.data)
-                    .map_err(|_| "Could not parse system instruction")?;
+                    .map_err(|_| "could not parse system instruction")?;
                     if let SystemInstruction::Transfer { lamports } = system_instruction {
                         if all_transaction_addresses.len() != 2 {
                             return Err("System Program Transfer Instruction should have exactly 2 arguments".into())
@@ -677,7 +676,7 @@ impl SolanaTransaction {
                 _ => {}
             }
 
-            let parsed_inst_option: Option<SolanaParsedInstructionData> = custom_idl_parsing(&program_key, &all_transaction_addresses, i, &self.custom_idl_records)?;
+            let parsed_inst_option: Option<SolanaParsedInstructionData> = parse_idl(&program_key, &all_transaction_addresses, i, &self.custom_idl_records)?;
 
             let instruction_data_hex: String = hex::encode(&i.data);
             let inst = SolanaInstruction {
@@ -739,7 +738,7 @@ impl SolanaTransaction {
 
     fn get_spl_multisig_signers_if_exist(&self, all_transaction_addresses: &Vec<AccountAddress>, num_accts_before_signer: usize) -> Result<Vec<String>, Box<dyn std::error::Error>> {
         if all_transaction_addresses.len() < num_accts_before_signer {
-            return Err(format!("Invalid number of accounts provided for spl token transfer instruction").into())
+            return Err(format!("invalid number of accounts provided for spl token transfer instruction").into())
         }
         Ok(all_transaction_addresses[num_accts_before_signer..all_transaction_addresses.len()].to_vec().into_iter().map(|a| a.to_string()).collect())
     }
@@ -797,10 +796,10 @@ impl SolanaTransaction {
 /*
     This method is used for parsing custom IDL's uploaded by the end user
     */
-    fn custom_idl_parsing(
+    fn parse_idl(
         program_key: &str,
         all_transaction_addresses: &[AccountAddress],
-        i: &CompiledInstruction,
+        inst: &CompiledInstruction,
         custom_idls: &HashMap<String, IdlRecord>,
     ) -> Result<Option<SolanaParsedInstructionData>, Box<dyn std::error::Error>> {
         if let Some(idl_record) = custom_idls.get(program_key) {
@@ -810,16 +809,15 @@ impl SolanaTransaction {
             // Parse idl interface json string into idl type
             let idl = idl_parser::decode_idl_data(&idl_json_str).map_err(|e| -> Box<dyn std::error::Error> {
                     format!(
-                        "Failed to parse Solana IDL with program key: {program_key} with error: {}",
+                        "failed to parse Solana IDL with program key: {program_key} with error: {}",
                         e
                     ).into()
             })?;
 
-            // At the moment, we hard fail if an ABI is uploaded, and the instruction being called in transaction data is not found. This can be edited later if need be.
-            let instruction = idl_parser::find_instruction_by_discriminator(&i.data, idl.instructions.clone())?;
+            let instruction = idl_parser::find_instruction_by_discriminator(&inst.data, idl.instructions.clone())?;
 
             // Parse data into args map
-            let parsed_args = idl_parser::parse_data_into_args(&i.data, &instruction, &idl).map_err(|e| -> Box<dyn std::error::Error> {
+            let parsed_args = idl_parser::parse_data_into_args(&inst.data, &instruction, &idl).map_err(|e| -> Box<dyn std::error::Error> {
                     format!(
                         "failed to parse instruction call data into IDL instruction for instruction name: {} with error: {}",
                         instruction.name, e
@@ -844,7 +842,7 @@ impl SolanaTransaction {
             }
             // We shouldn't get here because we found the instruction by the discriminator above
             return Err(
-                "Attempted to parse IDL into instruction without discriminator".into()
+                "attempted to parse IDL into instruction without discriminator".into()
             );
         }
         Ok(None)
