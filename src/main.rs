@@ -3,7 +3,7 @@ use std::env;
 mod solana;
 
 use crate::solana::parser::parse_transaction;
-use crate::solana::structs::{SolanaParsedTransactionPayload, SolanaParsedInstruction};
+use crate::solana::structs::{SolanaParsedTransactionPayload, SolanaParsedInstructionData};
 
 
 fn main() {
@@ -88,7 +88,7 @@ fn print_parsed_transaction(transaction_payload: SolanaParsedTransactionPayload)
     }
 }
 
-fn print_parsed_instruction_data(p_inst_data: Option<SolanaParsedInstruction>) {
+fn print_parsed_instruction_data(p_inst_data: Option<SolanaParsedInstructionData>) {
     println!("        Parsed Instruction Data:");
     if let Some(parsed_data) = p_inst_data {
         println!("          Instruction Name: {}", parsed_data.instruction_name);
@@ -98,8 +98,8 @@ fn print_parsed_instruction_data(p_inst_data: Option<SolanaParsedInstruction>) {
             println!("            {}: {}", k, acct_string);
         }
         println!("          Args:");
-        for k in parsed_data.args.keys() {
-            let arg_json = parsed_data.args[k].clone();
+        for k in parsed_data.program_call_args.keys() {
+            let arg_json = parsed_data.program_call_args[k].clone();
             println!("            {}: {:#?}", k, arg_json);
         }
     } else {
