@@ -7,6 +7,22 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use std::io::{Cursor, Read};
 use bs58;
 
+/// Compresses an IDL JSON string by removing all whitespace
+fn compress_idl_json(idl_json: &str) -> String {
+    idl_json.chars().filter(|c| !c.is_whitespace()).collect()
+}
+
+/// Computes SHA256 hash of the compressed IDL JSON string
+/// this doesn't canonicalize the JSON by sorting it or anything, so if your JSON isn't exactly same, you will get some inconsistencies
+/// we can resolve this by implementing a custom serializer for IDLs
+pub fn compute_idl_hash(idl_json: &str) -> String {
+    let compressed = compress_idl_json(idl_json);
+    let mut hasher = Sha256::new();
+    hasher.update(compressed.as_bytes());
+    let result = hasher.finalize();
+    hex::encode(result)
+}
+
 // Required Top-Level fields in Solana IDL JSON's
 /*
    The fields that are NEEDED in an uploaded Solana IDL, for the purposes of parsing instruction call data are:
@@ -35,19 +51,65 @@ const MAX_ALLOC_PER_CURSOR_LENGTH: usize = 24; // Typical heap allocation overhe
 // This method takes all IDL's that have been uploaded to the IDL DB and constructs a mapping from PROGRAM_ID --> IDL_RECORD_INFO
 pub fn construct_custom_idl_records_map() -> Result<HashMap<String, IdlRecord>, Box<dyn std::error::Error>> {
     let mut idl_map = HashMap::new();
-    
+
     for entry in IDL_DB {
-        let program_id = entry.1.to_string(); 
+        let program_id = entry.1.to_string();
         let idl_record = IdlRecord {
             program_name: entry.0.to_string(),
             program_id: entry.1.to_string(),
             file_path: entry.2.to_string(),
+            custom_idl_json: None,
+            override_builtin: false,
         };
-        
+
         // Use insert() instead of indexing syntax
         idl_map.insert(program_id, idl_record);
     }
-    
+
+    Ok(idl_map)
+}
+
+/// Constructs custom IDL records map with optional custom IDLs
+pub fn construct_custom_idl_records_map_with_overrides(
+    custom_idls: Option<HashMap<String, (String, bool)>>, // program_id -> (idl_json, override_builtin)
+) -> Result<HashMap<String, IdlRecord>, Box<dyn std::error::Error>> {
+    let mut idl_map = HashMap::new();
+
+    // First, load all built-in IDLs
+    for entry in IDL_DB {
+        let program_id = entry.1.to_string();
+        let idl_record = IdlRecord {
+            program_name: entry.0.to_string(),
+            program_id: entry.1.to_string(),
+            file_path: entry.2.to_string(),
+            custom_idl_json: None,
+            override_builtin: false,
+        };
+
+        idl_map.insert(program_id, idl_record);
+    }
+
+    // Then, add or override with custom IDLs if provided
+    if let Some(custom_idls) = custom_idls {
+        for (program_id, (idl_json, override_builtin)) in custom_idls {
+            if let Some(existing_record) = idl_map.get_mut(&program_id) {
+                // Update existing record with custom IDL
+                existing_record.custom_idl_json = Some(idl_json);
+                existing_record.override_builtin = override_builtin;
+            } else {
+                // Create new record for unknown program
+                let idl_record = IdlRecord {
+                    program_name: format!("Custom Program {}", &program_id[..8]),
+                    program_id: program_id.clone(),
+                    file_path: String::new(), // No file path for custom IDLs
+                    custom_idl_json: Some(idl_json),
+                    override_builtin: true, // Always override for unknown programs
+                };
+                idl_map.insert(program_id, idl_record);
+            }
+        }
+    }
+
     Ok(idl_map)
 }
 

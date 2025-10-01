@@ -2,6 +2,110 @@ use std::{fmt, collections::HashMap};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+/// ProgramType represents the built-in IDL types supported by the library
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ProgramType {
+    ApePro,
+    CandyMachine,
+    Drift,
+    JupiterLimit,
+    Jupiter,
+    Kamino,
+    Lifinity,
+    Meteora,
+    Openbook,
+    Orca,
+    Raydium,
+    Stabble,
+    JupiterAggregatorV6,
+}
+
+impl ProgramType {
+    /// Returns the program ID associated with this ProgramType
+    pub fn program_id(&self) -> &str {
+        match self {
+            ProgramType::ApePro => "JSW99DKmxNyREQM14SQLDykeBvEUG63TeohrvmofEiw",
+            ProgramType::CandyMachine => "cndyAnrLdpjq1Ssp1z8xxDsB8dxe7u4HL5Nxi2K5WXZ",
+            ProgramType::Drift => "dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH",
+            ProgramType::JupiterLimit => "j1o2qRpjcyUwEvwtcfhEQefh773ZgjxcVRry7LDqg5X",
+            ProgramType::Jupiter => "JUP4Fb2cqiRUcaTHdrPC8h2gNsA2ETXiPDD33WcGuJB",
+            ProgramType::Kamino => "6LtLpnUFNByNXLyCoK9wA2MykKAmQNZKBdY8s47dehDc",
+            ProgramType::Lifinity => "2wT8Yq49kHgDzXuPxZSaeLaH1qbmGXtEyPy64bL7aD3c",
+            ProgramType::Meteora => "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+            ProgramType::Openbook => "opnb2LAfJYbRMAHHvqjCwQxanZn7ReEHp1k81EohpZb",
+            ProgramType::Orca => "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",
+            ProgramType::Raydium => "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C",
+            ProgramType::Stabble => "swapNyd8XiQwJ6ianp9snpu4brUqFxadzvHebnAXjJZ",
+            ProgramType::JupiterAggregatorV6 => "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
+        }
+    }
+
+    /// Returns the file path for this ProgramType
+    pub fn file_path(&self) -> &str {
+        match self {
+            ProgramType::ApePro => "ape_pro.json",
+            ProgramType::CandyMachine => "cndy.json",
+            ProgramType::Drift => "drift.json",
+            ProgramType::JupiterLimit => "jupiter_limit.json",
+            ProgramType::Jupiter => "jupiter.json",
+            ProgramType::Kamino => "kamino.json",
+            ProgramType::Lifinity => "lifinity.json",
+            ProgramType::Meteora => "meteora.json",
+            ProgramType::Openbook => "openbook.json",
+            ProgramType::Orca => "orca.json",
+            ProgramType::Raydium => "raydium.json",
+            ProgramType::Stabble => "stabble.json",
+            ProgramType::JupiterAggregatorV6 => "jupiter_agg_v6.json",
+        }
+    }
+
+    /// Returns the program name for this ProgramType
+    pub fn program_name(&self) -> &str {
+        match self {
+            ProgramType::ApePro => "Ape Pro",
+            ProgramType::CandyMachine => "Metaplex Candy Machine",
+            ProgramType::Drift => "Drift Protocol V2",
+            ProgramType::JupiterLimit => "Jupiter Limit",
+            ProgramType::Jupiter => "Jupiter Swap",
+            ProgramType::Kamino => "Kamino",
+            ProgramType::Lifinity => "Lifinity Swap V2",
+            ProgramType::Meteora => "Meteora",
+            ProgramType::Openbook => "Openbook",
+            ProgramType::Orca => "Orca Whirlpool",
+            ProgramType::Raydium => "Raydium",
+            ProgramType::Stabble => "Stabble",
+            ProgramType::JupiterAggregatorV6 => "Jupiter Aggregator V6",
+        }
+    }
+
+    /// Looks up a ProgramType by program_id
+    pub fn from_program_id(program_id: &str) -> Option<ProgramType> {
+        match program_id {
+            "JSW99DKmxNyREQM14SQLDykeBvEUG63TeohrvmofEiw" => Some(ProgramType::ApePro),
+            "cndyAnrLdpjq1Ssp1z8xxDsB8dxe7u4HL5Nxi2K5WXZ" => Some(ProgramType::CandyMachine),
+            "dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH" => Some(ProgramType::Drift),
+            "j1o2qRpjcyUwEvwtcfhEQefh773ZgjxcVRry7LDqg5X" => Some(ProgramType::JupiterLimit),
+            "JUP4Fb2cqiRUcaTHdrPC8h2gNsA2ETXiPDD33WcGuJB" => Some(ProgramType::Jupiter),
+            "6LtLpnUFNByNXLyCoK9wA2MykKAmQNZKBdY8s47dehDc" => Some(ProgramType::Kamino),
+            "2wT8Yq49kHgDzXuPxZSaeLaH1qbmGXtEyPy64bL7aD3c" => Some(ProgramType::Lifinity),
+            "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo" => Some(ProgramType::Meteora),
+            "opnb2LAfJYbRMAHHvqjCwQxanZn7ReEHp1k81EohpZb" => Some(ProgramType::Openbook),
+            "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc" => Some(ProgramType::Orca),
+            "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C" => Some(ProgramType::Raydium),
+            "swapNyd8XiQwJ6ianp9snpu4brUqFxadzvHebnAXjJZ" => Some(ProgramType::Stabble),
+            "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" => Some(ProgramType::JupiterAggregatorV6),
+            _ => None,
+        }
+    }
+}
+
+/// IdlSource indicates whether a built-in or custom IDL was used for parsing
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum IdlSource {
+    BuiltIn(ProgramType),
+    Custom,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct SolanaMetadata {
     pub signatures: Vec<String>,
@@ -58,10 +162,14 @@ pub struct SplTransfer {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SolanaParsedInstructionData {
-    pub instruction_name: String, 
+    pub instruction_name: String,
     pub discriminator: String,
-    pub named_accounts: HashMap<String, String>, 
+    pub named_accounts: HashMap<String, String>,
     pub program_call_args: serde_json::Map<std::string::String, Value>,
+    /// Indicates whether a built-in or custom IDL was used
+    pub idl_source: IdlSource,
+    /// SHA256 hash of the compressed (whitespace removed) IDL JSON string
+    pub idl_hash: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -121,6 +229,10 @@ pub struct IdlRecord {
     pub program_id: String,
     pub program_name: String,
     pub file_path: String,
+    /// Custom IDL JSON string, if provided by the caller
+    pub custom_idl_json: Option<String>,
+    /// Whether to override built-in IDL with custom one (if both exist)
+    pub override_builtin: bool,
 }
 
 /// IDL that is compatible with what anchor and shank extract from a solana program.

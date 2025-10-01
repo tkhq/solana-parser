@@ -10,7 +10,7 @@ use solana_sdk::{
     pubkey::Pubkey,
     system_instruction::SystemInstruction, 
 };
-use super::structs::{AccountAddress, SolTransfer, SolanaAccount, SolanaParsedInstructionData, SolanaAddressTableLookup, SolanaInstruction, SolanaMetadata, SolanaParseResponse, SolanaParsedTransaction, SolanaParsedTransactionPayload, SolanaSingleAddressTableLookup, SplTransfer, IdlRecord};
+use super::structs::{AccountAddress, SolTransfer, SolanaAccount, SolanaParsedInstructionData, SolanaAddressTableLookup, SolanaInstruction, SolanaMetadata, SolanaParseResponse, SolanaParsedTransaction, SolanaParsedTransactionPayload, SolanaSingleAddressTableLookup, SplTransfer, IdlRecord, IdlSource, ProgramType};
 use crate::solana::idl_parser;
 
 pub const IDL_DIRECTORY: &str = "src/solana/idls/";
@@ -32,13 +32,25 @@ pub const TOKEN_2022_PROGRAM_KEY: &str = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEp
 // Versioned transactions have a prefix of 0x80
 const V0_TRANSACTION_INDICATOR: u8 = 0x80;
 
-// Entrypoint to parsing
-pub fn parse_transaction(unsigned_tx: String, full_transaction: bool) -> Result<SolanaParseResponse, Box<dyn Error>> {
+/// Entrypoint to parsing
+///
+/// # Arguments
+/// * `unsigned_tx` - Hex string of the transaction to parse
+/// * `full_transaction` - Whether the input is a full transaction or just a message
+/// * `custom_idls` - Optional map of program_id -> (idl_json, override_builtin)
+///   - idl_json: JSON string of the IDL
+///   - override_builtin: if true, use custom IDL even if a built-in exists for this program_id
+///   - Pass `None` to use only built-in IDLs (default behavior)
+pub fn parse_transaction(
+    unsigned_tx: String,
+    full_transaction: bool,
+    custom_idls: Option<HashMap<String, (String, bool)>>,
+) -> Result<SolanaParseResponse, Box<dyn Error>> {
     if unsigned_tx.is_empty() {
         return Err("Transaction is empty".into());
     }
 
-    let tx = SolanaTransaction::new(&unsigned_tx, full_transaction).map_err(|e| {
+    let tx = SolanaTransaction::new(&unsigned_tx, full_transaction, custom_idls).map_err(|e| {
         Box::<dyn std::error::Error>::from(format!("Unable to parse transaction: {}", e))
     })?;
 
@@ -66,6 +78,7 @@ Parse Solana Transaction
 fn parse_solana_transaction(
     unsigned_tx: &str,
     full_transaction: bool,
+    custom_idls: Option<HashMap<String, (String, bool)>>,
 ) -> Result<SolanaTransaction, Box<dyn std::error::Error>> {
     let unsigned_tx_bytes: Vec<u8> = hex::decode(unsigned_tx).map_err(|_| {
             "unsigned Solana transaction provided is invalid hex"
@@ -77,7 +90,7 @@ fn parse_solana_transaction(
         );
     }
 
-    let custom_idl_records = idl_parser::construct_custom_idl_records_map()?;
+    let custom_idl_records = idl_parser::construct_custom_idl_records_map_with_overrides(custom_idls)?;
 
     if full_transaction {
         let (signatures, tx_body) = parse_signatures(&unsigned_tx_bytes)?;
@@ -496,8 +509,12 @@ pub struct SolanaTransaction {
     custom_idl_records: HashMap<String, IdlRecord> 
 }
 impl SolanaTransaction {
-    pub fn new(hex_tx: &str, full_transaction: bool) -> Result<Self, Box<dyn Error>> {
-        parse_solana_transaction(hex_tx, full_transaction)
+    pub fn new(
+        hex_tx: &str,
+        full_transaction: bool,
+        custom_idls: Option<HashMap<String, (String, bool)>>,
+    ) -> Result<Self, Box<dyn Error>> {
+        parse_solana_transaction(hex_tx, full_transaction, custom_idls)
     }
 
     fn all_account_key_strings(&self) -> Vec<String> {
@@ -803,8 +820,29 @@ impl SolanaTransaction {
         custom_idls: &HashMap<String, IdlRecord>,
     ) -> Result<Option<SolanaParsedInstructionData>, Box<dyn std::error::Error>> {
         if let Some(idl_record) = custom_idls.get(program_key) {
-            // read idl data into json string
-            let idl_json_str = fs::read_to_string(IDL_DIRECTORY.to_string() + &idl_record.file_path)?;
+            // Determine which IDL to use
+            let (idl_json_str, idl_source) = if let Some(ref custom_json) = idl_record.custom_idl_json {
+                // Custom IDL provided
+                if idl_record.override_builtin || idl_record.file_path.is_empty() {
+                    // Use custom IDL (either override is set or no built-in exists)
+                    (custom_json.clone(), IdlSource::Custom)
+                } else {
+                    // Use built-in IDL (custom provided but override is false)
+                    let builtin_json = fs::read_to_string(IDL_DIRECTORY.to_string() + &idl_record.file_path)?;
+                    let program_type = ProgramType::from_program_id(program_key)
+                        .ok_or_else(|| format!("Unknown program type for program key: {}", program_key))?;
+                    (builtin_json, IdlSource::BuiltIn(program_type))
+                }
+            } else {
+                // No custom IDL, use built-in
+                let builtin_json = fs::read_to_string(IDL_DIRECTORY.to_string() + &idl_record.file_path)?;
+                let program_type = ProgramType::from_program_id(program_key)
+                    .ok_or_else(|| format!("Unknown program type for program key: {}", program_key))?;
+                (builtin_json, IdlSource::BuiltIn(program_type))
+            };
+
+            // Compute IDL hash
+            let idl_hash = idl_parser::compute_idl_hash(&idl_json_str);
 
             // Parse idl interface json string into idl type
             let idl = idl_parser::decode_idl_data(&idl_json_str).map_err(|e| -> Box<dyn std::error::Error> {
@@ -838,6 +876,8 @@ impl SolanaTransaction {
                     discriminator: hex::encode(&discriminator_bytes),
                     instruction_name: instruction.name,
                     named_accounts,
+                    idl_source,
+                    idl_hash,
                 }));
             }
             // We shouldn't get here because we found the instruction by the discriminator above
@@ -909,13 +949,13 @@ mod tests {
 
         // Test 1: Empty input to parse_solana_transaction()
         let unsigned_tx_too_short1 = "";
-        let empty_err = parse_solana_transaction(unsigned_tx_too_short1, false).unwrap_err();
+        let empty_err = parse_solana_transaction(unsigned_tx_too_short1, false, None).unwrap_err();
         assert_eq!(
             empty_err.to_string(),
             "unsigned Solana transaction provided must be non-empty"
         );
         let unsigned_tx_too_short2 = "0x";
-        let empty_err = parse_solana_transaction(unsigned_tx_too_short2, false).unwrap_err();
+        let empty_err = parse_solana_transaction(unsigned_tx_too_short2, false, None).unwrap_err();
         assert_eq!(
             empty_err.to_string(),
             "unsigned Solana transaction provided is invalid hex"
@@ -926,7 +966,7 @@ mod tests {
     fn solana_fuzzer_regression_test2() {
         // Test 2: Parsing hex bytes with characters with multi-byte widths
         let unsigned_tx_2 = ".ё%";
-        let empty_err = parse_solana_transaction(unsigned_tx_2, false).unwrap_err();
+        let empty_err = parse_solana_transaction(unsigned_tx_2, false, None).unwrap_err();
         assert_eq!(
             empty_err.to_string(),
             "unsigned Solana transaction provided is invalid hex"
@@ -949,7 +989,7 @@ mod tests {
         ];
         let unsigned_tx_instruction_problem1_hex_string = hex::encode(&unsigned_tx_instruction_problem1_raw);
         let unsigned_tx_instruction_problem1 =
-            parse_solana_transaction(&unsigned_tx_instruction_problem1_hex_string, true).unwrap();
+            parse_solana_transaction(&unsigned_tx_instruction_problem1_hex_string, true, None).unwrap();
 
         // symptom: this panics with "index out of bounds: the len is 0 but the index is 0"
         let fuzz_err = unsigned_tx_instruction_problem1
@@ -980,7 +1020,7 @@ mod tests {
         ])
         .unwrap();
         let unsigned_tx_instruction_problem2 =
-            parse_solana_transaction(&unsigned_tx_instruction_problem2_string, true).unwrap();
+            parse_solana_transaction(&unsigned_tx_instruction_problem2_string, true, None).unwrap();
 
         // symptom: this panics with "attempt to subtract with overflow"
         let fuzz_err = unsigned_tx_instruction_problem2
