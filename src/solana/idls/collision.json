@@ -1,0 +1,42 @@
+{
+    "types": [
+      {
+        "name": "TypeA",
+        "type": {
+          "kind": "struct",
+          "fields": [
+            {
+              "name": "parameterOne",
+              "type": "u8"
+            }
+          ]
+        }
+      },
+      {
+        "name": "TypeA",
+        "type": {
+          "kind": "struct",
+          "fields": [
+            {
+              "name": "ParameterTwo",
+              "type": "u8"
+            }
+          ]
+        }
+      }
+    ],
+    "instructions": [
+      {
+        "name": "cyclicInstruction",
+        "accounts": [],
+        "args": [
+          {
+            "name": "cycle",
+            "type": {
+              "defined": "TypeA"
+            }
+          }
+        ]
+      }
+    ]
+  }
