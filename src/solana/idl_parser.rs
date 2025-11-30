@@ -1,11 +1,13 @@
-use serde_json::{from_str, from_value, Value, Map};
-use crate::solana::structs::{Idl, IdlTypeDefinition, IdlInstruction, IdlRecord, IdlType, Defined, EnumFields, IdlTypeDefinitionType, AccountAddress};
-use crate::solana::idl_db::IDL_DB;
-use sha2::{Sha256, Digest};
-use std::collections::{HashMap, HashSet};
-use byteorder::{LittleEndian, ReadBytesExt};
-use std::io::{Cursor, Read};
+use crate::solana::structs::{
+    AccountAddress, CustomIdl, CustomIdlConfig, Defined, EnumFields, Idl, IdlInstruction,
+    IdlRecord, IdlType, IdlTypeDefinition, IdlTypeDefinitionType, ProgramType,
+};
 use bs58;
+use byteorder::{LittleEndian, ReadBytesExt};
+use serde_json::{from_str, from_value, Map, Value};
+use sha2::{Digest, Sha256};
+use std::collections::{HashMap, HashSet};
+use std::io::{Cursor, Read};
 
 /// Compresses an IDL JSON string by removing all whitespace
 fn compress_idl_json(idl_json: &str) -> String {
@@ -47,41 +49,68 @@ const MAX_DEFINED_TYPE_DEPTH: usize = 10; // Max depth for defined types
 const MAX_CURSOR_LENGTH: usize = 1232; // Max size in bytes of a serialized Solana transaction
 const MAX_ALLOC_PER_CURSOR_LENGTH: usize = 24; // Typical heap allocation overhead for pointers
 
-
-// This method takes all IDL's that have been uploaded to the IDL DB and constructs a mapping from PROGRAM_ID --> IDL_RECORD_INFO
-pub fn construct_custom_idl_records_map() -> Result<HashMap<String, IdlRecord>, Box<dyn std::error::Error>> {
+/// Constructs a mapping from program_id to IdlRecord for all built-in IDLs.
+/// IDLs are embedded at compile time and do not require file system access.
+#[allow(dead_code)] // Public API - exported from lib.rs
+pub fn construct_custom_idl_records_map(
+) -> Result<HashMap<String, IdlRecord>, Box<dyn std::error::Error>> {
     let mut idl_map = HashMap::new();
 
-    for entry in IDL_DB {
-        let program_id = entry.1.to_string();
+    for program_type in ProgramType::all() {
+        let program_id = program_type.program_id().to_string();
         let idl_record = IdlRecord {
-            program_name: entry.0.to_string(),
-            program_id: entry.1.to_string(),
-            file_path: entry.2.to_string(),
+            program_name: program_type.program_name().to_string(),
+            program_id: program_id.clone(),
+            program_type: Some(program_type.clone()),
+            custom_idl: None,
             custom_idl_json: None,
             override_builtin: false,
         };
 
-        // Use insert() instead of indexing syntax
         idl_map.insert(program_id, idl_record);
     }
 
     Ok(idl_map)
 }
 
-/// Constructs custom IDL records map with optional custom IDLs
+/// Constructs custom IDL records map with optional custom IDLs (JSON string version).
+/// This is the legacy API that accepts JSON strings.
+#[allow(dead_code)] // Public API - exported from lib.rs
 pub fn construct_custom_idl_records_map_with_overrides(
     custom_idls: Option<HashMap<String, (String, bool)>>, // program_id -> (idl_json, override_builtin)
 ) -> Result<HashMap<String, IdlRecord>, Box<dyn std::error::Error>> {
+    // Convert old API to new API
+    let custom_configs = custom_idls.map(|idls| {
+        idls.into_iter()
+            .map(|(program_id, (json, override_builtin))| {
+                (
+                    program_id,
+                    CustomIdlConfig::from_json(json, override_builtin),
+                )
+            })
+            .collect()
+    });
+    construct_idl_records_map(custom_configs)
+}
+
+/// Constructs IDL records map with optional custom IDLs.
+/// This is the new API that supports both pre-parsed Idl structs and JSON strings.
+///
+/// # Arguments
+/// * `custom_idls` - Optional map of program_id -> CustomIdlConfig
+pub fn construct_idl_records_map(
+    custom_idls: Option<HashMap<String, CustomIdlConfig>>,
+) -> Result<HashMap<String, IdlRecord>, Box<dyn std::error::Error>> {
     let mut idl_map = HashMap::new();
 
-    // First, load all built-in IDLs
-    for entry in IDL_DB {
-        let program_id = entry.1.to_string();
+    // First, load all built-in IDLs (using embedded IDL data)
+    for program_type in ProgramType::all() {
+        let program_id = program_type.program_id().to_string();
         let idl_record = IdlRecord {
-            program_name: entry.0.to_string(),
-            program_id: entry.1.to_string(),
-            file_path: entry.2.to_string(),
+            program_name: program_type.program_name().to_string(),
+            program_id: program_id.clone(),
+            program_type: Some(program_type.clone()),
+            custom_idl: None,
             custom_idl_json: None,
             override_builtin: false,
         };
@@ -91,18 +120,38 @@ pub fn construct_custom_idl_records_map_with_overrides(
 
     // Then, add or override with custom IDLs if provided
     if let Some(custom_idls) = custom_idls {
-        for (program_id, (idl_json, override_builtin)) in custom_idls {
+        for (program_id, config) in custom_idls {
+            // Parse the custom IDL if it's JSON, otherwise use the pre-parsed version
+            let (custom_idl, custom_idl_json) = match config.idl {
+                CustomIdl::Parsed(idl) => {
+                    // For pre-parsed IDLs, we serialize to JSON for hash computation
+                    let json = serde_json::to_string(&idl)?;
+                    (idl, json)
+                }
+                CustomIdl::Json(json) => {
+                    let idl = decode_idl_data(&json)?;
+                    (idl, json)
+                }
+            };
+
             if let Some(existing_record) = idl_map.get_mut(&program_id) {
                 // Update existing record with custom IDL
-                existing_record.custom_idl_json = Some(idl_json);
-                existing_record.override_builtin = override_builtin;
+                existing_record.custom_idl = Some(custom_idl);
+                existing_record.custom_idl_json = Some(custom_idl_json);
+                existing_record.override_builtin = config.override_builtin;
             } else {
                 // Create new record for unknown program
+                let short_id = if program_id.len() >= 8 {
+                    &program_id[..8]
+                } else {
+                    &program_id
+                };
                 let idl_record = IdlRecord {
-                    program_name: format!("Custom Program {}", &program_id[..8]),
+                    program_name: format!("Custom Program {short_id}"),
                     program_id: program_id.clone(),
-                    file_path: String::new(), // No file path for custom IDLs
-                    custom_idl_json: Some(idl_json),
+                    program_type: None,
+                    custom_idl: Some(custom_idl),
+                    custom_idl_json: Some(custom_idl_json),
                     override_builtin: true, // Always override for unknown programs
                 };
                 idl_map.insert(program_id, idl_record);
@@ -111,6 +160,48 @@ pub fn construct_custom_idl_records_map_with_overrides(
     }
 
     Ok(idl_map)
+}
+
+/// Get the resolved IDL and its JSON string for an IdlRecord.
+/// Returns (Idl, idl_json_str, IdlSource)
+pub fn resolve_idl_for_record(
+    idl_record: &IdlRecord,
+    program_key: &str,
+) -> Result<(Idl, String, crate::solana::structs::IdlSource), Box<dyn std::error::Error>> {
+    use crate::solana::structs::IdlSource;
+
+    // Determine which IDL to use
+    if let Some(ref custom_idl) = idl_record.custom_idl {
+        // Custom IDL provided
+        if idl_record.override_builtin || idl_record.program_type.is_none() {
+            // Use custom IDL (either override is set or no built-in exists)
+            let json = idl_record
+                .custom_idl_json
+                .clone()
+                .ok_or("Custom IDL present but JSON string missing")?;
+            return Ok((custom_idl.clone(), json, IdlSource::Custom));
+        }
+    }
+
+    // Use built-in IDL
+    if let Some(ref program_type) = idl_record.program_type {
+        let builtin_json = program_type.idl_json();
+        let builtin_idl = decode_idl_data(builtin_json)?;
+        Ok((
+            builtin_idl,
+            builtin_json.to_string(),
+            IdlSource::BuiltIn(program_type.clone()),
+        ))
+    } else if let Some(ref custom_idl) = idl_record.custom_idl {
+        // Fallback to custom IDL if no built-in
+        let json = idl_record
+            .custom_idl_json
+            .clone()
+            .ok_or("Custom IDL present but JSON string missing")?;
+        Ok((custom_idl.clone(), json, IdlSource::Custom))
+    } else {
+        Err(format!("No IDL available for program: {program_key}").into())
+    }
 }
 
 // The TypeResolver struct helps resolved defined types within an IDL during the parsing of instruction call data
@@ -124,7 +215,8 @@ impl<'a> TypeResolver<'a> {
         for ty in &idl.types {
             if type_cache.contains_key(&ty.name) {
                 return Err(
-                    format!("multiple types with the same name detected: {}", &ty.name).into())
+                    format!("multiple types with the same name detected: {}", &ty.name).into(),
+                );
             }
             type_cache.insert(ty.name.clone(), ty);
         }
@@ -152,7 +244,10 @@ impl SizeGuard {
     }
 
     // This method checks to see whether there is enough memory left in the budget to be allocated, and if so, creates a byte vector of the correct length
-    fn create_allocated_buffer(&mut self, len: usize) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    fn create_allocated_buffer(
+        &mut self,
+        len: usize,
+    ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         if len > self.remaining_budget {
             return Err(
                 "memory allocation exceeded maximum allowed budget while parsing IDL call data -- check your uploaded IDL or call data".into(),
@@ -164,7 +259,10 @@ impl SizeGuard {
     }
 
     // This method checks to see whether there is enough memory left in the budget to be allocated, and if so, creates a vector of serde json value type objects of the correct length
-    fn create_allocated_arg_vector(&mut self, len: usize) -> Result<Vec<Value>, Box<dyn std::error::Error>> {
+    fn create_allocated_arg_vector(
+        &mut self,
+        len: usize,
+    ) -> Result<Vec<Value>, Box<dyn std::error::Error>> {
         let amount = len * size_of::<serde_json::Value>();
 
         if amount > self.remaining_budget {
@@ -184,17 +282,19 @@ impl SizeGuard {
 // the Decode IDL Data method takes an IDL json string and parses it into IDL rust structs to be used to parse passed in instruction data
 pub fn decode_idl_data(idl_json: &str) -> Result<Idl, Box<dyn std::error::Error>> {
     // Parse IDL from JSON string into Maps
-    let idl_map: Map<String, Value> = from_str(idl_json).map_err(|e| -> Box<dyn std::error::Error> {
+    let idl_map: Map<String, Value> =
+        from_str(idl_json).map_err(|e| -> Box<dyn std::error::Error> {
             format!("unable to parse IDL: Invalid JSON with error: {e}").into()
-    })?;
+        })?;
 
     // Parse instructions array
     let instructions = validate_idl_array(&idl_map, IDL_INSTRUCTIONS_KEY)?;
     let mut parsed_instructions: Vec<IdlInstruction> = vec![];
     for i in instructions {
-        let parsed_i: IdlInstruction = from_value(i).map_err(|e| -> Box<dyn std::error::Error> {
+        let parsed_i: IdlInstruction =
+            from_value(i).map_err(|e| -> Box<dyn std::error::Error> {
                 format!("failed to parse instructions array in uploaded IDL with error: {e}").into()
-        })?;
+            })?;
         parsed_instructions.push(parsed_i);
     }
 
@@ -209,9 +309,10 @@ pub fn decode_idl_data(idl_json: &str) -> Result<Idl, Box<dyn std::error::Error>
     let types = validate_idl_array(&idl_map, IDL_TYPES_KEY)?;
     let mut parsed_types: Vec<IdlTypeDefinition> = vec![];
     for t in types {
-        let parsed_t: IdlTypeDefinition = from_value(t).map_err(|e| -> Box<dyn std::error::Error> {
+        let parsed_t: IdlTypeDefinition =
+            from_value(t).map_err(|e| -> Box<dyn std::error::Error> {
                 format!("failed to parse types array in uploaded IDL with error: {e}").into()
-    })?;
+            })?;
         parsed_types.push(parsed_t);
     }
 
@@ -228,21 +329,28 @@ pub fn decode_idl_data(idl_json: &str) -> Result<Idl, Box<dyn std::error::Error>
 
 // This method takes in a json object, and validates the existence of an ARRAY at a particular key (for example the top level instructions array within all IDL Json's)
 // It then returns the value at the provided key, cast as an array type
-fn validate_idl_array(idl_map: &Map<String, Value>, key: &str) -> Result<Vec<Value>, Box<dyn std::error::Error>> {
+fn validate_idl_array(
+    idl_map: &Map<String, Value>,
+    key: &str,
+) -> Result<Vec<Value>, Box<dyn std::error::Error>> {
     let value = idl_map
         .get(key)
-        .ok_or_else(|| -> Box<dyn std::error::Error> { 
-            format!("key '{key}' not found in uploaded IDL").into() 
+        .ok_or_else(|| -> Box<dyn std::error::Error> {
+            format!("key '{key}' not found in uploaded IDL").into()
         })?;
-    let checked_value = value.as_array().ok_or_else(|| -> Box<dyn std::error::Error> { 
-        format!("value for key '{key}' must be a JSON array").into()
-    })?;
+    let checked_value = value
+        .as_array()
+        .ok_or_else(|| -> Box<dyn std::error::Error> {
+            format!("value for key '{key}' must be a JSON array").into()
+        })?;
     Ok(checked_value.clone())
 }
 
 // This method computes the default anchor discriminator for an instruction using it's instruction name (only computes if the instruction discriminators are not EXPLICITLY provided)
 // Reference for calculating the default discriminator - https://www.anchor-lang.com/docs/basics/idl#discriminators
-pub fn compute_default_anchor_discriminator(instruction_name: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+pub fn compute_default_anchor_discriminator(
+    instruction_name: &str,
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     if instruction_name.is_empty() {
         return Err("attempted to compute the default anchor instruction discriminator for an instruction with no name".into());
     }
@@ -282,16 +390,16 @@ pub fn create_accounts_map(
     instruction_spec: &IdlInstruction,
 ) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
     if accounts.len() < instruction_spec.accounts.len() {
-        return Err(
-            format!(
-                "too few accounts provided in transaction payload for instruction {}",
-                instruction_spec.name
-            ).into());
+        return Err(format!(
+            "too few accounts provided in transaction payload for instruction {}",
+            instruction_spec.name
+        )
+        .into());
     }
 
     let mut acct_map: HashMap<String, String> = HashMap::new();
-    for i in 0..instruction_spec.accounts.len() {
-        acct_map.insert(instruction_spec.accounts[i].name.clone(), accounts[i].to_string());
+    for (account_spec, account) in instruction_spec.accounts.iter().zip(accounts.iter()) {
+        acct_map.insert(account_spec.name.clone(), account.to_string());
     }
     Ok(acct_map)
 }
@@ -306,10 +414,16 @@ pub fn find_instruction_by_discriminator(
     }
 
     for i in instructions {
-        let disc = i.clone().discriminator.ok_or_else(|| -> Box<dyn std::error::Error> {
-                format!("no discriminator found for instruction {} found in IDL", i.name).into()
-            }
-        )?;
+        let disc = i
+            .clone()
+            .discriminator
+            .ok_or_else(|| -> Box<dyn std::error::Error> {
+                format!(
+                    "no discriminator found for instruction {} found in IDL",
+                    i.name
+                )
+                .into()
+            })?;
 
         // Validate length of instruction data, to make sure it has enough bytes for the discriminator
         if instruction_data.len() < disc.len() {
@@ -322,9 +436,10 @@ pub fn find_instruction_by_discriminator(
         }
     }
     let inst_data_string = hex::encode(instruction_data);
-    Err(
-        format!("no matching instruction discriminator found for instruction data: {inst_data_string:?}").into()
+    Err(format!(
+        "no matching instruction discriminator found for instruction data: {inst_data_string:?}"
     )
+    .into())
 }
 
 // Parse data into args -- takes in the IDL instruction object corresponding to the instruction call data, as well as the instruction call data and parses the data into a vector of arguments
@@ -337,12 +452,17 @@ pub fn parse_data_into_args(
     let resolver = TypeResolver::new(idl)?;
 
     // Validate discriminator length and set cursor to correct position
-    let disc = idl_instruction.clone().discriminator.ok_or_else(|| -> Box<dyn std::error::Error> {
-            format!(
-                "no discriminator found for instruction {} not found in IDL",
-                idl_instruction.name
-            ).into()
-    })?;
+    let disc =
+        idl_instruction
+            .clone()
+            .discriminator
+            .ok_or_else(|| -> Box<dyn std::error::Error> {
+                format!(
+                    "no discriminator found for instruction {} not found in IDL",
+                    idl_instruction.name
+                )
+                .into()
+            })?;
     if data.len() < disc.len() {
         // we should not get here since we've checked the length of the discriminator
         return Err(
@@ -360,19 +480,27 @@ pub fn parse_data_into_args(
     // parse all arguments
     let mut args = serde_json::Map::new();
     for arg in &idl_instruction.args {
-        let parsed_arg = parse_type(&mut data_cursor, &arg.r#type, &resolver, &mut size_guard).map_err(|e| -> Box<dyn std::error::Error> { 
-            format!("failed to parse IDL argument with error: {}", e).into()
-    })?;
-        args.insert( arg.name.clone(), parsed_arg);
+        let parsed_arg = parse_type(&mut data_cursor, &arg.r#type, &resolver, &mut size_guard)
+            .map_err(|e| -> Box<dyn std::error::Error> {
+                format!("failed to parse IDL argument with error: {}", e).into()
+            })?;
+        args.insert(arg.name.clone(), parsed_arg);
     }
 
     // Error if data bytes still remaining after parsing all expected arguments
-    let cursor_position = usize::try_from(data_cursor.position()).map_err(|e| -> Box<dyn std::error::Error> { 
-        format!("invalid cursor position while parsing solana IDL data {}", e).into()
-    })?;
+    let cursor_position =
+        usize::try_from(data_cursor.position()).map_err(|e| -> Box<dyn std::error::Error> {
+            format!(
+                "invalid cursor position while parsing solana IDL data {}",
+                e
+            )
+            .into()
+        })?;
     if cursor_position != data.len() {
         if cursor_position < data.len() {
-            return Err("extra unexpected bytes remaining at the end of instruction call data".into());
+            return Err(
+                "extra unexpected bytes remaining at the end of instruction call data".into(),
+            );
         }
         return Err("cursor out of bounds".into());
     }
@@ -397,7 +525,7 @@ fn parse_type<R: Read>(
             } else {
                 serde_json::Value::Bool(true)
             })
-        },
+        }
         IdlType::I8 => Ok(reader.read_i8()?.into()),
         IdlType::I16 => Ok(reader.read_i16::<LittleEndian>()?.into()),
         IdlType::I32 => Ok(reader.read_i32::<LittleEndian>()?.into()),
@@ -424,7 +552,7 @@ fn parse_type<R: Read>(
             let mut buf = [0u8; 32];
             reader.read_exact(&mut buf)?;
             Ok(bs58::encode(buf).into_string().into())
-        },
+        }
         IdlType::String => {
             let len = reader.read_u32::<LittleEndian>()? as usize;
             // Check size guard & allocate memory
@@ -432,7 +560,7 @@ fn parse_type<R: Read>(
 
             reader.read_exact(&mut buf)?;
             Ok(String::from_utf8(buf)?.into())
-        },
+        }
         IdlType::Bytes => {
             let len = reader.read_u32::<LittleEndian>()? as usize;
             // Check size guard & allocate memory
@@ -440,7 +568,7 @@ fn parse_type<R: Read>(
 
             reader.read_exact(&mut buf)?;
             Ok(serde_json::Value::String(hex::encode(&buf)))
-        },
+        }
 
         // Container types
         IdlType::Array(ty, size) => {
@@ -451,11 +579,15 @@ fn parse_type<R: Read>(
                 arr.push(parse_type(reader, ty, resolver, size_guard)?);
             }
             Ok(arr.into())
-        },
+        }
         IdlType::Vec(ty) => {
-            let len = reader.read_u32::<LittleEndian>().map_err(|e| -> Box<dyn std::error::Error> {
-                format!("failed while parsing length header of argument of type vec: {e}").into()
-            })?;
+            let len =
+                reader
+                    .read_u32::<LittleEndian>()
+                    .map_err(|e| -> Box<dyn std::error::Error> {
+                        format!("failed while parsing length header of argument of type vec: {e}")
+                            .into()
+                    })?;
 
             // Check size guard & allocate memory
             let mut vec = size_guard.create_allocated_arg_vector(len as usize)?;
@@ -464,7 +596,7 @@ fn parse_type<R: Read>(
                 vec.push(parse_type(reader, ty, resolver, size_guard)?);
             }
             Ok(vec.into())
-        },
+        }
         IdlType::Option(ty) => {
             let flag = reader.read_u8()?;
             Ok(if flag == 0 {
@@ -472,7 +604,7 @@ fn parse_type<R: Read>(
             } else {
                 parse_type(reader, ty, resolver, size_guard)?
             })
-        },
+        }
         // Custom types
         IdlType::Defined(defined) => {
             let type_name = match defined {
@@ -480,7 +612,7 @@ fn parse_type<R: Read>(
                 Defined::Object { name } => name,
             };
             parse_defined_type(reader, type_name, resolver, size_guard)
-        },
+        }
     }
 }
 
@@ -491,7 +623,9 @@ fn parse_defined_type<R: Read>(
     resolver: &TypeResolver,
     size_guard: &mut SizeGuard,
 ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
-    let ty_def = resolver.resolve(type_name).ok_or_else(|| format!("type {} not found in IDL", type_name))?;
+    let ty_def = resolver
+        .resolve(type_name)
+        .ok_or_else(|| format!("type {} not found in IDL", type_name))?;
 
     match &ty_def.r#type {
         IdlTypeDefinitionType::Struct { fields } => {
@@ -499,14 +633,15 @@ fn parse_defined_type<R: Read>(
             for field in fields {
                 map.insert(
                     field.name.clone(),
-                    parse_type(reader, &field.r#type, resolver, size_guard)?
+                    parse_type(reader, &field.r#type, resolver, size_guard)?,
                 );
             }
             Ok(map.into())
         }
         IdlTypeDefinitionType::Enum { variants } => {
             let variant_index = reader.read_u8()?;
-            let variant = variants.get(variant_index as usize)
+            let variant = variants
+                .get(variant_index as usize)
                 .ok_or("invalid variant index")?;
 
             let value = match &variant.fields {
@@ -522,7 +657,7 @@ fn parse_defined_type<R: Read>(
                     for field in fields {
                         map.insert(
                             field.name.clone(),
-                            parse_type(reader, &field.r#type, resolver, size_guard)?
+                            parse_type(reader, &field.r#type, resolver, size_guard)?,
                         );
                     }
                     serde_json::Value::Object(map)
@@ -534,9 +669,7 @@ fn parse_defined_type<R: Read>(
                 variant.name.clone(): value
             }))
         }
-        IdlTypeDefinitionType::Alias { value } => {
-            parse_type(reader, value, resolver, size_guard)
-        }
+        IdlTypeDefinitionType::Alias { value } => parse_type(reader, value, resolver, size_guard),
     }
 }
 
@@ -545,7 +678,10 @@ fn parse_defined_type<R: Read>(
 */
 
 // Check IDL for Cycles -- takes in an IDL and checks to see whether the defined types contains any cycles (invalid case)
-fn check_idl_for_cycles(idl: Idl, type_cache: &HashMap<String, &IdlTypeDefinition>) -> Result<(), Box<dyn std::error::Error>> {
+fn check_idl_for_cycles(
+    idl: Idl,
+    type_cache: &HashMap<String, &IdlTypeDefinition>,
+) -> Result<(), Box<dyn std::error::Error>> {
     for t in idl.types {
         cycle_recursive_check(type_cache.clone(), &t.name, HashSet::new())?;
     }
@@ -560,22 +696,26 @@ fn cycle_recursive_check(
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Check to see whether max depth has been exceeded
     if path.len() > MAX_DEFINED_TYPE_DEPTH {
-        return Err(format!("defined types resolution max depth exceeded on type: {type_name}").into());
+        return Err(
+            format!("defined types resolution max depth exceeded on type: {type_name}").into(),
+        );
     }
 
     // Check to see whether a cycle has been detected
     if path.contains(type_name) {
-        return Err(format!("defined types cycle check failed. Recursive type found: {type_name}").into());
+        return Err(
+            format!("defined types cycle check failed. Recursive type found: {type_name}").into(),
+        );
     }
     path.insert(type_name.to_string());
 
-    let ty_def = type_cache
-        .get(type_name)
-        .copied()
-        .ok_or_else(|| -> Box<dyn std::error::Error> {
+    let ty_def =
+        type_cache
+            .get(type_name)
+            .copied()
+            .ok_or_else(|| -> Box<dyn std::error::Error> {
                 format!("type {type_name} not found in IDL").into()
-            }
-        )?;
+            })?;
 
     match &ty_def.r#type {
         IdlTypeDefinitionType::Struct { fields } => {

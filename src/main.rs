@@ -1,12 +1,13 @@
+use std::collections::HashMap;
 use std::env;
 use std::fs;
-use std::collections::HashMap;
 
 mod solana;
 
 use crate::solana::parser::parse_transaction;
-use crate::solana::structs::{SolanaParsedTransactionPayload, SolanaParsedInstructionData, IdlSource};
-
+use crate::solana::structs::{
+    IdlSource, SolanaParsedInstructionData, SolanaParsedTransactionPayload,
+};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -29,12 +30,15 @@ fn main() {
                     // Check for optional custom IDL parameters
                     let custom_idls = parse_custom_idl_args(&args[4..]);
 
-                    let result = parse_transaction(unsigned_tx.to_string(), is_transaction, custom_idls);
+                    let result =
+                        parse_transaction(unsigned_tx.to_string(), is_transaction, custom_idls);
 
                     match result {
                         Ok(response) => {
-                            print_parsed_transaction(response.solana_parsed_transaction.payload.unwrap());
-                        },
+                            print_parsed_transaction(
+                                response.solana_parsed_transaction.payload.unwrap(),
+                            );
+                        }
                         Err(e) => println!("Error: {}", e),
                     }
                 }
@@ -76,7 +80,9 @@ fn parse_custom_idl_args(args: &[String]) -> Option<HashMap<String, (String, boo
     while i < args.len() {
         if args[i] == "--custom-idl" {
             if i + 2 >= args.len() {
-                eprintln!("Error: --custom-idl requires <program_id> and <idl_json_file_or_string>");
+                eprintln!(
+                    "Error: --custom-idl requires <program_id> and <idl_json_file_or_string>"
+                );
                 return None;
             }
 
@@ -120,7 +126,10 @@ fn parse_custom_idl_args(args: &[String]) -> Option<HashMap<String, (String, boo
 
 fn print_parsed_transaction(transaction_payload: SolanaParsedTransactionPayload) {
     println!("Solana Parsed Transaction Payload:");
-    println!("  Unsigned Payload: {}", transaction_payload.unsigned_payload);
+    println!(
+        "  Unsigned Payload: {}",
+        transaction_payload.unsigned_payload
+    );
     if let Some(metadata) = transaction_payload.transaction_metadata {
         println!("  Transaction Metadata:");
         println!("    Signatures: {:?}", metadata.signatures);
@@ -132,8 +141,14 @@ fn print_parsed_transaction(transaction_payload: SolanaParsedTransactionPayload)
             println!("      Instruction {}:", i + 1);
             println!("        Program Key: {}", instruction.program_key);
             println!("        Accounts: {:?}", instruction.accounts);
-            println!("        Instruction Data (hex): {}", instruction.instruction_data_hex);
-            println!("        Address Table Lookups: {:?}", instruction.address_table_lookups);
+            println!(
+                "        Instruction Data (hex): {}",
+                instruction.instruction_data_hex
+            );
+            println!(
+                "        Address Table Lookups: {:?}",
+                instruction.address_table_lookups
+            );
             print_parsed_instruction_data(instruction.parsed_instruction.clone());
         }
         println!("    Transfers:");
@@ -163,19 +178,28 @@ fn print_parsed_transaction(transaction_payload: SolanaParsedTransactionPayload)
                 println!("        Fee: {}", fee);
             }
         }
-        println!("    Address Table Lookups: {:?}", metadata.address_table_lookups);
+        println!(
+            "    Address Table Lookups: {:?}",
+            metadata.address_table_lookups
+        );
     }
 }
 
 fn print_parsed_instruction_data(p_inst_data: Option<SolanaParsedInstructionData>) {
     println!("        Parsed Instruction Data:");
     if let Some(parsed_data) = p_inst_data {
-        println!("          Instruction Name: {}", parsed_data.instruction_name);
+        println!(
+            "          Instruction Name: {}",
+            parsed_data.instruction_name
+        );
 
         // Display IDL source information
         match &parsed_data.idl_source {
             IdlSource::BuiltIn(program_type) => {
-                println!("          IDL Source: Built-in ({})", program_type.program_name());
+                println!(
+                    "          IDL Source: Built-in ({})",
+                    program_type.program_name()
+                );
             }
             IdlSource::Custom => {
                 println!("          IDL Source: Custom");

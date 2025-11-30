@@ -1,6 +1,6 @@
-use std::{fmt, collections::HashMap};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::{collections::HashMap, fmt};
 
 /// ProgramType represents the built-in IDL types supported by the library
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -40,7 +40,8 @@ impl ProgramType {
         }
     }
 
-    /// Returns the file path for this ProgramType
+    /// Returns the file path for this ProgramType (deprecated, IDLs are now embedded)
+    #[allow(dead_code)] // Kept for backwards compatibility
     pub fn file_path(&self) -> &str {
         match self {
             ProgramType::ApePro => "ape_pro.json",
@@ -79,6 +80,7 @@ impl ProgramType {
     }
 
     /// Looks up a ProgramType by program_id
+    #[allow(dead_code)] // Public API
     pub fn from_program_id(program_id: &str) -> Option<ProgramType> {
         match program_id {
             "JSW99DKmxNyREQM14SQLDykeBvEUG63TeohrvmofEiw" => Some(ProgramType::ApePro),
@@ -95,6 +97,46 @@ impl ProgramType {
             "swapNyd8XiQwJ6ianp9snpu4brUqFxadzvHebnAXjJZ" => Some(ProgramType::Stabble),
             "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" => Some(ProgramType::JupiterAggregatorV6),
             _ => None,
+        }
+    }
+
+    /// Returns all built-in program types
+    pub fn all() -> &'static [ProgramType] {
+        &[
+            ProgramType::ApePro,
+            ProgramType::CandyMachine,
+            ProgramType::Drift,
+            ProgramType::JupiterLimit,
+            ProgramType::Jupiter,
+            ProgramType::Kamino,
+            ProgramType::Lifinity,
+            ProgramType::Meteora,
+            ProgramType::Openbook,
+            ProgramType::Orca,
+            ProgramType::Raydium,
+            ProgramType::Stabble,
+            ProgramType::JupiterAggregatorV6,
+        ]
+    }
+
+    /// Returns the embedded IDL JSON string for this program type.
+    /// IDLs are compiled into the binary.
+    pub fn idl_json(&self) -> &'static str {
+        use crate::solana::embedded_idls::*;
+        match self {
+            ProgramType::ApePro => APE_PRO_IDL,
+            ProgramType::CandyMachine => CANDY_MACHINE_IDL,
+            ProgramType::Drift => DRIFT_IDL,
+            ProgramType::JupiterLimit => JUPITER_LIMIT_IDL,
+            ProgramType::Jupiter => JUPITER_IDL,
+            ProgramType::Kamino => KAMINO_IDL,
+            ProgramType::Lifinity => LIFINITY_IDL,
+            ProgramType::Meteora => METEORA_IDL,
+            ProgramType::Openbook => OPENBOOK_IDL,
+            ProgramType::Orca => ORCA_IDL,
+            ProgramType::Raydium => RAYDIUM_IDL,
+            ProgramType::Stabble => STABBLE_IDL,
+            ProgramType::JupiterAggregatorV6 => JUPITER_AGG_V6_IDL,
         }
     }
 }
@@ -154,8 +196,8 @@ pub struct SplTransfer {
     pub to: String,
     pub amount: String,
     pub owner: String,
-    pub signers: Vec<String>, // This is an empty array if ths is not a multisig account with multiple signers 
-    pub token_mint: Option<String>, 
+    pub signers: Vec<String>, // This is an empty array if ths is not a multisig account with multiple signers
+    pub token_mint: Option<String>,
     pub decimals: Option<String>,
     pub fee: Option<String>,
 }
@@ -223,13 +265,17 @@ impl fmt::Display for AccountAddress {
     - vendor docs reference: <https://github.com/metaplex-foundation/shank/blob/9a8f2a77f6000d2d00e04f5aaa8c36a36765f567/shank-idl/src/idl_type.rs>
 */
 
-// Contains a reference to "uploaded" IDL's
+/// Contains resolved IDL information for a program.
+/// IDLs are now stored as parsed structs, not file paths.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct IdlRecord {
     pub program_id: String,
     pub program_name: String,
-    pub file_path: String,
-    /// Custom IDL JSON string, if provided by the caller
+    /// The built-in program type (if this is a known program)
+    pub program_type: Option<ProgramType>,
+    /// Custom IDL provided by the caller (already parsed)
+    pub custom_idl: Option<Idl>,
+    /// The JSON string for the custom IDL (used for hash computation)
     pub custom_idl_json: Option<String>,
     /// Whether to override built-in IDL with custom one (if both exist)
     pub override_builtin: bool,
@@ -403,3 +449,54 @@ impl fmt::Display for Defined {
     }
 }
 
+/// Represents a custom IDL that can be passed to the parser.
+/// Supports both pre-parsed `Idl` structs and JSON strings.
+#[derive(Debug, Clone)]
+#[allow(dead_code)] // Public API - variants used by library consumers
+pub enum CustomIdl {
+    /// A pre-parsed IDL struct (avoids re-parsing)
+    Parsed(Idl),
+    /// An IDL as a JSON string (will be parsed)
+    Json(String),
+}
+
+#[allow(dead_code)] // Public API
+impl CustomIdl {
+    /// Create a CustomIdl from a pre-parsed Idl struct
+    pub fn from_idl(idl: Idl) -> Self {
+        CustomIdl::Parsed(idl)
+    }
+
+    /// Create a CustomIdl from a JSON string
+    pub fn from_json(json: String) -> Self {
+        CustomIdl::Json(json)
+    }
+}
+
+/// Configuration for a custom IDL to be used during parsing
+#[derive(Debug, Clone)]
+pub struct CustomIdlConfig {
+    /// The custom IDL (either pre-parsed or as JSON)
+    pub idl: CustomIdl,
+    /// If true, override built-in IDL even if one exists for this program
+    pub override_builtin: bool,
+}
+
+#[allow(dead_code)] // Public API
+impl CustomIdlConfig {
+    /// Create a new custom IDL config from a pre-parsed Idl
+    pub fn from_idl(idl: Idl, override_builtin: bool) -> Self {
+        Self {
+            idl: CustomIdl::Parsed(idl),
+            override_builtin,
+        }
+    }
+
+    /// Create a new custom IDL config from a JSON string
+    pub fn from_json(json: String, override_builtin: bool) -> Self {
+        Self {
+            idl: CustomIdl::Json(json),
+            override_builtin,
+        }
+    }
+}
