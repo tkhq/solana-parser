@@ -1,6 +1,7 @@
 use crate::solana::structs::{
     AccountAddress, CustomIdl, CustomIdlConfig, Defined, EnumFields, Idl, IdlInstruction,
     IdlRecord, IdlType, IdlTypeDefinition, IdlTypeDefinitionType, ProgramType,
+    SolanaParsedInstructionData,
 };
 use bs58;
 use byteorder::{LittleEndian, ReadBytesExt};
@@ -671,6 +672,73 @@ fn parse_defined_type<R: Read>(
         }
         IdlTypeDefinitionType::Alias { value } => parse_type(reader, value, resolver, size_guard),
     }
+}
+
+/// Parses individual instruction data using a provided IDL.
+///
+/// This function allows parsing instruction data without requiring full transaction context.
+/// It matches the instruction by discriminator and parses the arguments according to the IDL.
+///
+/// # Arguments
+/// * `instruction_data` - The raw instruction data bytes (including discriminator)
+/// * `program_id` - The program ID this instruction belongs to (used for context in output)
+/// * `idl` - The IDL to use for parsing
+///
+/// # Returns
+/// * `SolanaParsedInstructionData` containing the parsed instruction name, discriminator,
+///   and arguments. Note that `named_accounts` will be empty since no accounts are provided.
+///
+/// # Example
+/// ```ignore
+/// use solana_parser::{parse_instruction_with_idl, decode_idl_data};
+///
+/// let idl_json = r#"{"instructions": [...], "types": [...]}"#;
+/// let idl = decode_idl_data(idl_json).unwrap();
+/// let instruction_data = hex::decode("abc123...").unwrap();
+///
+/// let parsed = parse_instruction_with_idl(&instruction_data, "program_id", &idl).unwrap();
+/// println!("Instruction: {}", parsed.instruction_name);
+/// ```
+#[allow(dead_code)] // Public API - exported from lib.rs
+pub fn parse_instruction_with_idl(
+    instruction_data: &[u8],
+    _program_id: &str,
+    idl: &Idl,
+) -> Result<SolanaParsedInstructionData, Box<dyn std::error::Error>> {
+    use crate::solana::structs::IdlSource;
+
+    // Find the matching instruction by discriminator
+    let instruction =
+        find_instruction_by_discriminator(instruction_data, idl.instructions.clone())?;
+
+    // Parse the instruction data into arguments
+    let parsed_args = parse_data_into_args(instruction_data, &instruction, idl).map_err(
+        |e| -> Box<dyn std::error::Error> {
+            format!(
+                "failed to parse instruction data for instruction '{}': {e}",
+                instruction.name
+            )
+            .into()
+        },
+    )?;
+
+    // Get the discriminator (we know it exists since find_instruction_by_discriminator succeeded)
+    let discriminator_bytes = instruction
+        .discriminator
+        .ok_or("instruction matched but discriminator is missing")?;
+
+    // Compute IDL hash from serialized IDL
+    let idl_json = serde_json::to_string(idl)?;
+    let idl_hash = compute_idl_hash(&idl_json);
+
+    Ok(SolanaParsedInstructionData {
+        instruction_name: instruction.name,
+        discriminator: hex::encode(&discriminator_bytes),
+        program_call_args: parsed_args,
+        named_accounts: std::collections::HashMap::new(),
+        idl_source: IdlSource::Custom,
+        idl_hash,
+    })
 }
 
 /*
