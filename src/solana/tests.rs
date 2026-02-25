@@ -4,7 +4,7 @@ use serde_json::{Value, Number, Map};
 use super::*;
 use parser::SOL_SYSTEM_PROGRAM_KEY;
 use structs::SolanaMetadata;
-use crate::solana::structs::{SolanaInstruction, SolanaAccount, SolanaAddressTableLookup, SolanaSingleAddressTableLookup, SolTransfer};
+use crate::solana::structs::{SolanaInstruction, SolanaAccount, SolanaAddressTableLookup, SolanaSingleAddressTableLookup, SolTransfer, SolanaParsedInstructionData};
 use crate::solana::parser::{SolanaTransaction, TOKEN_PROGRAM_KEY, TOKEN_2022_PROGRAM_KEY, IDL_DIRECTORY};
 use crate::solana::idl_parser;
 
@@ -362,7 +362,39 @@ use crate::solana::idl_parser;
             instruction_data_hex:
                 "e517cb977ae3ad2a01000000120064000180f0fa02000000005d34700000000000320000"
                     .to_string(),
-            parsed_instruction: None,
+            parsed_instruction: Some(SolanaParsedInstructionData {
+                instruction_name: "route".to_string(),
+                discriminator: "e517cb977ae3ad2a".to_string(),
+                named_accounts: HashMap::from_iter([
+                    ("token_program".to_string(), "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_string()),
+                    ("user_transfer_authority".to_string(), "G6fEj2pt4YYAxLS8JAsY5BL6hea7Fpe8Xyqscg2e7pgp".to_string()),
+                    ("user_source_token_account".to_string(), "FxDNKZ14p3W7o1tpinH935oiwUo3YiZowzP1hUcUzUFw".to_string()),
+                    ("user_destination_token_account".to_string(), "A4a6VbNvKA58AGpXBEMhp7bPNN9bDCFS9qze4qWDBBQ8".to_string()),
+                    ("destination_token_account".to_string(), "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4".to_string()),
+                    ("destination_mint".to_string(), "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v".to_string()),
+                    ("platform_fee_account".to_string(), "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4".to_string()),
+                    ("event_authority".to_string(), "D8cy77BBepLMngZx6ZukaTff5hCt1HrWyKk3Hnd9oitf".to_string()),
+                    ("program".to_string(), "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4".to_string()),
+                ]),
+                program_call_args: Map::from_iter([
+                    ("in_amount".to_string(), Value::Number(Number::from(50000000u64))),
+                    ("quoted_out_amount".to_string(), Value::Number(Number::from(7353437u64))),
+                    ("slippage_bps".to_string(), Value::Number(Number::from(50u64))),
+                    ("platform_fee_bps".to_string(), Value::Number(Number::from(0u64))),
+                    ("route_plan".to_string(), Value::Array(vec![
+                        Value::Object(Map::from_iter([
+                            ("swap".to_string(), Value::Object(Map::from_iter([
+                                ("Invariant".to_string(), Value::Object(Map::from_iter([
+                                    ("x_to_y".to_string(), Value::Bool(false)),
+                                ]))),
+                            ]))),
+                            ("percent".to_string(), Value::Number(Number::from(100u64))),
+                            ("input_index".to_string(), Value::Number(Number::from(0u64))),
+                            ("output_index".to_string(), Value::Number(Number::from(1u64))),
+                        ])),
+                    ])),
+                ]),
+            }),
         };
         assert_eq!(exp_instruction_7, transaction_metadata.instructions[6]);
 
@@ -595,7 +627,54 @@ use crate::solana::idl_parser;
         // Instruction 6 -- Jupiter Aggregator v6: sharedAccountsRoute
         let exp_instruction_6 = SolanaInstruction {
             program_key: jupiter_program_acct_key.to_string(),
-            parsed_instruction: None,
+            parsed_instruction: Some(SolanaParsedInstructionData {
+                instruction_name: "shared_accounts_route".to_string(),
+                discriminator: "c1209b3341d69c81".to_string(),
+                named_accounts: HashMap::from_iter([
+                    ("token_2022_program".to_string(), "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4".to_string()),
+                    ("token_program".to_string(), "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_string()),
+                    ("program_source_token_account".to_string(), "91bUbswo6Di8235jAPwim1At4cPZLbG2pkpneyqKg4NQ".to_string()),
+                    ("source_mint".to_string(), "So11111111111111111111111111111111111111112".to_string()),
+                    ("destination_mint".to_string(), "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v".to_string()),
+                    ("program_destination_token_account".to_string(), "Gjmjory7TWKJXD2Jc6hKzAG991wWutFhtbXudzJqgx3p".to_string()),
+                    ("destination_token_account".to_string(), "A4a6VbNvKA58AGpXBEMhp7bPNN9bDCFS9qze4qWDBBQ8".to_string()),
+                    ("source_token_account".to_string(), "FxDNKZ14p3W7o1tpinH935oiwUo3YiZowzP1hUcUzUFw".to_string()),
+                    ("platform_fee_account".to_string(), "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4".to_string()),
+                    ("program_authority".to_string(), "CapuXNQoDviLvU1PxFiizLgPNQCxrsag1uMeyk6zLVps".to_string()),
+                    ("user_transfer_authority".to_string(), "G6fEj2pt4YYAxLS8JAsY5BL6hea7Fpe8Xyqscg2e7pgp".to_string()),
+                    ("event_authority".to_string(), "D8cy77BBepLMngZx6ZukaTff5hCt1HrWyKk3Hnd9oitf".to_string()),
+                    ("program".to_string(), "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4".to_string()),
+                ]),
+                program_call_args: Map::from_iter([
+                    ("id".to_string(), Value::Number(Number::from(5u64))),
+                    ("in_amount".to_string(), Value::Number(Number::from(10000000u64))),
+                    ("platform_fee_bps".to_string(), Value::Number(Number::from(0u64))),
+                    ("quoted_out_amount".to_string(), Value::Number(Number::from(1549234u64))),
+                    ("route_plan".to_string(), Value::Array(vec![
+                        Value::Object(Map::from_iter([
+                            ("input_index".to_string(), Value::Number(Number::from(0u64))),
+                            ("output_index".to_string(), Value::Number(Number::from(1u64))),
+                            ("percent".to_string(), Value::Number(Number::from(100u64))),
+                            ("swap".to_string(), Value::Object(Map::from_iter([
+                                ("Meteora".to_string(), Value::Null),
+                            ]))),
+                        ])),
+                        Value::Object(Map::from_iter([
+                            ("input_index".to_string(), Value::Number(Number::from(1u64))),
+                            ("output_index".to_string(), Value::Number(Number::from(2u64))),
+                            ("percent".to_string(), Value::Number(Number::from(100u64))),
+                            ("swap".to_string(), Value::Object(Map::from_iter([
+                                ("Phoenix".to_string(), Value::Object(Map::from_iter([
+                                    ("side".to_string(), Value::Object(Map::from_iter([
+                                        ("Ask".to_string(), Value::Null),
+                                    ]))),
+                                ]))),
+                            ]))),
+                        ])),
+                    ])),
+                    ("slippage_bps".to_string(), Value::Number(Number::from(100u64))),
+                ]),
+            }),
             accounts: vec![
                 token_acct.clone(),
                 jupiter_event_authority_acct.clone(),
@@ -1106,6 +1185,233 @@ use crate::solana::idl_parser;
         assert_eq!(spl_transfer_2.owner, "ADDRESS_TABLE_LOOKUP".to_string()); // Shows the flag ADDRESS_TABLE_LOOKUP because an ATLU is used for this address in the transaction
     }
 
+    #[test]
+    fn parses_jupiter_route_with_humidifi_v2_swap() {
+        // This v0 transaction swaps wSOL → USDC via Jupiter Aggregator V6 using the HumidiFiV2 AMM (Swap enum variant 118).
+        // Reference: static accounts include the signer (BTPuMyMnj), wSOL token account (BkieYnTFD5), USDC destination (3Jc86H6x),
+        // and an ATL (FqeeFKhvn4d...) that provides the swap-specific accounts.
+        let unsigned_transaction = "0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800100090c9b57ddd7024d2b88e8f25524d61fab00086799e954394bb16bcc09ec1a93b9ef2239f5e1723877ed5601527cdf17e07a6674ae63db9293a5aceb282559b1d13b9fc7ef55509c125bbd04bce0a15434541548c971d29cc6743265a1ca70de8c4800000000000000000000000000000000000000000000000000000000000000000306466fe5211732ffecadba72c39be7bc8ce5bbc5f7126b2c439b3a400000000479d55bf231c06eee74c56ece681507fdb1b2dea3f48e5102b1cda256bc138f06ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a9579bb61a6a940a3df711e8152862cbb0c1c674271d4a0df57eed5816903ea0a58c97258f4e2489f1bb3d1029148e0d830b5a1399daff1084048e7bd8dbe9f859b43ffa27f5d7f64a74c09b1f295879de4b09ab36dfc9dd514b321aa7b38ce5e8c6fa7af3bedbad3a3d65f36aabc97431b1bbe4c2d2f6e0e47ca60203452f5d61fcd13da041559013cf4aeba1a84ed7023ad4ff21a84747ff3b05ab30fa8207c397d7d28a412262a09ff28e2fd00d3bc9b4ae8f9e0308bcf683b7504f0b4821820704000502c05c150004000903041701000000000008060002000f03060101030200020c0200000040420f00000000000601020111051906000201050a05090512000d0c0e0201110606100f0a070b052ce517cb977ae3ad2a0100000076b8cce0ded621faac0164000140420f00000000001a3a0100000000003200000603020000010901dc7a0ed6a806c77425e9306f8f59401d8534160458c33e30a876ada5f2bf7c9603e4bbba0405bce5bd".to_string();
+        let parsed_tx = SolanaTransaction::new(&unsigned_transaction, true).unwrap();
+        let transaction_metadata = parsed_tx.transaction_metadata().unwrap();
+
+        // Assert signature
+        assert_eq!(1, transaction_metadata.signatures.len());
+        assert_eq!(
+            "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+            transaction_metadata.signatures[0]
+        );
+
+        // Account key constants
+        let signer_key = "BTPuMyMnj2JegpMFt4WAYScwUDXTPFFGrm2C3EV4midt";
+        let usdc_dest_key = "3Jc86H6xCQVeY5Cu6GHzQiiXJiCyNw3s6P4B1dRhDE9x";
+        let wsol_token_acct_key = "BkieYnTFD5UC3TWaEtznLHaRC6xjjykgw6AHBGyHz2sh";
+        let jupiter_key = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4";
+        let token_program_key = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+        let wsol_mint_program_key = "6tzBXvABjypVEfrwMvuGA2semooUCkFkgV6VwxPNcFBa";
+        let atoken_key = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
+        let jup_event_auth_key = "D8cy77BBepLMngZx6ZukaTff5hCt1HrWyKk3Hnd9oitf";
+        let usdc_mint_key = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+        let jup_token_ledger_key = "J1to1yufRnoWn81KYg1XkTWzmKjnYSnmE2VY8DGUJ9Qv";
+        let compute_budget_key = "ComputeBudget111111111111111111111111111111";
+        let atl_key = "FqeeFKhvn4d19iJA7G4qU9tcfjHNUkEo2rKsht5Btztm";
+
+        // Assert static account keys (12 static accounts)
+        let expected_account_keys: Vec<String> = vec![
+            signer_key, usdc_dest_key, wsol_token_acct_key,
+            SOL_SYSTEM_PROGRAM_KEY, compute_budget_key, jupiter_key,
+            token_program_key, wsol_mint_program_key, atoken_key,
+            jup_event_auth_key, usdc_mint_key, jup_token_ledger_key,
+        ].into_iter().map(|s| s.to_string()).collect();
+        assert_eq!(expected_account_keys, transaction_metadata.account_keys);
+
+        // Assert program keys (in order of static account index)
+        let expected_program_keys: Vec<String> = vec![
+            SOL_SYSTEM_PROGRAM_KEY, compute_budget_key, jupiter_key,
+            token_program_key, atoken_key,
+        ].into_iter().map(|s| s.to_string()).collect();
+        assert_eq!(expected_program_keys, transaction_metadata.program_keys);
+
+        // Assert 7 instructions
+        assert_eq!(7, transaction_metadata.instructions.len());
+
+        // Reusable account objects
+        let signer_acct = SolanaAccount { account_key: signer_key.to_string(), signer: true, writable: true };
+        let wsol_token_acct = SolanaAccount { account_key: wsol_token_acct_key.to_string(), signer: false, writable: true };
+        let usdc_dest_acct = SolanaAccount { account_key: usdc_dest_key.to_string(), signer: false, writable: true };
+        let system_acct = SolanaAccount { account_key: SOL_SYSTEM_PROGRAM_KEY.to_string(), signer: false, writable: false };
+        let token_program_acct = SolanaAccount { account_key: token_program_key.to_string(), signer: false, writable: false };
+        let jupiter_acct = SolanaAccount { account_key: jupiter_key.to_string(), signer: false, writable: false };
+        let jup_event_auth_acct = SolanaAccount { account_key: jup_event_auth_key.to_string(), signer: false, writable: false };
+        let usdc_mint_acct = SolanaAccount { account_key: usdc_mint_key.to_string(), signer: false, writable: false };
+        let wsol_mint_program_acct = SolanaAccount { account_key: wsol_mint_program_key.to_string(), signer: false, writable: false };
+        let jup_token_ledger_acct = SolanaAccount { account_key: jup_token_ledger_key.to_string(), signer: false, writable: false };
+
+        // Instruction 1 -- SetComputeUnitLimit
+        let exp_ix_0 = SolanaInstruction {
+            program_key: compute_budget_key.to_string(),
+            accounts: vec![],
+            address_table_lookups: vec![],
+            instruction_data_hex: "02c05c1500".to_string(),
+            parsed_instruction: None,
+        };
+        assert_eq!(exp_ix_0, transaction_metadata.instructions[0]);
+
+        // Instruction 2 -- SetComputeUnitPrice
+        let exp_ix_1 = SolanaInstruction {
+            program_key: compute_budget_key.to_string(),
+            accounts: vec![],
+            address_table_lookups: vec![],
+            instruction_data_hex: "030417010000000000".to_string(),
+            parsed_instruction: None,
+        };
+        assert_eq!(exp_ix_1, transaction_metadata.instructions[1]);
+
+        // Instruction 3 -- AToken CreateIdempotent (create wSOL ATA)
+        // Account at ATL index 15 (readonly[0] = idx 5) is the wSOL mint, resolved via ATL
+        let exp_ix_2 = SolanaInstruction {
+            program_key: atoken_key.to_string(),
+            accounts: vec![
+                signer_acct.clone(),
+                wsol_token_acct.clone(),
+                signer_acct.clone(),
+                system_acct.clone(),
+                token_program_acct.clone(),
+            ],
+            address_table_lookups: vec![
+                SolanaSingleAddressTableLookup {
+                    address_table_key: atl_key.to_string(),
+                    index: 5,
+                    writable: false,
+                },
+            ],
+            instruction_data_hex: "01".to_string(),
+            parsed_instruction: None,
+        };
+        assert_eq!(exp_ix_2, transaction_metadata.instructions[2]);
+
+        // Instruction 4 -- System transfer (fund wSOL token account with 1,000,000 lamports)
+        let exp_ix_3 = SolanaInstruction {
+            program_key: SOL_SYSTEM_PROGRAM_KEY.to_string(),
+            accounts: vec![signer_acct.clone(), wsol_token_acct.clone()],
+            address_table_lookups: vec![],
+            instruction_data_hex: "0200000040420f0000000000".to_string(),
+            parsed_instruction: None,
+        };
+        assert_eq!(exp_ix_3, transaction_metadata.instructions[3]);
+
+        // Instruction 5 -- SyncNative
+        let exp_ix_4 = SolanaInstruction {
+            program_key: token_program_key.to_string(),
+            accounts: vec![wsol_token_acct.clone()],
+            address_table_lookups: vec![],
+            instruction_data_hex: "11".to_string(),
+            parsed_instruction: None,
+        };
+        assert_eq!(exp_ix_4, transaction_metadata.instructions[4]);
+
+        // Instruction 6 -- Jupiter route (wSOL → USDC via HumidiFiV2)
+        let exp_ix_5 = SolanaInstruction {
+            program_key: jupiter_key.to_string(),
+            accounts: vec![
+                token_program_acct.clone(),
+                signer_acct.clone(),
+                wsol_token_acct.clone(),
+                usdc_dest_acct.clone(),
+                jupiter_acct.clone(),
+                usdc_mint_acct.clone(),
+                jupiter_acct.clone(),
+                jup_event_auth_acct.clone(),
+                jupiter_acct.clone(),
+                signer_acct.clone(),
+                wsol_token_acct.clone(),
+                usdc_dest_acct.clone(),
+                token_program_acct.clone(),
+                token_program_acct.clone(),
+                usdc_mint_acct.clone(),
+                wsol_mint_program_acct.clone(),
+                jup_token_ledger_acct.clone(),
+                jupiter_acct.clone(),
+            ],
+            address_table_lookups: vec![
+                SolanaSingleAddressTableLookup { address_table_key: atl_key.to_string(), index: 189, writable: false },
+                SolanaSingleAddressTableLookup { address_table_key: atl_key.to_string(), index: 187, writable: true },
+                SolanaSingleAddressTableLookup { address_table_key: atl_key.to_string(), index: 228, writable: true },
+                SolanaSingleAddressTableLookup { address_table_key: atl_key.to_string(), index: 186, writable: true },
+                SolanaSingleAddressTableLookup { address_table_key: atl_key.to_string(), index: 229, writable: false },
+                SolanaSingleAddressTableLookup { address_table_key: atl_key.to_string(), index: 188, writable: false },
+                SolanaSingleAddressTableLookup { address_table_key: atl_key.to_string(), index: 5, writable: false },
+            ],
+            instruction_data_hex: "e517cb977ae3ad2a0100000076b8cce0ded621faac0164000140420f00000000001a3a010000000000320000".to_string(),
+            parsed_instruction: Some(SolanaParsedInstructionData {
+                instruction_name: "route".to_string(),
+                discriminator: "e517cb977ae3ad2a".to_string(),
+                named_accounts: HashMap::from_iter([
+                    ("token_program".to_string(), token_program_key.to_string()),
+                    ("user_transfer_authority".to_string(), signer_key.to_string()),
+                    ("user_source_token_account".to_string(), wsol_token_acct_key.to_string()),
+                    ("user_destination_token_account".to_string(), usdc_dest_key.to_string()),
+                    ("destination_token_account".to_string(), jupiter_key.to_string()),
+                    ("destination_mint".to_string(), usdc_mint_key.to_string()),
+                    ("platform_fee_account".to_string(), jupiter_key.to_string()),
+                    ("event_authority".to_string(), jup_event_auth_key.to_string()),
+                    ("program".to_string(), jupiter_key.to_string()),
+                ]),
+                program_call_args: Map::from_iter([
+                    ("in_amount".to_string(), Value::Number(Number::from(1000000u64))),
+                    ("quoted_out_amount".to_string(), Value::Number(Number::from(80410u64))),
+                    ("slippage_bps".to_string(), Value::Number(Number::from(50u64))),
+                    ("platform_fee_bps".to_string(), Value::Number(Number::from(0u64))),
+                    ("route_plan".to_string(), Value::Array(vec![
+                        Value::Object(Map::from_iter([
+                            ("swap".to_string(), Value::Object(Map::from_iter([
+                                ("HumidiFiV2".to_string(), Value::Object(Map::from_iter([
+                                    ("swap_id".to_string(), Value::Number(Number::from(12464312125447261368u64))),
+                                    ("is_base_to_quote".to_string(), Value::Bool(true)),
+                                ]))),
+                            ]))),
+                            ("percent".to_string(), Value::Number(Number::from(100u64))),
+                            ("input_index".to_string(), Value::Number(Number::from(0u64))),
+                            ("output_index".to_string(), Value::Number(Number::from(1u64))),
+                        ])),
+                    ])),
+                ]),
+            }),
+        };
+        assert_eq!(exp_ix_5, transaction_metadata.instructions[5]);
+
+        // Instruction 7 -- CloseAccount (close wSOL token account, reclaim SOL)
+        let exp_ix_6 = SolanaInstruction {
+            program_key: token_program_key.to_string(),
+            accounts: vec![wsol_token_acct.clone(), signer_acct.clone(), signer_acct.clone()],
+            address_table_lookups: vec![],
+            instruction_data_hex: "09".to_string(),
+            parsed_instruction: None,
+        };
+        assert_eq!(exp_ix_6, transaction_metadata.instructions[6]);
+
+        // Assert SOL transfer (1,000,000 lamports from signer to wSOL token account)
+        assert_eq!(1, transaction_metadata.transfers.len());
+        assert_eq!(
+            SolTransfer {
+                amount: "1000000".to_string(),
+                from: signer_key.to_string(),
+                to: wsol_token_acct_key.to_string(),
+            },
+            transaction_metadata.transfers[0]
+        );
+
+        // Assert top-level ATL metadata
+        assert_eq!(1, transaction_metadata.address_table_lookups.len());
+        assert_eq!(
+            SolanaAddressTableLookup {
+                address_table_key: atl_key.to_string(),
+                writable_indexes: vec![228, 187, 186],
+                readonly_indexes: vec![5, 188, 229, 189],
+            },
+            transaction_metadata.address_table_lookups[0]
+        );
+    }
+
     #[cfg(test)]
     mod tests {
         use super::*;
@@ -1166,7 +1472,28 @@ use crate::solana::idl_parser;
             // Instruction Name: claim_token
             let _ = get_idl_parsed_value_given_data(jup_idl_file, &hex::decode("74ce1bbfa613004908").unwrap()).unwrap();
         }
-    
+
+        #[test]
+        fn test_idl_parsing_jupiter_instruction_2() {
+            let jup_idl_file = "jupiter_agg_v6_2.json";
+
+            // Instruction #6 from parses_valid_v0_transaction_with_complex_address_table_lookups test
+            // Instruction Name: shared_accounts_route (2-hop: Meteora → Phoenix)
+            let _ = get_idl_parsed_value_given_data(
+                jup_idl_file,
+                &hex::decode("c1209b3341d69c810502000000136400011c016401028096980000000000b2a3170000000000640000").unwrap(),
+            )
+            .unwrap();
+
+            // Instruction #6 from parses_jupiter_route_with_humidifi_v2_swap test
+            // Instruction Name: route (1-hop: HumidiFiV2, variant 118)
+            let _ = get_idl_parsed_value_given_data(
+                jup_idl_file,
+                &hex::decode("e517cb977ae3ad2a0100000076b8cce0ded621faac0164000140420f00000000001a3a010000000000320000").unwrap(),
+            )
+            .unwrap();
+        }
+
         // APE PRO SMART WALLET PROGRAM -- IDL PARSING TESTS
         #[test]
         fn test_idl_ape_pro() {
