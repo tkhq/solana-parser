@@ -8,7 +8,7 @@ pub use solana::idl_parser::{
 };
 pub use solana::parser::{parse_transaction, parse_transaction_with_idls};
 pub use solana::structs::{
-    CustomIdl, CustomIdlConfig, Idl, IdlInstruction, IdlSource, ProgramType, SolanaInstruction,
-    SolanaMetadata, SolanaParseResponse, SolanaParsedInstructionData, SolanaParsedTransaction,
-    SolanaParsedTransactionPayload,
+    CustomIdl, CustomIdlConfig, Idl, IdlInstruction, IdlParseError, IdlSource, ProgramType,
+    SolanaInstruction, SolanaMetadata, SolanaParseResponse, SolanaParsedInstructionData,
+    SolanaParsedTransaction, SolanaParsedTransactionPayload,
 };

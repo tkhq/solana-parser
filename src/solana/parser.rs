@@ -1,5 +1,5 @@
 use super::structs::{
-    AccountAddress, CustomIdlConfig, IdlRecord, SolTransfer, SolanaAccount,
+    AccountAddress, CustomIdlConfig, IdlParseError, IdlRecord, SolTransfer, SolanaAccount,
     SolanaAddressTableLookup, SolanaInstruction, SolanaMetadata, SolanaParseResponse,
     SolanaParsedInstructionData, SolanaParsedTransaction, SolanaParsedTransactionPayload,
     SolanaSingleAddressTableLookup, SplTransfer,
@@ -819,7 +819,7 @@ impl SolanaTransaction {
                 _ => {}
             }
 
-            let parsed_inst_option: Option<SolanaParsedInstructionData> = parse_idl(
+            let (parsed_inst_option, idl_parse_error) = parse_idl(
                 &program_key,
                 &all_transaction_addresses,
                 i,
@@ -833,6 +833,7 @@ impl SolanaTransaction {
                 instruction_data_hex,
                 address_table_lookups: atlu_addresses,
                 parsed_instruction: parsed_inst_option,
+                idl_parse_error,
             };
             instructions.push(inst);
         }
@@ -962,57 +963,88 @@ impl SolanaTransaction {
 
 /// Parses instruction data using the IDL for the given program.
 /// IDLs are embedded at compile time - no file system access required.
+///
+/// Returns `Ok((parsed, None))` on success, or `Ok((None, Some(error)))` when
+/// IDL parsing fails in a structured way the caller can inspect.
 fn parse_idl(
     program_key: &str,
     all_transaction_addresses: &[AccountAddress],
     inst: &CompiledInstruction,
     custom_idls: &HashMap<String, IdlRecord>,
-) -> Result<Option<SolanaParsedInstructionData>, Box<dyn std::error::Error>> {
+) -> Result<(Option<SolanaParsedInstructionData>, Option<IdlParseError>), Box<dyn std::error::Error>>
+{
     if let Some(idl_record) = custom_idls.get(program_key) {
         // Resolve which IDL to use (built-in or custom) - uses embedded IDLs
         let (idl, idl_json_str, idl_source) =
-            idl_parser::resolve_idl_for_record(idl_record, program_key)?;
+            match idl_parser::resolve_idl_for_record(idl_record, program_key) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Ok((None, Some(IdlParseError::IdlResolutionError(e.to_string()))));
+                }
+            };
 
         // Compute IDL hash
         let idl_hash = idl_parser::compute_idl_hash(&idl_json_str);
 
-        let instruction =
-            idl_parser::find_instruction_by_discriminator(&inst.data, idl.instructions.clone())?;
+        let instruction = match idl_parser::find_instruction_by_discriminator(
+            &inst.data,
+            idl.instructions.clone(),
+        ) {
+            Ok(v) => v,
+            Err(e) => {
+                return Ok((
+                    None,
+                    Some(IdlParseError::DiscriminatorNotFound(e.to_string())),
+                ));
+            }
+        };
 
         // Parse data into args map
-        let parsed_args = idl_parser::parse_data_into_args(&inst.data, &instruction, &idl).map_err(|e| -> Box<dyn std::error::Error> {
-                format!(
-                    "failed to parse instruction call data into IDL instruction for instruction name: {} with error: {}",
-                    instruction.name, e
-                ).into()
-        })?;
+        let parsed_args = match idl_parser::parse_data_into_args(&inst.data, &instruction, &idl) {
+            Ok(v) => v,
+            Err(e) => {
+                return Ok((
+                    None,
+                    Some(IdlParseError::DataParseError {
+                        instruction_name: instruction.name,
+                        error: e.to_string(),
+                    }),
+                ));
+            }
+        };
 
         // Create named accounts map
         let named_accounts =
-            idl_parser::create_accounts_map(all_transaction_addresses, &instruction).map_err(
-                |e| -> Box<dyn std::error::Error> {
-                    format!(
-                    "failed to create named accounts map for instruction name: {} with error: {}",
-                    instruction.name, e
-                )
-                    .into()
-                },
-            )?;
+            match idl_parser::create_accounts_map(all_transaction_addresses, &instruction) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Ok((
+                        None,
+                        Some(IdlParseError::AccountsMapError {
+                            instruction_name: instruction.name,
+                            error: e.to_string(),
+                        }),
+                    ));
+                }
+            };
 
         if let Some(discriminator_bytes) = instruction.discriminator {
-            return Ok(Some(SolanaParsedInstructionData {
-                program_call_args: parsed_args,
-                discriminator: hex::encode(&discriminator_bytes),
-                instruction_name: instruction.name,
-                named_accounts,
-                idl_source,
-                idl_hash,
-            }));
+            return Ok((
+                Some(SolanaParsedInstructionData {
+                    program_call_args: parsed_args,
+                    discriminator: hex::encode(&discriminator_bytes),
+                    instruction_name: instruction.name,
+                    named_accounts,
+                    idl_source,
+                    idl_hash,
+                }),
+                None,
+            ));
         }
         // We shouldn't get here because we found the instruction by the discriminator above
         return Err("attempted to parse IDL into instruction without discriminator".into());
     }
-    Ok(None)
+    Ok((None, None))
 }
 
 #[cfg(test)]

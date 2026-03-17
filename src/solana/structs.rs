@@ -160,6 +160,46 @@ pub struct SolanaMetadata {
     pub address_table_lookups: Vec<SolanaAddressTableLookup>,
 }
 
+/// Describes why IDL parsing failed for an instruction.
+/// Returned on the instruction so callers can decide how to handle each case.
+#[derive(Debug, Clone, PartialEq)]
+pub enum IdlParseError {
+    /// The instruction data could not be decoded into the IDL's argument types
+    /// (e.g. an unknown enum variant in the data).
+    DataParseError {
+        instruction_name: String,
+        error: String,
+    },
+    /// The accounts list could not be mapped to the IDL's named accounts.
+    AccountsMapError {
+        instruction_name: String,
+        error: String,
+    },
+    /// No instruction in the IDL matched the discriminator bytes.
+    DiscriminatorNotFound(String),
+    /// The IDL itself could not be resolved (missing, malformed, etc.).
+    IdlResolutionError(String),
+}
+
+impl std::fmt::Display for IdlParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::DataParseError {
+                instruction_name,
+                error,
+            } => write!(f, "data parse error for {instruction_name}: {error}"),
+            Self::AccountsMapError {
+                instruction_name,
+                error,
+            } => write!(f, "accounts map error for {instruction_name}: {error}"),
+            Self::DiscriminatorNotFound(e) => write!(f, "discriminator not found: {e}"),
+            Self::IdlResolutionError(e) => write!(f, "IDL resolution error: {e}"),
+        }
+    }
+}
+
+impl std::error::Error for IdlParseError {}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct SolanaInstruction {
     pub program_key: String,
@@ -167,6 +207,9 @@ pub struct SolanaInstruction {
     pub instruction_data_hex: String,
     pub address_table_lookups: Vec<SolanaSingleAddressTableLookup>,
     pub parsed_instruction: Option<SolanaParsedInstructionData>,
+    /// If IDL parsing failed, this contains the structured error.
+    /// `None` means either parsing succeeded or no IDL was available for this program.
+    pub idl_parse_error: Option<IdlParseError>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
