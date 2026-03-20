@@ -542,4 +542,18 @@ impl CustomIdlConfig {
             override_builtin,
         }
     }
+
+    /// Convert legacy format `HashMap<String, (String, bool)>` to `HashMap<String, CustomIdlConfig>`
+    pub fn from_legacy_map(
+        idls: HashMap<String, (String, bool)>,
+    ) -> HashMap<String, CustomIdlConfig> {
+        idls.into_iter()
+            .map(|(program_id, (json, override_builtin))| {
+                (
+                    program_id,
+                    CustomIdlConfig::from_json(json, override_builtin),
+                )
+            })
+            .collect()
+    }
 }

@@ -15,15 +15,18 @@ fn compress_idl_json(idl_json: &str) -> String {
     idl_json.chars().filter(|c| !c.is_whitespace()).collect()
 }
 
-/// Computes SHA256 hash of the compressed IDL JSON string
-/// this doesn't canonicalize the JSON by sorting it or anything, so if your JSON isn't exactly same, you will get some inconsistencies
-/// we can resolve this by implementing a custom serializer for IDLs
+/// Computes SHA256 hash of the canonicalized IDL JSON string.
+/// Canonicalization parses the JSON and re-serializes it, which normalizes
+/// whitespace and sorts keys (serde_json::Value uses BTreeMap for objects).
+/// Falls back to whitespace stripping if the JSON cannot be parsed.
 pub fn compute_idl_hash(idl_json: &str) -> String {
-    let compressed = compress_idl_json(idl_json);
+    let canonical = match serde_json::from_str::<serde_json::Value>(idl_json) {
+        Ok(value) => serde_json::to_string(&value).unwrap_or_else(|_| compress_idl_json(idl_json)),
+        Err(_) => compress_idl_json(idl_json),
+    };
     let mut hasher = Sha256::new();
-    hasher.update(compressed.as_bytes());
-    let result = hasher.finalize();
-    hex::encode(result)
+    hasher.update(canonical.as_bytes());
+    hex::encode(hasher.finalize())
 }
 
 // Required Top-Level fields in Solana IDL JSON's
@@ -81,16 +84,7 @@ pub fn construct_custom_idl_records_map_with_overrides(
     custom_idls: Option<HashMap<String, (String, bool)>>, // program_id -> (idl_json, override_builtin)
 ) -> Result<HashMap<String, IdlRecord>, Box<dyn std::error::Error>> {
     // Convert old API to new API
-    let custom_configs = custom_idls.map(|idls| {
-        idls.into_iter()
-            .map(|(program_id, (json, override_builtin))| {
-                (
-                    program_id,
-                    CustomIdlConfig::from_json(json, override_builtin),
-                )
-            })
-            .collect()
-    });
+    let custom_configs = custom_idls.map(CustomIdlConfig::from_legacy_map);
     construct_idl_records_map(custom_configs)
 }
 

@@ -50,16 +50,7 @@ pub fn parse_transaction(
     custom_idls: Option<HashMap<String, (String, bool)>>,
 ) -> Result<SolanaParseResponse, Box<dyn Error>> {
     // Convert old API to new API
-    let custom_configs = custom_idls.map(|idls| {
-        idls.into_iter()
-            .map(|(program_id, (json, override_builtin))| {
-                (
-                    program_id,
-                    CustomIdlConfig::from_json(json, override_builtin),
-                )
-            })
-            .collect()
-    });
+    let custom_configs = custom_idls.map(CustomIdlConfig::from_legacy_map);
     parse_transaction_with_idls(unsigned_tx, full_transaction, custom_configs)
 }
 
@@ -135,16 +126,7 @@ fn parse_solana_transaction(
     custom_idls: Option<HashMap<String, (String, bool)>>,
 ) -> Result<SolanaTransaction, Box<dyn std::error::Error>> {
     // Convert old API to new API
-    let custom_configs = custom_idls.map(|idls| {
-        idls.into_iter()
-            .map(|(program_id, (json, override_builtin))| {
-                (
-                    program_id,
-                    CustomIdlConfig::from_json(json, override_builtin),
-                )
-            })
-            .collect()
-    });
+    let custom_configs = custom_idls.map(CustomIdlConfig::from_legacy_map);
     parse_solana_transaction_with_idls(unsigned_tx, full_transaction, custom_configs)
 }
 
