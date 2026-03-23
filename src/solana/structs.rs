@@ -1,6 +1,152 @@
-use std::{fmt, collections::HashMap};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::{collections::HashMap, fmt};
+
+/// ProgramType represents the built-in IDL types supported by the library
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ProgramType {
+    ApePro,
+    CandyMachine,
+    Drift,
+    JupiterLimit,
+    Jupiter,
+    Kamino,
+    Lifinity,
+    Meteora,
+    Openbook,
+    Orca,
+    Raydium,
+    Stabble,
+    JupiterAggregatorV6,
+}
+
+impl ProgramType {
+    /// Returns the program ID associated with this ProgramType
+    pub fn program_id(&self) -> &str {
+        match self {
+            ProgramType::ApePro => "JSW99DKmxNyREQM14SQLDykeBvEUG63TeohrvmofEiw",
+            ProgramType::CandyMachine => "cndyAnrLdpjq1Ssp1z8xxDsB8dxe7u4HL5Nxi2K5WXZ",
+            ProgramType::Drift => "dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH",
+            ProgramType::JupiterLimit => "j1o2qRpjcyUwEvwtcfhEQefh773ZgjxcVRry7LDqg5X",
+            ProgramType::Jupiter => "JUP4Fb2cqiRUcaTHdrPC8h2gNsA2ETXiPDD33WcGuJB",
+            ProgramType::Kamino => "6LtLpnUFNByNXLyCoK9wA2MykKAmQNZKBdY8s47dehDc",
+            ProgramType::Lifinity => "2wT8Yq49kHgDzXuPxZSaeLaH1qbmGXtEyPy64bL7aD3c",
+            ProgramType::Meteora => "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+            ProgramType::Openbook => "opnb2LAfJYbRMAHHvqjCwQxanZn7ReEHp1k81EohpZb",
+            ProgramType::Orca => "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",
+            ProgramType::Raydium => "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C",
+            ProgramType::Stabble => "swapNyd8XiQwJ6ianp9snpu4brUqFxadzvHebnAXjJZ",
+            ProgramType::JupiterAggregatorV6 => "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
+        }
+    }
+
+    /// Returns the file path for this ProgramType (deprecated, IDLs are now embedded)
+    #[allow(dead_code)] // Kept for backwards compatibility
+    pub fn file_path(&self) -> &str {
+        match self {
+            ProgramType::ApePro => "ape_pro.json",
+            ProgramType::CandyMachine => "cndy.json",
+            ProgramType::Drift => "drift.json",
+            ProgramType::JupiterLimit => "jupiter_limit.json",
+            ProgramType::Jupiter => "jupiter.json",
+            ProgramType::Kamino => "kamino.json",
+            ProgramType::Lifinity => "lifinity.json",
+            ProgramType::Meteora => "meteora.json",
+            ProgramType::Openbook => "openbook.json",
+            ProgramType::Orca => "orca.json",
+            ProgramType::Raydium => "raydium.json",
+            ProgramType::Stabble => "stabble.json",
+            ProgramType::JupiterAggregatorV6 => "jupiter_agg_v6.json",
+        }
+    }
+
+    /// Returns the program name for this ProgramType
+    pub fn program_name(&self) -> &str {
+        match self {
+            ProgramType::ApePro => "Ape Pro",
+            ProgramType::CandyMachine => "Metaplex Candy Machine",
+            ProgramType::Drift => "Drift Protocol V2",
+            ProgramType::JupiterLimit => "Jupiter Limit",
+            ProgramType::Jupiter => "Jupiter Swap",
+            ProgramType::Kamino => "Kamino",
+            ProgramType::Lifinity => "Lifinity Swap V2",
+            ProgramType::Meteora => "Meteora",
+            ProgramType::Openbook => "Openbook",
+            ProgramType::Orca => "Orca Whirlpool",
+            ProgramType::Raydium => "Raydium",
+            ProgramType::Stabble => "Stabble",
+            ProgramType::JupiterAggregatorV6 => "Jupiter Aggregator V6",
+        }
+    }
+
+    /// Looks up a ProgramType by program_id
+    #[allow(dead_code)] // Public API
+    pub fn from_program_id(program_id: &str) -> Option<ProgramType> {
+        match program_id {
+            "JSW99DKmxNyREQM14SQLDykeBvEUG63TeohrvmofEiw" => Some(ProgramType::ApePro),
+            "cndyAnrLdpjq1Ssp1z8xxDsB8dxe7u4HL5Nxi2K5WXZ" => Some(ProgramType::CandyMachine),
+            "dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH" => Some(ProgramType::Drift),
+            "j1o2qRpjcyUwEvwtcfhEQefh773ZgjxcVRry7LDqg5X" => Some(ProgramType::JupiterLimit),
+            "JUP4Fb2cqiRUcaTHdrPC8h2gNsA2ETXiPDD33WcGuJB" => Some(ProgramType::Jupiter),
+            "6LtLpnUFNByNXLyCoK9wA2MykKAmQNZKBdY8s47dehDc" => Some(ProgramType::Kamino),
+            "2wT8Yq49kHgDzXuPxZSaeLaH1qbmGXtEyPy64bL7aD3c" => Some(ProgramType::Lifinity),
+            "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo" => Some(ProgramType::Meteora),
+            "opnb2LAfJYbRMAHHvqjCwQxanZn7ReEHp1k81EohpZb" => Some(ProgramType::Openbook),
+            "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc" => Some(ProgramType::Orca),
+            "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C" => Some(ProgramType::Raydium),
+            "swapNyd8XiQwJ6ianp9snpu4brUqFxadzvHebnAXjJZ" => Some(ProgramType::Stabble),
+            "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" => Some(ProgramType::JupiterAggregatorV6),
+            _ => None,
+        }
+    }
+
+    /// Returns all built-in program types
+    pub fn all() -> &'static [ProgramType] {
+        &[
+            ProgramType::ApePro,
+            ProgramType::CandyMachine,
+            ProgramType::Drift,
+            ProgramType::JupiterLimit,
+            ProgramType::Jupiter,
+            ProgramType::Kamino,
+            ProgramType::Lifinity,
+            ProgramType::Meteora,
+            ProgramType::Openbook,
+            ProgramType::Orca,
+            ProgramType::Raydium,
+            ProgramType::Stabble,
+            ProgramType::JupiterAggregatorV6,
+        ]
+    }
+
+    /// Returns the embedded IDL JSON string for this program type.
+    /// IDLs are compiled into the binary.
+    pub fn idl_json(&self) -> &'static str {
+        use crate::solana::embedded_idls::*;
+        match self {
+            ProgramType::ApePro => APE_PRO_IDL,
+            ProgramType::CandyMachine => CANDY_MACHINE_IDL,
+            ProgramType::Drift => DRIFT_IDL,
+            ProgramType::JupiterLimit => JUPITER_LIMIT_IDL,
+            ProgramType::Jupiter => JUPITER_IDL,
+            ProgramType::Kamino => KAMINO_IDL,
+            ProgramType::Lifinity => LIFINITY_IDL,
+            ProgramType::Meteora => METEORA_IDL,
+            ProgramType::Openbook => OPENBOOK_IDL,
+            ProgramType::Orca => ORCA_IDL,
+            ProgramType::Raydium => RAYDIUM_IDL,
+            ProgramType::Stabble => STABBLE_IDL,
+            ProgramType::JupiterAggregatorV6 => JUPITER_AGG_V6_IDL,
+        }
+    }
+}
+
+/// IdlSource indicates whether a built-in or custom IDL was used for parsing
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum IdlSource {
+    BuiltIn(ProgramType),
+    Custom,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SolanaMetadata {
@@ -14,6 +160,46 @@ pub struct SolanaMetadata {
     pub address_table_lookups: Vec<SolanaAddressTableLookup>,
 }
 
+/// Describes why IDL parsing failed for an instruction.
+/// Returned on the instruction so callers can decide how to handle each case.
+#[derive(Debug, Clone, PartialEq)]
+pub enum IdlParseError {
+    /// The instruction data could not be decoded into the IDL's argument types
+    /// (e.g. an unknown enum variant in the data).
+    DataParseError {
+        instruction_name: String,
+        error: String,
+    },
+    /// The accounts list could not be mapped to the IDL's named accounts.
+    AccountsMapError {
+        instruction_name: String,
+        error: String,
+    },
+    /// No instruction in the IDL matched the discriminator bytes.
+    DiscriminatorNotFound(String),
+    /// The IDL itself could not be resolved (missing, malformed, etc.).
+    IdlResolutionError(String),
+}
+
+impl std::fmt::Display for IdlParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::DataParseError {
+                instruction_name,
+                error,
+            } => write!(f, "data parse error for {instruction_name}: {error}"),
+            Self::AccountsMapError {
+                instruction_name,
+                error,
+            } => write!(f, "accounts map error for {instruction_name}: {error}"),
+            Self::DiscriminatorNotFound(e) => write!(f, "discriminator not found: {e}"),
+            Self::IdlResolutionError(e) => write!(f, "IDL resolution error: {e}"),
+        }
+    }
+}
+
+impl std::error::Error for IdlParseError {}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct SolanaInstruction {
     pub program_key: String,
@@ -21,6 +207,9 @@ pub struct SolanaInstruction {
     pub instruction_data_hex: String,
     pub address_table_lookups: Vec<SolanaSingleAddressTableLookup>,
     pub parsed_instruction: Option<SolanaParsedInstructionData>,
+    /// If IDL parsing failed, this contains the structured error.
+    /// `None` means either parsing succeeded or no IDL was available for this program.
+    pub idl_parse_error: Option<IdlParseError>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -50,18 +239,22 @@ pub struct SplTransfer {
     pub to: String,
     pub amount: String,
     pub owner: String,
-    pub signers: Vec<String>, // This is an empty array if ths is not a multisig account with multiple signers 
-    pub token_mint: Option<String>, 
+    pub signers: Vec<String>, // This is an empty array if ths is not a multisig account with multiple signers
+    pub token_mint: Option<String>,
     pub decimals: Option<String>,
     pub fee: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SolanaParsedInstructionData {
-    pub instruction_name: String, 
+    pub instruction_name: String,
     pub discriminator: String,
-    pub named_accounts: HashMap<String, String>, 
+    pub named_accounts: HashMap<String, String>,
     pub program_call_args: serde_json::Map<std::string::String, Value>,
+    /// Indicates whether a built-in or custom IDL was used
+    pub idl_source: IdlSource,
+    /// SHA256 hash of the compressed (whitespace removed) IDL JSON string
+    pub idl_hash: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -115,12 +308,20 @@ impl fmt::Display for AccountAddress {
     - vendor docs reference: <https://github.com/metaplex-foundation/shank/blob/9a8f2a77f6000d2d00e04f5aaa8c36a36765f567/shank-idl/src/idl_type.rs>
 */
 
-// Contains a reference to "uploaded" IDL's
+/// Contains resolved IDL information for a program.
+/// IDLs are now stored as parsed structs, not file paths.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct IdlRecord {
     pub program_id: String,
     pub program_name: String,
-    pub file_path: String,
+    /// The built-in program type (if this is a known program)
+    pub program_type: Option<ProgramType>,
+    /// Custom IDL provided by the caller (already parsed)
+    pub custom_idl: Option<Idl>,
+    /// The JSON string for the custom IDL (used for hash computation)
+    pub custom_idl_json: Option<String>,
+    /// Whether to override built-in IDL with custom one (if both exist)
+    pub override_builtin: bool,
 }
 
 /// IDL that is compatible with what anchor and shank extract from a solana program.
@@ -291,3 +492,68 @@ impl fmt::Display for Defined {
     }
 }
 
+/// Represents a custom IDL that can be passed to the parser.
+/// Supports both pre-parsed `Idl` structs and JSON strings.
+#[derive(Debug, Clone)]
+#[allow(dead_code)] // Public API - variants used by library consumers
+pub enum CustomIdl {
+    /// A pre-parsed IDL struct (avoids re-parsing)
+    Parsed(Idl),
+    /// An IDL as a JSON string (will be parsed)
+    Json(String),
+}
+
+#[allow(dead_code)] // Public API
+impl CustomIdl {
+    /// Create a CustomIdl from a pre-parsed Idl struct
+    pub fn from_idl(idl: Idl) -> Self {
+        CustomIdl::Parsed(idl)
+    }
+
+    /// Create a CustomIdl from a JSON string
+    pub fn from_json(json: String) -> Self {
+        CustomIdl::Json(json)
+    }
+}
+
+/// Configuration for a custom IDL to be used during parsing
+#[derive(Debug, Clone)]
+pub struct CustomIdlConfig {
+    /// The custom IDL (either pre-parsed or as JSON)
+    pub idl: CustomIdl,
+    /// If true, override built-in IDL even if one exists for this program
+    pub override_builtin: bool,
+}
+
+#[allow(dead_code)] // Public API
+impl CustomIdlConfig {
+    /// Create a new custom IDL config from a pre-parsed Idl
+    pub fn from_idl(idl: Idl, override_builtin: bool) -> Self {
+        Self {
+            idl: CustomIdl::Parsed(idl),
+            override_builtin,
+        }
+    }
+
+    /// Create a new custom IDL config from a JSON string
+    pub fn from_json(json: String, override_builtin: bool) -> Self {
+        Self {
+            idl: CustomIdl::Json(json),
+            override_builtin,
+        }
+    }
+
+    /// Convert legacy format `HashMap<String, (String, bool)>` to `HashMap<String, CustomIdlConfig>`
+    pub fn from_legacy_map(
+        idls: HashMap<String, (String, bool)>,
+    ) -> HashMap<String, CustomIdlConfig> {
+        idls.into_iter()
+            .map(|(program_id, (json, override_builtin))| {
+                (
+                    program_id,
+                    CustomIdlConfig::from_json(json, override_builtin),
+                )
+            })
+            .collect()
+    }
+}
