@@ -1184,6 +1184,69 @@ fn parse_spl_transfer_using_address_table_lookups_owner() {
 }
 
 #[cfg(test)]
+mod account_validation_tests {
+    use super::*;
+
+    #[test]
+    fn parses_system_transfer_with_extra_accounts() {
+        // This transaction contains a system program Transfer instruction with 3 account keys
+        // instead of the normal 2. The Solana runtime is permissive and ignores extra accounts
+        // beyond the required from/to pair. This test ensures our parser handles this correctly
+        // (e.g., Jupiter limit order v2 deposits).
+        //
+        // Built from the parses_valid_legacy_transactions test tx but with an extra account
+        // (index 2) added to the transfer instruction's account list.
+        let unsigned_transaction = "010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000204ef9a11d81cd82d96ce3273cda2d2e6b32ac5e89f935c18ec44b5fd91c340eed80d42099a5e0aaeaad1d4ede263662787cb3f6291a6ede340c4aa7ca26249dbe3111111111111111111111111111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000000000002d9084e1e78a3966ef658e17f3c3c8f855c8955eb53e8d7d9ce94134202a60ab0103030001020c020000006400000000000000".to_string();
+        let parsed_tx = SolanaTransaction::new(&unsigned_transaction, true, None).unwrap();
+        let transaction_metadata = parsed_tx.transaction_metadata().unwrap();
+
+        let sender_account_key = "H8Jhb6qEnby1XHkxSY4eoLzsdbfZFG2Nuu1dALLeb3Hq";
+        let recipient_account_key = "tkhqC9QX2gkqJtUFk2QKhBmQfFyyqZXSpr73VFRi35C";
+
+        // The transfer instruction has 3 accounts but only the first 2 matter for the transfer
+        assert_eq!(transaction_metadata.instructions.len(), 1);
+        let inst = &transaction_metadata.instructions[0];
+        assert_eq!(inst.program_key, SOL_SYSTEM_PROGRAM_KEY.to_string());
+        assert_eq!(inst.accounts.len(), 3, "instruction should have 3 accounts");
+
+        // Transfer should still be parsed correctly using only the first 2 accounts
+        assert_eq!(transaction_metadata.transfers.len(), 1);
+        let transfer = &transaction_metadata.transfers[0];
+        assert_eq!(transfer.from, sender_account_key);
+        assert_eq!(transfer.to, recipient_account_key);
+        assert_eq!(transfer.amount, "100");
+    }
+
+    #[test]
+    fn parses_system_transfer_with_extra_accounts_jupiter_craft_deposit() {
+        // Similar to the above test but using a real failing intent from jupiter_craft_deposit - https://dev.jup.ag/api-reference/trigger/v2/deposit-craft#craft-deposit
+        // This transaction has multiple instructions (7 total), and the system program
+        // Transfer instruction (the 3rd) has 3 account keys instead of the normal 2.
+        // The Solana runtime is permissive and ignores extra accounts beyond the
+        // required from/to pair. This test ensures our parser handles this correctly.
+        let unsigned_transaction = "030000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000301050a08d8167cfcc1631e875bfa6ec73a6e298b2eadcd40ad7463185d27914d89c74df844a911736270327b0cd88425f1b61e6d284b23c4aa4a9caa0e35f9f60cfa110d48c72acace14f57019f9901701c7816493ef985d70b906135419fce82b3bd52f295689e2507cb5c3bc2d130db02cc6802e45754e73578814077578702ca32c7cc6545eb0a3ce6b9fad3977e58635742d3ef0e960965b10c768663cd93f54c800000000000000000000000000000000000000000000000000000000000000000306466fe5211732ffecadba72c39be7bc8ce5bbc5f7126b2c439b3a400000000479d55bf231c06eee74c56ece681507fdb1b2dea3f48e5102b1cda256bc138f069b8857feab8184fb687f634618c035dac439dc1aeb3b5598a0f0000000000106ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a9ed4fd7dde19b705818da89bd93b254bed62ea69c13ad7d52b32dd648aee86dad0706000502a44b00000600090390d003000000000005030003020c02000000f01d1f000000000007060301080905000993f17b64f484ae76ff09030403010903000e27070000000009030300010109050200000c02000000000e270700000000".to_string();
+        let parsed_tx = SolanaTransaction::new(&unsigned_transaction, true, None).unwrap();
+        let transaction_metadata = parsed_tx.transaction_metadata().unwrap();
+
+        let sender_account_key = "bXNWGA4KcB8fz15DF9RJqf54nE5ZyS6rJBP8Jz8Dhm6";
+        let recipient_account_key = "4B6iqgbER5yJNJs7TjuzUaVxdb3PApP3NeGecH8RvK5M";
+
+        // The 3rd instruction is a transfer instruction that has 3 accounts but only the first 2 matter for the transfer
+        assert_eq!(transaction_metadata.instructions.len(), 7);
+        let inst = &transaction_metadata.instructions[2];
+        assert_eq!(inst.program_key, SOL_SYSTEM_PROGRAM_KEY.to_string());
+        assert_eq!(inst.accounts.len(), 3, "instruction should have 3 accounts");
+
+        // Transfer should still be parsed correctly using only the first 2 accounts
+        assert_eq!(transaction_metadata.transfers.len(), 2);
+        let transfer = &transaction_metadata.transfers[0];
+        assert_eq!(transfer.from, sender_account_key);
+        assert_eq!(transfer.to, recipient_account_key);
+        assert_eq!(transfer.amount, "2039280");
+    }
+}
+
+#[cfg(test)]
 #[allow(clippy::module_inception)]
 mod tests {
     use super::*;
