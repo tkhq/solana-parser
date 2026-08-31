@@ -5,9 +5,22 @@ use super::*;
 use crate::solana::idl_parser;
 use crate::solana::parser::{SolanaTransaction, TOKEN_2022_PROGRAM_KEY, TOKEN_PROGRAM_KEY};
 use crate::solana::structs::{
-    IdlSource, ProgramType, SolTransfer, SolanaAccount, SolanaAddressTableLookup,
+    AccountAddress, IdlSource, ProgramType, SolTransfer, SolanaAccount, SolanaAddressTableLookup,
     SolanaInstruction, SolanaSingleAddressTableLookup,
 };
+
+/// Wrap statically included accounts as the positional `all_accounts` view.
+///
+/// Valid only for instructions with no address-table lookups; when lookups are
+/// present the interleaving must be written out explicitly, since that ordering
+/// is the thing under test.
+fn all_static(accounts: &[SolanaAccount]) -> Vec<AccountAddress> {
+    accounts
+        .iter()
+        .cloned()
+        .map(AccountAddress::Static)
+        .collect()
+}
 
 // Test-only IDL directory for test fixtures
 const TEST_IDL_DIRECTORY: &str = "src/solana/idls/";
@@ -262,6 +275,7 @@ fn verify_jupiter_message(transaction_metadata: SolanaMetadata) {
         program_key: compute_budget_acct_key.to_string(),
         accounts: vec![],
         address_table_lookups: vec![],
+        all_accounts: all_static(&vec![]),
         instruction_data_hex: "02c05c1500".to_string(),
         parsed_instruction: None,
         idl_parse_error: None,
@@ -273,6 +287,7 @@ fn verify_jupiter_message(transaction_metadata: SolanaMetadata) {
         program_key: compute_budget_acct_key.to_string(),
         accounts: vec![],
         address_table_lookups: vec![],
+        all_accounts: all_static(&vec![]),
         instruction_data_hex: "03caa2000000000000".to_string(),
         parsed_instruction: None,
         idl_parse_error: None,
@@ -296,6 +311,24 @@ fn verify_jupiter_message(transaction_metadata: SolanaMetadata) {
             index: 151,
             writable: false,
         }],
+        // The positional view. Associated Token Account `CreateIdempotent`
+        // declares its accounts as [payer, ata, owner, mint, system_program,
+        // token_program]; the mint is the account supplied through the lookup
+        // table, so the lookup belongs at index 3 -- between the owner and the
+        // system program. Partitioning by kind (the two fields above) loses
+        // exactly this placement.
+        all_accounts: vec![
+            AccountAddress::Static(signer_acct.clone()),
+            AccountAddress::Static(receiving_acct.clone()),
+            AccountAddress::Static(signer_acct.clone()),
+            AccountAddress::AddressTableLookUp(SolanaSingleAddressTableLookup {
+                address_table_key: lookup_table_key.to_string(),
+                index: 151,
+                writable: false,
+            }),
+            AccountAddress::Static(system_program_acct.clone()),
+            AccountAddress::Static(token_acct.clone()),
+        ],
         instruction_data_hex: "01".to_string(),
     };
     assert_eq!(exp_instruction_3, transaction_metadata.instructions[2]);
@@ -305,6 +338,7 @@ fn verify_jupiter_message(transaction_metadata: SolanaMetadata) {
         program_key: SOL_SYSTEM_PROGRAM_KEY.to_string(),
         accounts: vec![signer_acct.clone(), receiving_acct.clone()],
         address_table_lookups: vec![],
+        all_accounts: all_static(&vec![signer_acct.clone(), receiving_acct.clone()]),
         instruction_data_hex: "0200000080f0fa0200000000".to_string(),
         parsed_instruction: None,
         idl_parse_error: None,
@@ -316,6 +350,7 @@ fn verify_jupiter_message(transaction_metadata: SolanaMetadata) {
         program_key: token_acct_key.to_string(),
         accounts: vec![receiving_acct.clone()],
         address_table_lookups: vec![],
+        all_accounts: all_static(&vec![receiving_acct.clone()]),
         instruction_data_hex: "11".to_string(),
         parsed_instruction: None,
         idl_parse_error: None,
@@ -334,6 +369,14 @@ fn verify_jupiter_message(transaction_metadata: SolanaMetadata) {
             token_acct.clone(),
         ],
         address_table_lookups: vec![],
+        all_accounts: all_static(&vec![
+            signer_acct.clone(),
+            usdc_mint_acct.clone(),
+            signer_acct.clone(),
+            usdc_acct.clone(),
+            system_program_acct.clone(),
+            token_acct.clone(),
+        ]),
         instruction_data_hex: "01".to_string(),
         parsed_instruction: None,
         idl_parse_error: None,
@@ -400,6 +443,11 @@ fn verify_jupiter_message(transaction_metadata: SolanaMetadata) {
             signer_acct.clone(),
         ],
         address_table_lookups: vec![],
+        all_accounts: all_static(&vec![
+            receiving_acct.clone(),
+            signer_acct.clone(),
+            signer_acct.clone(),
+        ]),
         instruction_data_hex: "09".to_string(),
         parsed_instruction: None,
         idl_parse_error: None,
@@ -566,6 +614,7 @@ fn parses_valid_v0_transaction_with_complex_address_table_lookups() {
         program_key: compute_budget_acct_key.to_string(),
         accounts: vec![],
         address_table_lookups: vec![],
+        all_accounts: all_static(&vec![]),
         instruction_data_hex: "02605f0400".to_string(),
         parsed_instruction: None,
         idl_parse_error: None,
@@ -577,6 +626,7 @@ fn parses_valid_v0_transaction_with_complex_address_table_lookups() {
         program_key: compute_budget_acct_key.to_string(),
         accounts: vec![],
         address_table_lookups: vec![],
+        all_accounts: all_static(&vec![]),
         instruction_data_hex: "032753050000000000".to_string(),
         parsed_instruction: None,
         idl_parse_error: None,
@@ -595,6 +645,14 @@ fn parses_valid_v0_transaction_with_complex_address_table_lookups() {
             token_acct.clone(),
         ],
         address_table_lookups: vec![],
+        all_accounts: all_static(&vec![
+            signer_acct.clone(),
+            wsol_mint_acct.clone(),
+            signer_acct.clone(),
+            wsol_acct.clone(),
+            system_program_acct.clone(),
+            token_acct.clone(),
+        ]),
         instruction_data_hex: "01".to_string(),
         parsed_instruction: None,
         idl_parse_error: None,
@@ -606,6 +664,7 @@ fn parses_valid_v0_transaction_with_complex_address_table_lookups() {
         program_key: SOL_SYSTEM_PROGRAM_KEY.to_string(),
         accounts: vec![signer_acct.clone(), wsol_mint_acct.clone()],
         address_table_lookups: vec![],
+        all_accounts: all_static(&vec![signer_acct.clone(), wsol_mint_acct.clone()]),
         instruction_data_hex: "020000008096980000000000".to_string(),
         parsed_instruction: None,
         idl_parse_error: None,
@@ -617,6 +676,7 @@ fn parses_valid_v0_transaction_with_complex_address_table_lookups() {
         program_key: token_acct_key.to_string(),
         accounts: vec![wsol_mint_acct.clone()],
         address_table_lookups: vec![],
+        all_accounts: all_static(&vec![wsol_mint_acct.clone()]),
         instruction_data_hex: "11".to_string(),
         parsed_instruction: None,
         idl_parse_error: None,
@@ -770,6 +830,11 @@ fn parses_valid_v0_transaction_with_complex_address_table_lookups() {
             signer_acct.clone(),
         ],
         address_table_lookups: vec![],
+        all_accounts: all_static(&vec![
+            wsol_mint_acct.clone(),
+            signer_acct.clone(),
+            signer_acct.clone(),
+        ]),
         instruction_data_hex: "09".to_string(),
         parsed_instruction: None,
         idl_parse_error: None,
@@ -2302,4 +2367,61 @@ mod custom_idl_tests {
         let result = parse_transaction(unsigned_payload, false, None);
         assert!(result.is_ok());
     }
+}
+
+/// `all_accounts` must be a faithful positional superset of the two
+/// partitioned views: filtering it by kind has to reproduce `accounts` and
+/// `address_table_lookups` exactly, in order.
+///
+/// This is the invariant that makes `all_accounts` safe to index by account
+/// position. It is asserted over a real v0 transaction that mixes statically
+/// included accounts with address-table lookups in the same instruction.
+#[test]
+fn all_accounts_partitions_into_static_and_lookup_views() {
+    // Same mainnet v0 transaction as `parses_v0_transactions`.
+    let unsigned_payload = "0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800100070ae05271368f77a2c5fefe77ce50e2b2f93ceb671eee8b172734c8d4df9d9eddc186a35856664b03306690c1c0fbd4b5821aea1c64ffb8c368a0422e47ae0d2895de288ba87b903021e6c8c2abf12c2484e98b040792b1fbb87091bc8e0dd76b6600000000000000000000000000000000000000000000000000000000000000000306466fe5211732ffecadba72c39be7bc8ce5bbc5f7126b2c439b3a400000000479d55bf231c06eee74c56ece681507fdb1b2dea3f48e5102b1cda256bc138f06ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a98c97258f4e2489f1bb3d1029148e0d830b5a1399daff1084048e7bd8dbe9f859b43ffa27f5d7f64a74c09b1f295879de4b09ab36dfc9dd514b321aa7b38ce5e8c6fa7af3bedbad3a3d65f36aabc97431b1bbe4c2d2f6e0e47ca60203452f5d616419cee70b839eb4eadd1411aa73eea6fd8700da5f0ea730136db1dd6fb2de660804000502c05c150004000903caa200000000000007060002000e03060101030200020c0200000080f0fa02000000000601020111070600010009030601010515060002010509050805100f0a0d01020b0c0011060524e517cb977ae3ad2a01000000120064000180f0fa02000000005d34700000000000320000060302000001090158b73fa66d1fb4a0562610136ebc84c7729542a8d792cb9bd2ad1bf75c30d5a404bdc2c1ba0497bcbbbf".to_string();
+    let parsed_tx = SolanaTransaction::new(&unsigned_payload, true, None).unwrap();
+    let transaction_metadata = parsed_tx.transaction_metadata().unwrap();
+
+    let mut saw_lookup = false;
+
+    for (i, instruction) in transaction_metadata.instructions.iter().enumerate() {
+        let statics: Vec<SolanaAccount> = instruction
+            .all_accounts
+            .iter()
+            .filter_map(|a| match a {
+                AccountAddress::Static(account) => Some(account.clone()),
+                AccountAddress::AddressTableLookUp(_) => None,
+            })
+            .collect();
+        let lookups: Vec<SolanaSingleAddressTableLookup> = instruction
+            .all_accounts
+            .iter()
+            .filter_map(|a| match a {
+                AccountAddress::AddressTableLookUp(lookup) => Some(lookup.clone()),
+                AccountAddress::Static(_) => None,
+            })
+            .collect();
+
+        assert_eq!(
+            statics, instruction.accounts,
+            "instruction {i}: static accounts filtered out of all_accounts must equal `accounts`, in order"
+        );
+        assert_eq!(
+            lookups, instruction.address_table_lookups,
+            "instruction {i}: lookups filtered out of all_accounts must equal `address_table_lookups`, in order"
+        );
+        assert_eq!(
+            instruction.all_accounts.len(),
+            instruction.accounts.len() + instruction.address_table_lookups.len(),
+            "instruction {i}: all_accounts must account for every referenced account exactly once"
+        );
+
+        saw_lookup |= !instruction.address_table_lookups.is_empty();
+    }
+
+    assert!(
+        saw_lookup,
+        "fixture must contain at least one address-table lookup, or this test proves nothing"
+    );
 }

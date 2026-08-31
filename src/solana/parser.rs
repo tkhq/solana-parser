@@ -818,6 +818,10 @@ impl SolanaTransaction {
                 accounts: static_accounts,
                 instruction_data_hex,
                 address_table_lookups: atlu_addresses,
+                // The positional view. `static_accounts` and `atlu_addresses`
+                // above are this same data partitioned by kind, which drops the
+                // interleaving and so cannot be indexed by account position.
+                all_accounts: all_transaction_addresses,
                 parsed_instruction: parsed_inst_option,
                 idl_parse_error,
             };

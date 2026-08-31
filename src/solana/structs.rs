@@ -203,9 +203,31 @@ impl std::error::Error for IdlParseError {}
 #[derive(Debug, Clone, PartialEq)]
 pub struct SolanaInstruction {
     pub program_key: String,
+    /// The instruction's *statically included* accounts, in order, with
+    /// address-table-lookup entries omitted.
+    ///
+    /// Because lookup entries are dropped rather than represented, an index
+    /// into this vector does NOT correspond to the account's position in the
+    /// instruction. Use [`SolanaInstruction::all_accounts`] when positional
+    /// alignment matters (for example when zipping against an IDL's declared
+    /// account list, or rendering a placeholder for an unresolved account).
     pub accounts: Vec<SolanaAccount>,
     pub instruction_data_hex: String,
+    /// The instruction's address-table-lookup accounts, in order, with static
+    /// accounts omitted. Carries the same positional caveat as `accounts`.
     pub address_table_lookups: Vec<SolanaSingleAddressTableLookup>,
+    /// Every account the instruction references, in the order the instruction
+    /// declares them, tagged as either static or an address-table lookup.
+    ///
+    /// This is the positional view: `all_accounts[n]` is the account at index
+    /// `n` of the instruction, for every `n`. `accounts` and
+    /// `address_table_lookups` are the same data partitioned by kind, which
+    /// loses the interleaving.
+    ///
+    /// Prefer matching on [`AccountAddress`] directly over its `Display` impl,
+    /// which renders every lookup as the literal `ADDRESS_TABLE_LOOKUP` and so
+    /// cannot distinguish one lookup from another.
+    pub all_accounts: Vec<AccountAddress>,
     pub parsed_instruction: Option<SolanaParsedInstructionData>,
     /// If IDL parsing failed, this contains the structured error.
     /// `None` means either parsing succeeded or no IDL was available for this program.
