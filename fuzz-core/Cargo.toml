@@ -1,0 +1,15 @@
+[package]
+name = "solana-parser-fuzz-core"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[features]
+proptest = ["dep:proptest", "dep:serde_json"]
+arbitrary = ["dep:arbitrary"]
+
+[dependencies]
+solana_parser = { path = ".." }
+proptest = { version = "1", optional = true, default-features = false, features = ["std"] }
+serde_json = { version = "1.0", optional = true }
+arbitrary = { version = "1", optional = true, features = ["derive"] }

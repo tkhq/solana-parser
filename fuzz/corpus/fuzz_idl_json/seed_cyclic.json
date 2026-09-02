@@ -1,0 +1,46 @@
+{
+    "types": [
+      {
+        "name": "TypeA",
+        "type": {
+          "kind": "struct",
+          "fields": [
+            {
+              "name": "next",
+              "type": {
+                "defined": "TypeB"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "TypeB",
+        "type": {
+          "kind": "struct",
+          "fields": [
+            {
+              "name": "prev",
+              "type": {
+                "defined": "TypeA"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "instructions": [
+      {
+        "name": "cyclicInstruction",
+        "accounts": [],
+        "args": [
+          {
+            "name": "cycle",
+            "type": {
+              "defined": "TypeA"
+            }
+          }
+        ]
+      }
+    ]
+  }

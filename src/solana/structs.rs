@@ -145,6 +145,10 @@ impl ProgramType {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum IdlSource {
     BuiltIn(ProgramType),
+    /// An IDL the embedding application ships itself, distinct from one a
+    /// request supplied. Both arrive through the same `custom_idls` argument,
+    /// so `IdlRecord::is_preset` is what separates them.
+    Preset,
     Custom,
 }
 
@@ -322,6 +326,10 @@ pub struct IdlRecord {
     pub custom_idl_json: Option<String>,
     /// Whether to override built-in IDL with custom one (if both exist)
     pub override_builtin: bool,
+    /// Whether this IDL is one the embedding application ships rather than one
+    /// a request supplied. Reported as [`IdlSource::Preset`] instead of
+    /// [`IdlSource::Custom`]; does not change which IDL is selected.
+    pub is_preset: bool,
 }
 
 /// IDL that is compatible with what anchor and shank extract from a solana program.

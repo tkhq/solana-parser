@@ -2,10 +2,8 @@ use std::collections::HashMap;
 use std::env;
 use std::fs;
 
-mod solana;
-
-use crate::solana::parser::parse_transaction;
-use crate::solana::structs::{
+use solana_parser::solana::parser::parse_transaction;
+use solana_parser::solana::structs::{
     IdlSource, SolanaParsedInstructionData, SolanaParsedTransactionPayload,
 };
 
@@ -66,7 +64,9 @@ fn print_usage() {
     println!("Examples:");
     println!("  cargo run parse --message <tx_hex>");
     println!("  cargo run parse --message <tx_hex> --custom-idl <program_id> /path/to/idl.json");
-    println!("  cargo run parse --message <tx_hex> --custom-idl <program_id> /path/to/idl.json --override");
+    println!(
+        "  cargo run parse --message <tx_hex> --custom-idl <program_id> /path/to/idl.json --override"
+    );
 }
 
 fn parse_custom_idl_args(args: &[String]) -> Option<HashMap<String, (String, bool)>> {
@@ -200,6 +200,9 @@ fn print_parsed_instruction_data(p_inst_data: Option<SolanaParsedInstructionData
                     "          IDL Source: Built-in ({})",
                     program_type.program_name()
                 );
+            }
+            IdlSource::Preset => {
+                println!("          IDL Source: Preset");
             }
             IdlSource::Custom => {
                 println!("          IDL Source: Custom");

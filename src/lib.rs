@@ -6,9 +6,11 @@ pub use solana::idl_parser::{
     construct_custom_idl_records_map_with_overrides, construct_idl_records_map, decode_idl_data,
     find_instruction_by_discriminator, parse_instruction_with_idl,
 };
-pub use solana::parser::{parse_transaction, parse_transaction_with_idls};
+pub use solana::parser::{
+    parse_transaction, parse_transaction_with_idl_records, parse_transaction_with_idls,
+};
 pub use solana::structs::{
-    CustomIdl, CustomIdlConfig, Idl, IdlInstruction, IdlParseError, IdlSource, ProgramType,
-    SolanaInstruction, SolanaMetadata, SolanaParseResponse, SolanaParsedInstructionData,
-    SolanaParsedTransaction, SolanaParsedTransactionPayload,
+    CustomIdl, CustomIdlConfig, Idl, IdlInstruction, IdlParseError, IdlRecord, IdlSource,
+    ProgramType, SolanaInstruction, SolanaMetadata, SolanaParseResponse,
+    SolanaParsedInstructionData, SolanaParsedTransaction, SolanaParsedTransactionPayload,
 };

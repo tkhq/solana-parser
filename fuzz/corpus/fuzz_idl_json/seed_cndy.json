@@ -1,0 +1,504 @@
+{
+  "accounts": [
+    {
+      "name": "CandyMachine",
+      "type": {
+        "fields": [
+          {
+            "name": "authority",
+            "type": "publicKey"
+          },
+          {
+            "name": "wallet",
+            "type": "publicKey"
+          },
+          {
+            "name": "tokenMint",
+            "type": {
+              "option": "publicKey"
+            }
+          },
+          {
+            "name": "config",
+            "type": "publicKey"
+          },
+          {
+            "name": "data",
+            "type": {
+              "defined": "CandyMachineData"
+            }
+          },
+          {
+            "name": "itemsRedeemed",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "Config",
+      "type": {
+        "fields": [
+          {
+            "name": "authority",
+            "type": "publicKey"
+          },
+          {
+            "name": "data",
+            "type": {
+              "defined": "ConfigData"
+            }
+          }
+        ],
+        "kind": "struct"
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 300,
+      "msg": "Account does not have correct owner!",
+      "name": "IncorrectOwner"
+    },
+    {
+      "code": 301,
+      "msg": "Account is not initialized!",
+      "name": "Uninitialized"
+    },
+    {
+      "code": 302,
+      "msg": "Mint Mismatch!",
+      "name": "MintMismatch"
+    },
+    {
+      "code": 303,
+      "msg": "Index greater than length!",
+      "name": "IndexGreaterThanLength"
+    },
+    {
+      "code": 304,
+      "msg": "Config must have atleast one entry!",
+      "name": "ConfigMustHaveAtleastOneEntry"
+    },
+    {
+      "code": 305,
+      "msg": "Numerical overflow error!",
+      "name": "NumericalOverflowError"
+    },
+    {
+      "code": 306,
+      "msg": "Can only provide up to 4 creators to candy machine (because candy machine is one)!",
+      "name": "TooManyCreators"
+    },
+    {
+      "code": 307,
+      "msg": "Uuid must be exactly of 6 length",
+      "name": "UuidMustBeExactly6Length"
+    },
+    {
+      "code": 308,
+      "msg": "Not enough tokens to pay for this minting",
+      "name": "NotEnoughTokens"
+    },
+    {
+      "code": 309,
+      "msg": "Not enough SOL to pay for this minting",
+      "name": "NotEnoughSOL"
+    },
+    {
+      "code": 310,
+      "msg": "Token transfer failed",
+      "name": "TokenTransferFailed"
+    },
+    {
+      "code": 311,
+      "msg": "Candy machine is empty!",
+      "name": "CandyMachineEmpty"
+    },
+    {
+      "code": 312,
+      "msg": "Candy machine is not live yet!",
+      "name": "CandyMachineNotLiveYet"
+    },
+    {
+      "code": 313,
+      "msg": "Number of config lines must be at least number of items available",
+      "name": "ConfigLineMismatch"
+    }
+  ],
+  "instructions": [
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "config"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "candyMachine"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "payer"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "wallet"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "metadata"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "mint"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "mintAuthority"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "updateAuthority"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "masterEdition"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenMetadataProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "systemProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "rent"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "clock"
+        }
+      ],
+      "args": [],
+      "name": "mintNft"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "candyMachine"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "price",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "goLiveDate",
+          "type": {
+            "option": "i64"
+          }
+        }
+      ],
+      "name": "updateCandyMachine"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "config"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "authority"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "payer"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "rent"
+        }
+      ],
+      "args": [
+        {
+          "name": "data",
+          "type": {
+            "defined": "ConfigData"
+          }
+        }
+      ],
+      "name": "initializeConfig"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "config"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u32"
+        },
+        {
+          "name": "configLines",
+          "type": {
+            "vec": {
+              "defined": "ConfigLine"
+            }
+          }
+        }
+      ],
+      "name": "addConfigLines"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "candyMachine"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "wallet"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "config"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "authority"
+        },
+        {
+          "isMut": true,
+          "isSigner": true,
+          "name": "payer"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "systemProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "rent"
+        }
+      ],
+      "args": [
+        {
+          "name": "bump",
+          "type": "u8"
+        },
+        {
+          "name": "data",
+          "type": {
+            "defined": "CandyMachineData"
+          }
+        }
+      ],
+      "name": "initializeCandyMachine"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "candyMachine"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "newAuthority",
+          "type": {
+            "option": "publicKey"
+          }
+        }
+      ],
+      "name": "updateAuthority"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "config"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "authority"
+        }
+      ],
+      "args": [],
+      "name": "withdrawFunds"
+    }
+  ],
+  "name": "nft_candy_machine",
+  "types": [
+    {
+      "name": "CandyMachineData",
+      "type": {
+        "fields": [
+          {
+            "name": "uuid",
+            "type": "string"
+          },
+          {
+            "name": "price",
+            "type": "u64"
+          },
+          {
+            "name": "itemsAvailable",
+            "type": "u64"
+          },
+          {
+            "name": "goLiveDate",
+            "type": {
+              "option": "i64"
+            }
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "ConfigData",
+      "type": {
+        "fields": [
+          {
+            "name": "uuid",
+            "type": "string"
+          },
+          {
+            "name": "symbol",
+            "type": "string"
+          },
+          {
+            "name": "sellerFeeBasisPoints",
+            "type": "u16"
+          },
+          {
+            "name": "creators",
+            "type": {
+              "vec": {
+                "defined": "Creator"
+              }
+            }
+          },
+          {
+            "name": "maxSupply",
+            "type": "u64"
+          },
+          {
+            "name": "isMutable",
+            "type": "bool"
+          },
+          {
+            "name": "retainAuthority",
+            "type": "bool"
+          },
+          {
+            "name": "maxNumberOfLines",
+            "type": "u32"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "ConfigLine",
+      "type": {
+        "fields": [
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "uri",
+            "type": "string"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "Creator",
+      "type": {
+        "fields": [
+          {
+            "name": "address",
+            "type": "publicKey"
+          },
+          {
+            "name": "verified",
+            "type": "bool"
+          },
+          {
+            "name": "share",
+            "type": "u8"
+          }
+        ],
+        "kind": "struct"
+      }
+    }
+  ],
+  "version": "0.0.0"
+}

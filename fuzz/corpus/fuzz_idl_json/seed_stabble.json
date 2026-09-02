@@ -1,0 +1,1057 @@
+{
+  "accounts": [
+    {
+      "discriminator": [
+        241,
+        154,
+        109,
+        4,
+        17,
+        177,
+        109,
+        188
+      ],
+      "name": "Pool"
+    },
+    {
+      "discriminator": [
+        174,
+        110,
+        39,
+        119,
+        82,
+        106,
+        169,
+        102
+      ],
+      "name": "Strategy"
+    },
+    {
+      "discriminator": [
+        211,
+        8,
+        232,
+        43,
+        2,
+        152,
+        117,
+        119
+      ],
+      "name": "Vault"
+    }
+  ],
+  "address": "swapNyd8XiQwJ6ianp9snpu4brUqFxadzvHebnAXjJZ",
+  "events": [
+    {
+      "discriminator": [
+        172,
+        82,
+        114,
+        207,
+        27,
+        103,
+        211,
+        4
+      ],
+      "name": "PoolBalanceUpdatedEvent"
+    },
+    {
+      "discriminator": [
+        128,
+        39,
+        94,
+        221,
+        230,
+        222,
+        127,
+        141
+      ],
+      "name": "PoolUpdatedEvent"
+    }
+  ],
+  "instructions": [
+    {
+      "accounts": [
+        {
+          "name": "pending_owner",
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": [],
+      "discriminator": [
+        176,
+        23,
+        41,
+        28,
+        23,
+        111,
+        8,
+        4
+      ],
+      "name": "accept_owner"
+    },
+    {
+      "accounts": [
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "vault"
+        },
+        {
+          "name": "admin",
+          "signer": true
+        },
+        {
+          "name": "strategy",
+          "writable": true
+        }
+      ],
+      "args": [],
+      "discriminator": [
+        7,
+        141,
+        162,
+        60,
+        71,
+        115,
+        26,
+        146
+      ],
+      "name": "approve_strategy"
+    },
+    {
+      "accounts": [
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "vault"
+        },
+        {
+          "name": "admin",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_amp_factor",
+          "type": "u16"
+        },
+        {
+          "name": "ramp_duration",
+          "type": "u32"
+        }
+      ],
+      "discriminator": [
+        56,
+        238,
+        189,
+        35,
+        200,
+        157,
+        42,
+        66
+      ],
+      "name": "change_amp_factor"
+    },
+    {
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_max_supply",
+          "type": "u64"
+        }
+      ],
+      "discriminator": [
+        93,
+        176,
+        0,
+        205,
+        69,
+        63,
+        87,
+        80
+      ],
+      "name": "change_max_supply"
+    },
+    {
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_swap_fee",
+          "type": "u64"
+        }
+      ],
+      "discriminator": [
+        231,
+        15,
+        132,
+        51,
+        132,
+        165,
+        64,
+        170
+      ],
+      "name": "change_swap_fee"
+    },
+    {
+      "accounts": [
+        {
+          "accounts": [
+            {
+              "name": "owner",
+              "signer": true
+            },
+            {
+              "name": "pool",
+              "writable": true
+            }
+          ],
+          "name": "owner_only"
+        },
+        {
+          "name": "strategy",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "amp_min_factor",
+          "type": "u16"
+        },
+        {
+          "name": "amp_max_factor",
+          "type": "u16"
+        },
+        {
+          "name": "ramp_min_step",
+          "type": "u16"
+        },
+        {
+          "name": "ramp_max_step",
+          "type": "u16"
+        },
+        {
+          "name": "ramp_min_duration",
+          "type": "u32"
+        },
+        {
+          "name": "ramp_max_duration",
+          "type": "u32"
+        }
+      ],
+      "discriminator": [
+        152,
+        160,
+        107,
+        148,
+        245,
+        190,
+        127,
+        224
+      ],
+      "name": "create_strategy"
+    },
+    {
+      "accounts": [
+        {
+          "name": "user",
+          "signer": true
+        },
+        {
+          "name": "user_pool_token",
+          "writable": true
+        },
+        {
+          "name": "mint",
+          "writable": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "pool_authority"
+        },
+        {
+          "name": "vault"
+        },
+        {
+          "name": "vault_authority"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "token_program_2022"
+        }
+      ],
+      "args": [
+        {
+          "name": "amounts",
+          "type": {
+            "vec": "u64"
+          }
+        },
+        {
+          "name": "minimum_amount_out",
+          "type": "u64"
+        }
+      ],
+      "discriminator": [
+        242,
+        35,
+        198,
+        137,
+        82,
+        225,
+        242,
+        182
+      ],
+      "docs": [
+        "add liquidity"
+      ],
+      "name": "deposit"
+    },
+    {
+      "accounts": [
+        {
+          "name": "strategy"
+        },
+        {
+          "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "ramp_step",
+          "type": "u16"
+        },
+        {
+          "name": "ramp_duration",
+          "type": "u32"
+        }
+      ],
+      "discriminator": [
+        249,
+        46,
+        55,
+        57,
+        31,
+        38,
+        61,
+        27
+      ],
+      "name": "exec_strategy"
+    },
+    {
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "pool_authority"
+        },
+        {
+          "name": "withdraw_authority"
+        },
+        {
+          "name": "vault"
+        }
+      ],
+      "args": [
+        {
+          "name": "amp_factor",
+          "type": "u16"
+        },
+        {
+          "name": "swap_fee",
+          "type": "u64"
+        },
+        {
+          "name": "max_caps",
+          "type": {
+            "vec": "u64"
+          }
+        }
+      ],
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "docs": [
+        "initialize a pool"
+      ],
+      "name": "initialize"
+    },
+    {
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": [],
+      "discriminator": [
+        211,
+        22,
+        221,
+        251,
+        74,
+        121,
+        193,
+        47
+      ],
+      "name": "pause"
+    },
+    {
+      "accounts": [
+        {
+          "name": "pending_owner",
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": [],
+      "discriminator": [
+        238,
+        206,
+        198,
+        215,
+        51,
+        178,
+        133,
+        228
+      ],
+      "name": "reject_owner"
+    },
+    {
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": [],
+      "discriminator": [
+        146,
+        204,
+        241,
+        213,
+        86,
+        21,
+        253,
+        211
+      ],
+      "docs": [
+        "shutdown the zero-liquidity pool"
+      ],
+      "name": "shutdown"
+    },
+    {
+      "accounts": [
+        {
+          "name": "user",
+          "signer": true
+        },
+        {
+          "name": "user_token_in",
+          "writable": true
+        },
+        {
+          "name": "user_token_out",
+          "writable": true
+        },
+        {
+          "name": "vault_token_in",
+          "writable": true
+        },
+        {
+          "name": "vault_token_out",
+          "writable": true
+        },
+        {
+          "name": "beneficiary_token_out",
+          "writable": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "withdraw_authority"
+        },
+        {
+          "name": "vault"
+        },
+        {
+          "name": "vault_authority"
+        },
+        {
+          "name": "vault_program"
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount_in",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "minimum_amount_out",
+          "type": "u64"
+        }
+      ],
+      "discriminator": [
+        248,
+        198,
+        158,
+        145,
+        225,
+        117,
+        135,
+        200
+      ],
+      "docs": [
+        "swap"
+      ],
+      "name": "swap"
+    },
+    {
+      "accounts": [
+        {
+          "name": "user",
+          "signer": true
+        },
+        {
+          "name": "mint_in"
+        },
+        {
+          "name": "mint_out"
+        },
+        {
+          "name": "user_token_in",
+          "writable": true
+        },
+        {
+          "name": "user_token_out",
+          "writable": true
+        },
+        {
+          "name": "vault_token_in",
+          "writable": true
+        },
+        {
+          "name": "vault_token_out",
+          "writable": true
+        },
+        {
+          "name": "beneficiary_token_out",
+          "writable": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "withdraw_authority"
+        },
+        {
+          "name": "vault"
+        },
+        {
+          "name": "vault_authority"
+        },
+        {
+          "name": "vault_program"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "token_2022_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount_in",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "minimum_amount_out",
+          "type": "u64"
+        }
+      ],
+      "discriminator": [
+        43,
+        4,
+        237,
+        11,
+        26,
+        201,
+        30,
+        98
+      ],
+      "name": "swap_v2"
+    },
+    {
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_owner",
+          "type": "pubkey"
+        }
+      ],
+      "discriminator": [
+        245,
+        25,
+        221,
+        175,
+        106,
+        229,
+        225,
+        45
+      ],
+      "name": "transfer_owner"
+    },
+    {
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": [],
+      "discriminator": [
+        169,
+        144,
+        4,
+        38,
+        10,
+        141,
+        188,
+        255
+      ],
+      "name": "unpause"
+    },
+    {
+      "accounts": [
+        {
+          "name": "user",
+          "signer": true
+        },
+        {
+          "name": "user_pool_token",
+          "writable": true
+        },
+        {
+          "name": "mint",
+          "writable": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "withdraw_authority"
+        },
+        {
+          "name": "vault"
+        },
+        {
+          "name": "vault_authority"
+        },
+        {
+          "name": "vault_program"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "token_program_2022"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "minimum_amounts_out",
+          "type": {
+            "vec": "u64"
+          }
+        }
+      ],
+      "discriminator": [
+        183,
+        18,
+        70,
+        156,
+        148,
+        109,
+        161,
+        34
+      ],
+      "docs": [
+        "remove liquidity"
+      ],
+      "name": "withdraw"
+    }
+  ],
+  "metadata": {
+    "description": "Created with Anchor",
+    "name": "stable_swap",
+    "spec": "0.1.0",
+    "version": "1.4.0"
+  },
+  "types": [
+    {
+      "name": "Pool",
+      "type": {
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority_bump",
+            "type": "u8"
+          },
+          {
+            "name": "is_active",
+            "type": "bool"
+          },
+          {
+            "name": "amp_initial_factor",
+            "type": "u16"
+          },
+          {
+            "name": "amp_target_factor",
+            "type": "u16"
+          },
+          {
+            "name": "ramp_start_ts",
+            "type": "i64"
+          },
+          {
+            "name": "ramp_stop_ts",
+            "type": "i64"
+          },
+          {
+            "name": "swap_fee",
+            "type": "u64"
+          },
+          {
+            "name": "tokens",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "PoolToken"
+                }
+              }
+            }
+          },
+          {
+            "name": "pending_owner",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "max_supply",
+            "type": "u64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "PoolBalanceUpdatedData",
+      "type": {
+        "fields": [
+          {
+            "name": "balances",
+            "type": {
+              "vec": "u64"
+            }
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "PoolBalanceUpdatedEvent",
+      "type": {
+        "fields": [
+          {
+            "name": "pubkey",
+            "type": "pubkey"
+          },
+          {
+            "name": "data",
+            "type": {
+              "defined": {
+                "name": "PoolBalanceUpdatedData"
+              }
+            }
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "PoolToken",
+      "type": {
+        "fields": [
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "decimals",
+            "type": "u8"
+          },
+          {
+            "name": "scaling_up",
+            "type": "bool"
+          },
+          {
+            "name": "scaling_factor",
+            "type": "u64"
+          },
+          {
+            "name": "balance",
+            "type": "u64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "PoolUpdatedData",
+      "type": {
+        "fields": [
+          {
+            "name": "is_active",
+            "type": "bool"
+          },
+          {
+            "name": "amp_initial_factor",
+            "type": "u16"
+          },
+          {
+            "name": "amp_target_factor",
+            "type": "u16"
+          },
+          {
+            "name": "ramp_start_ts",
+            "type": "i64"
+          },
+          {
+            "name": "ramp_stop_ts",
+            "type": "i64"
+          },
+          {
+            "name": "swap_fee",
+            "type": "u64"
+          },
+          {
+            "name": "max_supply",
+            "type": "u64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "PoolUpdatedEvent",
+      "type": {
+        "fields": [
+          {
+            "name": "pubkey",
+            "type": "pubkey"
+          },
+          {
+            "name": "data",
+            "type": {
+              "defined": {
+                "name": "PoolUpdatedData"
+              }
+            }
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "Strategy",
+      "type": {
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "is_active",
+            "type": "bool"
+          },
+          {
+            "name": "amp_min_factor",
+            "type": "u16"
+          },
+          {
+            "name": "amp_max_factor",
+            "type": "u16"
+          },
+          {
+            "name": "ramp_min_step",
+            "type": "u16"
+          },
+          {
+            "name": "ramp_max_step",
+            "type": "u16"
+          },
+          {
+            "name": "ramp_min_duration",
+            "type": "u32"
+          },
+          {
+            "name": "ramp_max_duration",
+            "type": "u32"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "Vault",
+      "type": {
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "docs": [
+              "PDA of pool programs seeded by vault address"
+            ],
+            "name": "withdraw_authority",
+            "type": "pubkey"
+          },
+          {
+            "docs": [
+              "bump seed of withdraw_authority PDA"
+            ],
+            "name": "withdraw_authority_bump",
+            "type": "u8"
+          },
+          {
+            "docs": [
+              "bump seed of vault_authority PDA"
+            ],
+            "name": "authority_bump",
+            "type": "u8"
+          },
+          {
+            "name": "is_active",
+            "type": "bool"
+          },
+          {
+            "name": "beneficiary",
+            "type": "pubkey"
+          },
+          {
+            "name": "beneficiary_fee",
+            "type": "u64"
+          },
+          {
+            "name": "pending_admin",
+            "type": {
+              "option": "pubkey"
+            }
+          }
+        ],
+        "kind": "struct"
+      }
+    }
+  ]
+}
