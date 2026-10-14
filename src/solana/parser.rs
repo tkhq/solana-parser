@@ -34,6 +34,8 @@ pub const TOKEN_PROGRAM_KEY: &str = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA
 pub const TOKEN_2022_PROGRAM_KEY: &str = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
 // Versioned transactions have a prefix of 0x80
 const V0_TRANSACTION_INDICATOR: u8 = 0x80;
+// A first byte with the top bit set marks a versioned message (version in the low 7 bits); a legacy message starts with its signer count, which is below 128
+const VERSIONED_MESSAGE_PREFIX: u8 = 0x80;
 
 /// Entrypoint to parsing (legacy API)
 ///
@@ -180,6 +182,8 @@ fn parse_solana_transaction_with_idl_records(
 
     if full_transaction {
         let (signatures, tx_body) = parse_signatures(&unsigned_tx_bytes)?;
+        validate_length(tx_body, LEN_MESSAGE_HEADER_BYTES, "Message Header")?;
+        reject_unsupported_version(tx_body[0])?;
         let message = match tx_body[0] {
             V0_TRANSACTION_INDICATOR => parse_solana_v0_transaction(&tx_body[LEN_ARRAY_HEADER_BYTES..tx_body.len()]).map_err(|e| format!("Error parsing full transaction. If this is just a message instead of a full transaction, parse using the --message flag. Parsing Error: {e:#?}"))?,
             _ => parse_solana_legacy_transaction(tx_body).map_err(|e| format!("Error parsing full transaction. If this is just a message instead of a full transaction, parse using the --message flag. Parsing Error: {e:#?}"))?,
@@ -190,6 +194,7 @@ fn parse_solana_transaction_with_idl_records(
             custom_idl_records,
         });
     }
+    reject_unsupported_version(unsigned_tx_bytes[0])?;
     let message = match unsigned_tx_bytes[0] {
         V0_TRANSACTION_INDICATOR => parse_solana_v0_transaction(&unsigned_tx_bytes[LEN_ARRAY_HEADER_BYTES..unsigned_tx_bytes.len()]).map_err(|e| format!("Error parsing message. If this is a serialized Solana transaction with signatures, parse using the --transaction flag. Parsing error: {e:#?}"))?,
         _ => parse_solana_legacy_transaction(&unsigned_tx_bytes).map_err(|e| format!("Error parsing message. If this is a full solana transaction with signatures or signature placeholders, parse using the --transaction flag. Parsing Error: {e:#?}"))?,
@@ -199,6 +204,21 @@ fn parse_solana_transaction_with_idl_records(
         signatures: vec![],
         custom_idl_records,
     }) // Signatures array is empty when we are parsing a message (using --message) as opposed to a full transaction
+}
+
+/*
+Reject Unsupported Version
+- Only legacy and v0 messages are parsed. Any other versioned prefix (v1 is 0x81) would otherwise fall through to the legacy parser and be read with the wrong layout
+*/
+fn reject_unsupported_version(first_byte: u8) -> Result<(), Box<dyn Error>> {
+    if first_byte & VERSIONED_MESSAGE_PREFIX != 0 && first_byte != V0_TRANSACTION_INDICATOR {
+        return Err(format!(
+            "unsupported Solana message version {}",
+            first_byte & !VERSIONED_MESSAGE_PREFIX
+        )
+        .into());
+    }
+    Ok(())
 }
 
 /*
@@ -276,6 +296,36 @@ fn validate_length(
     Ok(())
 }
 
+// Checks whether a compact-encoded array length exceeds the byte length of the
+// remaining transaction. Every instruction consumes at least one byte, so this
+// also prevents an inflated count from causing an excessive allocation.
+fn verify_compact16_max_length<'a>(
+    length: usize,
+    bytes: &'a [u8],
+    section: &str,
+) -> Result<(usize, &'a [u8]), Box<dyn std::error::Error>> {
+    let bytes_len = bytes.len();
+    if bytes_len < length {
+        return Err(format!(
+            "error parsing unsigned transaction: indicated compact-encoded array length {length} exceeds transaction byte length {bytes_len} for {section}"
+        )
+        .into());
+    }
+    Ok((length, bytes))
+}
+
+// Reads a compact-u16 array length and bounds it by the remaining bytes. Every
+// array length in a message (signatures, account keys, instructions, address
+// table lookups) is a compact-u16, not a single byte.
+fn read_compact_array_len<'a>(
+    bytes: &'a [u8],
+    section: &str,
+) -> Result<(usize, &'a [u8]), Box<dyn std::error::Error>> {
+    read_compact_u16(bytes).and_then(|(length, remaining_bytes)| {
+        verify_compact16_max_length(length, remaining_bytes, section)
+    })
+}
+
 /*
 Parse Signatures
 - Context: Solana transactions contain a compact array of signatures at the beginning of a transaction
@@ -286,23 +336,15 @@ Parse Signatures
 fn parse_signatures(
     unsigned_tx_bytes: &[u8],
 ) -> Result<(Vec<Signature>, &[u8]), Box<dyn std::error::Error>> {
-    validate_length(
-        unsigned_tx_bytes,
-        LEN_ARRAY_HEADER_BYTES,
-        "Signature Array Header",
-    )?;
-    let num_signatures = unsigned_tx_bytes[0] as usize;
-    let parse_len = 1 + (num_signatures * LEN_SOL_SIGNATURE_BYTES);
-    validate_length(unsigned_tx_bytes, parse_len, "Signatures")?;
-    let signatures: Vec<Signature> = unsigned_tx_bytes[1..]
+    let (num_signatures, remainder) = read_compact_array_len(unsigned_tx_bytes, "Signatures")?;
+    let parse_len = num_signatures * LEN_SOL_SIGNATURE_BYTES;
+    validate_length(remainder, parse_len, "Signatures")?;
+    let signatures: Vec<Signature> = remainder
         .chunks_exact(LEN_SOL_SIGNATURE_BYTES)
         .take(num_signatures)
         .map(<[u8]>::to_vec)
         .collect();
-    Ok((
-        signatures,
-        &unsigned_tx_bytes[parse_len..unsigned_tx_bytes.len()],
-    ))
+    Ok((signatures, &remainder[parse_len..]))
 }
 
 /*
@@ -337,27 +379,17 @@ Parse Accounts
 fn parse_accounts(
     tx_body_remainder: &[u8],
 ) -> Result<(Vec<Pubkey>, &[u8]), Box<dyn std::error::Error>> {
-    validate_length(
-        tx_body_remainder,
-        LEN_ARRAY_HEADER_BYTES,
-        "Accounts Array Header",
-    )?;
-    let accounts_num = tx_body_remainder[0] as usize;
-    let len_accounts_array = (LEN_SOL_ACCOUNT_KEY_BYTES * accounts_num) + LEN_ARRAY_HEADER_BYTES;
+    let (accounts_num, tx_body_remainder) = read_compact_array_len(tx_body_remainder, "Accounts")?;
+    let len_accounts_array = LEN_SOL_ACCOUNT_KEY_BYTES * accounts_num;
     validate_length(tx_body_remainder, len_accounts_array, "Accounts")?;
     let mut pubkeys: Vec<Pubkey> = Vec::with_capacity(accounts_num);
-    for i in 0..accounts_num {
+    for key_bytes in tx_body_remainder[..len_accounts_array].chunks_exact(LEN_SOL_ACCOUNT_KEY_BYTES)
+    {
         let mut pubkey_sized_bytes = [0u8; LEN_SOL_ACCOUNT_KEY_BYTES];
-        pubkey_sized_bytes.copy_from_slice(
-            &tx_body_remainder[((i * LEN_SOL_ACCOUNT_KEY_BYTES) + LEN_ARRAY_HEADER_BYTES)
-                ..=((i + 1) * LEN_SOL_ACCOUNT_KEY_BYTES)],
-        );
+        pubkey_sized_bytes.copy_from_slice(key_bytes);
         pubkeys.push(Pubkey::new_from_array(pubkey_sized_bytes));
     }
-    Ok((
-        pubkeys,
-        &tx_body_remainder[len_accounts_array..tx_body_remainder.len()],
-    ))
+    Ok((pubkeys, &tx_body_remainder[len_accounts_array..]))
 }
 
 /*
@@ -382,15 +414,12 @@ Parse Instructions
 fn parse_instructions(
     tx_body_remainder: &[u8],
 ) -> Result<(Vec<CompiledInstruction>, &[u8]), Box<dyn std::error::Error>> {
-    validate_length(
-        tx_body_remainder,
-        LEN_ARRAY_HEADER_BYTES,
-        "Instructions Array Header",
-    )?;
-    let insts_num = tx_body_remainder[0] as usize;
+    let (insts_num, tx_body_remainder) =
+        read_compact_u16(tx_body_remainder).and_then(|(length, remaining_bytes)| {
+            verify_compact16_max_length(length, remaining_bytes, "Instructions")
+        })?;
     let mut compiled_insts: Vec<CompiledInstruction> = Vec::with_capacity(insts_num);
-    let mut parsed_tx_body_remainder =
-        &tx_body_remainder[LEN_ARRAY_HEADER_BYTES..tx_body_remainder.len()];
+    let mut parsed_tx_body_remainder = tx_body_remainder;
     for _ in 0..insts_num {
         let (new_inst, remainder_bytes) = parse_single_instruction(parsed_tx_body_remainder)?;
         parsed_tx_body_remainder = remainder_bytes;
@@ -434,14 +463,9 @@ Parse Address Table Lookups
 fn parse_address_table_lookups(
     tx_body_remainder: &[u8],
 ) -> Result<(Vec<MessageAddressTableLookup>, &[u8]), Box<dyn std::error::Error>> {
-    validate_length(
-        tx_body_remainder,
-        LEN_ARRAY_HEADER_BYTES,
-        "Instructions Address Table Lookup Header",
-    )?;
-    let lookups_num = tx_body_remainder[0] as usize;
+    let (lookups_num, mut parsed_remainder) =
+        read_compact_array_len(tx_body_remainder, "Address Table Lookups")?;
     let mut lookups: Vec<MessageAddressTableLookup> = Vec::with_capacity(lookups_num);
-    let mut parsed_remainder = &tx_body_remainder[LEN_ARRAY_HEADER_BYTES..tx_body_remainder.len()];
     for _ in 0..lookups_num {
         let (new_lookup, remainder_bytes) = parse_single_address_table_lookup(parsed_remainder)?;
         parsed_remainder = remainder_bytes;
@@ -536,6 +560,13 @@ fn read_compact_u16(
         if shift == 14 && (byte & 0xfc) != 0 {
             return Err(
                 "error parsing unsigned transaction: third byte in compact u16 has more than it's 2 least significant bits set".into()
+            );
+        }
+
+        // a zero byte after a continuation bit adds nothing: the same value has a shorter encoding, which the Solana runtime rejects as an alias
+        if bytes_read > 1 && byte == 0 {
+            return Err(
+                "error parsing unsigned transaction: compact u16 is not minimally encoded".into(),
             );
         }
 
@@ -1132,6 +1163,109 @@ mod tests {
     }
 
     #[test]
+    fn parses_transaction_with_128_instructions() {
+        let signer = Pubkey::new_unique();
+        let recipient = Pubkey::new_unique();
+        let system_program = Pubkey::new_from_array([0; 32]);
+        let noop_program = Pubkey::new_unique();
+
+        let mut transfer_data = 2u32.to_le_bytes().to_vec();
+        transfer_data.extend_from_slice(&100u64.to_le_bytes());
+
+        let mut instructions = vec![CompiledInstruction {
+            program_id_index: 2,
+            accounts: vec![0, 1],
+            data: transfer_data,
+        }];
+        for _ in 1..128 {
+            instructions.push(CompiledInstruction {
+                program_id_index: 3,
+                accounts: vec![],
+                data: vec![],
+            });
+        }
+
+        for message in [
+            VersionedMessage::Legacy(LegacyMessage {
+                header: MessageHeader {
+                    num_required_signatures: 1,
+                    num_readonly_signed_accounts: 0,
+                    num_readonly_unsigned_accounts: 2,
+                },
+                account_keys: vec![signer, recipient, system_program, noop_program],
+                recent_blockhash: Hash::default(),
+                instructions: instructions.clone(),
+            }),
+            VersionedMessage::V0(VersionZeroMessage {
+                header: MessageHeader {
+                    num_required_signatures: 1,
+                    num_readonly_signed_accounts: 0,
+                    num_readonly_unsigned_accounts: 2,
+                },
+                account_keys: vec![signer, recipient, system_program, noop_program],
+                recent_blockhash: Hash::default(),
+                instructions,
+                address_table_lookups: vec![],
+            }),
+        ] {
+            let mut tx_bytes = vec![1u8];
+            tx_bytes.extend_from_slice(&[0u8; LEN_SOL_SIGNATURE_BYTES]);
+            tx_bytes.extend_from_slice(&message.serialize());
+
+            let parsed_tx = SolanaTransaction::new(&hex::encode(tx_bytes), true, None).unwrap();
+            let metadata = parsed_tx.transaction_metadata().unwrap();
+
+            assert_eq!(metadata.instructions.len(), 128);
+            assert_eq!(metadata.transfers.len(), 1);
+            assert_eq!(metadata.transfers[0].from, signer.to_string());
+            assert_eq!(metadata.transfers[0].to, recipient.to_string());
+            assert_eq!(metadata.transfers[0].amount, "100");
+        }
+    }
+
+    #[test]
+    fn rejects_transaction_with_inflated_instruction_count() {
+        let signer = Pubkey::new_unique();
+        let recipient = Pubkey::new_unique();
+        let system_program = Pubkey::new_from_array([0; 32]);
+
+        let mut transfer_data = 2u32.to_le_bytes().to_vec();
+        transfer_data.extend_from_slice(&100u64.to_le_bytes());
+
+        let message = VersionedMessage::Legacy(LegacyMessage {
+            header: MessageHeader {
+                num_required_signatures: 1,
+                num_readonly_signed_accounts: 0,
+                num_readonly_unsigned_accounts: 1,
+            },
+            account_keys: vec![signer, recipient, system_program],
+            recent_blockhash: Hash::default(),
+            instructions: vec![CompiledInstruction {
+                program_id_index: 2,
+                accounts: vec![0, 1],
+                data: transfer_data,
+            }],
+        });
+
+        let mut message_bytes = message.serialize();
+        let instruction_count_offset = LEN_MESSAGE_HEADER_BYTES
+            + LEN_ARRAY_HEADER_BYTES
+            + (3 * LEN_SOL_ACCOUNT_KEY_BYTES)
+            + LEN_SOL_ACCOUNT_KEY_BYTES;
+        message_bytes[instruction_count_offset] = 0x7f;
+
+        let mut tx_bytes = vec![1u8];
+        tx_bytes.extend_from_slice(&[0u8; LEN_SOL_SIGNATURE_BYTES]);
+        tx_bytes.extend_from_slice(&message_bytes);
+
+        let error = SolanaTransaction::new(&hex::encode(tx_bytes), true, None).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "Error parsing full transaction. If this is just a message instead of a full transaction, parse using the --message flag. Parsing Error: \"error parsing unsigned transaction: indicated compact-encoded array length 127 exceeds transaction byte length 17 for Instructions\""
+        );
+    }
+
+    #[test]
     fn solana_fuzzer_regression_test1() {
         // This test tests fixes for inputs that would potentially cause Panics in the Solana Parser
 
@@ -1223,6 +1357,129 @@ mod tests {
         assert_eq!(
             fuzz_err.to_string(),
             "Solana transaction message failed sanitization check while parsing instructions: index out of bounds"
+        );
+    }
+
+    /// The compact-u16 encoding the Solana SDK writes for array lengths.
+    fn compact_u16(mut value: u16) -> Vec<u8> {
+        let mut out = Vec::new();
+        loop {
+            let byte = (value & 0x7f) as u8;
+            value >>= 7;
+            if value == 0 {
+                out.push(byte);
+                return out;
+            }
+            out.push(byte | 0x80);
+        }
+    }
+
+    /// A full transaction: `signatures` zeroed signatures, then the message.
+    fn transaction_bytes(signatures: u16, message_bytes: &[u8]) -> Vec<u8> {
+        let mut bytes = compact_u16(signatures);
+        bytes.resize(
+            bytes.len() + usize::from(signatures) * LEN_SOL_SIGNATURE_BYTES,
+            0,
+        );
+        bytes.extend_from_slice(message_bytes);
+        bytes
+    }
+
+    #[test]
+    fn compact_u16_helper_matches_known_encodings() {
+        assert_eq!(compact_u16(127), vec![0x7f]);
+        assert_eq!(compact_u16(128), vec![0x80, 0x01]);
+        assert_eq!(compact_u16(49152), vec![0x80, 0x80, 0x03]);
+    }
+
+    /// Signature, account key and lookup counts are compact-u16 too.
+    #[test]
+    fn two_byte_lengths_for_signatures_keys_and_lookups() {
+        let message = VersionedMessage::V0(VersionZeroMessage {
+            header: MessageHeader {
+                num_required_signatures: 130,
+                num_readonly_signed_accounts: 0,
+                num_readonly_unsigned_accounts: 1,
+            },
+            account_keys: (0..131).map(|_| Pubkey::new_unique()).collect(),
+            recent_blockhash: Hash::new_unique(),
+            instructions: vec![CompiledInstruction {
+                program_id_index: 130,
+                accounts: vec![0, 131],
+                data: vec![1],
+            }],
+            address_table_lookups: (0..130)
+                .map(|_| MessageAddressTableLookup {
+                    account_key: Pubkey::new_unique(),
+                    writable_indexes: vec![],
+                    readonly_indexes: vec![0],
+                })
+                .collect(),
+        });
+        let tx_hex = hex::encode(transaction_bytes(130, &message.serialize()));
+        let Ok(parsed) = parse_solana_transaction(&tx_hex, true, None) else {
+            panic!("130 signatures, keys and lookups must parse");
+        };
+        assert_eq!(parsed.message, message);
+        assert_eq!(parsed.signatures.len(), 130);
+    }
+
+    /// A length padded with a zero continuation byte is rejected, as the
+    /// Solana runtime does, so one value has one encoding.
+    #[test]
+    fn compact_u16_rejects_non_minimal_encodings() {
+        for padded in ["8000", "ff00", "808000"] {
+            let bytes = hex_to_vec(padded).unwrap();
+            let err = read_compact_u16(&bytes).unwrap_err();
+            assert_eq!(
+                err.to_string(),
+                "error parsing unsigned transaction: compact u16 is not minimally encoded",
+                "{padded}"
+            );
+        }
+    }
+
+    /// A versioned prefix other than v0 is an error, not a legacy message.
+    #[test]
+    fn unsupported_message_versions_are_rejected() {
+        let legacy = LegacyMessage {
+            header: MessageHeader {
+                num_required_signatures: 1,
+                num_readonly_signed_accounts: 0,
+                num_readonly_unsigned_accounts: 1,
+            },
+            account_keys: vec![Pubkey::new_unique(), Pubkey::new_unique()],
+            recent_blockhash: Hash::new_unique(),
+            instructions: vec![CompiledInstruction {
+                program_id_index: 1,
+                accounts: vec![0],
+                data: vec![1],
+            }],
+        };
+        let mut message_bytes = vec![0x81];
+        message_bytes.extend(legacy.serialize());
+        for (input, full_transaction) in [
+            (message_bytes.clone(), false),
+            (transaction_bytes(1, &message_bytes), true),
+        ] {
+            let Err(err) = parse_solana_transaction(&hex::encode(input), full_transaction, None)
+            else {
+                panic!("a v1 prefix must not parse");
+            };
+            assert_eq!(err.to_string(), "unsupported Solana message version 1");
+        }
+    }
+
+    /// A full transaction that ends after its signatures is an error, not an
+    /// out-of-bounds read of the version byte.
+    #[test]
+    fn transaction_without_a_message_is_rejected() {
+        let Err(err) = parse_solana_transaction("00", true, None) else {
+            panic!("a transaction with no message must not parse");
+        };
+        assert_eq!(
+            err.to_string(),
+            "Unsigned transaction provided is incorrectly formatted, error while parsing Message Header"
         );
     }
 }
