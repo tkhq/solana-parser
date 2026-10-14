@@ -1,0 +1,71 @@
+name: "Fuzz Testing"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  fuzz:
+    if: contains(github.event.pull_request.labels.*.name, 'fuzz')
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: git checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache Rust toolchain and dependencies
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: |
+            ~/.rustup/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ~/.cargo/bin/
+            target/
+            fuzz/target/
+          key: ${{ runner.os }}-cargo-fuzz-${{ hashFiles('fuzz/rust-toolchain.toml', 'fuzz/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-fuzz-
+            ${{ runner.os }}-cargo-
+
+      - name: Install cargo-fuzz
+        # Uses the runner's pre-installed stable toolchain to install the
+        # cargo-fuzz binary itself. The fuzz commands below run inside fuzz/,
+        # which has rust-toolchain.toml pinning the nightly that libfuzzer-sys
+        # actually needs -- rustup auto-installs that on first cargo invocation.
+        run: cargo install cargo-fuzz --version 0.13.1 --locked
+
+      - name: Fuzz fuzz_idl_json (30s)
+        id: fuzz_idl_json
+        continue-on-error: true
+        run: cargo fuzz run fuzz_idl_json -- -max_total_time=30
+        working-directory: fuzz
+
+      - name: Fuzz fuzz_instruction_data (30s)
+        id: fuzz_instruction_data
+        continue-on-error: true
+        run: cargo fuzz run fuzz_instruction_data -- -max_total_time=30
+        working-directory: fuzz
+
+      - name: Fuzz fuzz_transaction (30s)
+        id: fuzz_transaction
+        continue-on-error: true
+        run: cargo fuzz run fuzz_transaction -- -max_total_time=30
+        working-directory: fuzz
+
+      - name: Label PR on fuzz failure
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ "${{ steps.fuzz_idl_json.outcome }}" = "failure" ] \
+             || [ "${{ steps.fuzz_instruction_data.outcome }}" = "failure" ] \
+             || [ "${{ steps.fuzz_transaction.outcome }}" = "failure" ]; then
+            gh pr edit "$PR_NUMBER" --add-label fuzz-failure || true
+          else
+            gh pr edit "$PR_NUMBER" --remove-label fuzz-failure || true
+          fi

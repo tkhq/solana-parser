@@ -1,0 +1,6 @@
+target
+artifacts
+coverage
+# Ignore runtime-grown corpus files but track committed seed_* inputs
+corpus/*/*
+!corpus/*/seed_*

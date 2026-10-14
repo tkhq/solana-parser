@@ -1,0 +1,837 @@
+{
+  "accounts": [
+    {
+      "name": "Amm",
+      "type": {
+        "fields": [
+          {
+            "name": "initializerKey",
+            "type": "publicKey"
+          },
+          {
+            "name": "initializerDepositTokenAccount",
+            "type": "publicKey"
+          },
+          {
+            "name": "initializerReceiveTokenAccount",
+            "type": "publicKey"
+          },
+          {
+            "name": "initializerAmount",
+            "type": "u64"
+          },
+          {
+            "name": "takerAmount",
+            "type": "u64"
+          },
+          {
+            "docs": [
+              "Is the swap initialized, with data written to it"
+            ],
+            "name": "isInitialized",
+            "type": "bool"
+          },
+          {
+            "docs": [
+              "Bump seed used to generate the program address / authority"
+            ],
+            "name": "bumpSeed",
+            "type": "u8"
+          },
+          {
+            "docs": [
+              "Freeze swap"
+            ],
+            "name": "freezeTrade",
+            "type": "u8"
+          },
+          {
+            "docs": [
+              "Freeze deposit"
+            ],
+            "name": "freezeDeposit",
+            "type": "u8"
+          },
+          {
+            "docs": [
+              "Freeze withdraw"
+            ],
+            "name": "freezeWithdraw",
+            "type": "u8"
+          },
+          {
+            "docs": [
+              "Base decimals account"
+            ],
+            "name": "baseDecimals",
+            "type": "u8"
+          },
+          {
+            "docs": [
+              "Token program ID associated with the swap"
+            ],
+            "name": "tokenProgramId",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "Address of token A liquidity account"
+            ],
+            "name": "tokenAAccount",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "Address of token B liquidity account"
+            ],
+            "name": "tokenBAccount",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "Address of pool token mint"
+            ],
+            "name": "poolMint",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "Address of token A mint"
+            ],
+            "name": "tokenAMint",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "Address of token B mint"
+            ],
+            "name": "tokenBMint",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "Address of pool fee account"
+            ],
+            "name": "feeAccount",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "Oracle Main account"
+            ],
+            "name": "oracleMainAccount",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "Oracle Sub account"
+            ],
+            "name": "oracleSubAccount",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "oracle Pc account"
+            ],
+            "name": "oraclePcAccount",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "Fees associated with swap"
+            ],
+            "name": "fees",
+            "type": {
+              "defined": "AmmFees"
+            }
+          },
+          {
+            "docs": [
+              "Curve associated with swap"
+            ],
+            "name": "curve",
+            "type": {
+              "defined": "AmmCurve"
+            }
+          },
+          {
+            "docs": [
+              "Curve associated with swap"
+            ],
+            "name": "config",
+            "type": {
+              "defined": "AmmConfig"
+            }
+          },
+          {
+            "docs": [
+              "Temp area"
+            ],
+            "name": "ammPTemp1",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "Temp area"
+            ],
+            "name": "ammPTemp2",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "Temp area"
+            ],
+            "name": "ammPTemp3",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "Temp area"
+            ],
+            "name": "ammPTemp4",
+            "type": "publicKey"
+          },
+          {
+            "docs": [
+              "Temp area"
+            ],
+            "name": "ammPTemp5",
+            "type": "publicKey"
+          }
+        ],
+        "kind": "struct"
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "msg": "Swap account already in use",
+      "name": "AlreadyInUse"
+    },
+    {
+      "code": 6001,
+      "msg": "Invalid program address generated from bump seed and key",
+      "name": "InvalidProgramAddress"
+    },
+    {
+      "code": 6002,
+      "msg": "Input account owner is not the program address",
+      "name": "InvalidOwner"
+    },
+    {
+      "code": 6003,
+      "msg": "Output pool account owner cannot be the program address",
+      "name": "InvalidOutputOwner"
+    },
+    {
+      "code": 6004,
+      "msg": "Deserialized account is not an SPL Token mint",
+      "name": "ExpectedMint"
+    },
+    {
+      "code": 6005,
+      "msg": "Deserialized account is not an SPL Token account",
+      "name": "ExpectedAccount"
+    },
+    {
+      "code": 6006,
+      "msg": "Input token account empty",
+      "name": "EmptySupply"
+    },
+    {
+      "code": 6007,
+      "msg": "Pool token mint has a non-zero supply",
+      "name": "InvalidSupply"
+    },
+    {
+      "code": 6008,
+      "msg": "Token account has a delegate",
+      "name": "InvalidDelegate"
+    },
+    {
+      "code": 6009,
+      "msg": "InvalidInput",
+      "name": "InvalidInput"
+    },
+    {
+      "code": 6010,
+      "msg": "Address of the provided swap token account is incorrect",
+      "name": "IncorrectSwapAccount"
+    },
+    {
+      "code": 6011,
+      "msg": "Address of the provided pool token mint is incorrect",
+      "name": "IncorrectPoolMint"
+    },
+    {
+      "code": 6012,
+      "msg": "InvalidOutput",
+      "name": "InvalidOutput"
+    },
+    {
+      "code": 6013,
+      "msg": "General calculation failure due to overflow or underflow",
+      "name": "CalculationFailure"
+    },
+    {
+      "code": 6014,
+      "msg": "Invalid instruction",
+      "name": "InvalidInstruction"
+    },
+    {
+      "code": 6015,
+      "msg": "Swap input token accounts have the same mint",
+      "name": "RepeatedMint"
+    },
+    {
+      "code": 6016,
+      "msg": "Swap instruction exceeds desired slippage limit",
+      "name": "ExceededSlippage"
+    },
+    {
+      "code": 6017,
+      "msg": "Token account has a close authority",
+      "name": "InvalidCloseAuthority"
+    },
+    {
+      "code": 6018,
+      "msg": "Pool token mint has a freeze authority",
+      "name": "InvalidFreezeAuthority"
+    },
+    {
+      "code": 6019,
+      "msg": "Pool fee token account incorrect",
+      "name": "IncorrectFeeAccount"
+    },
+    {
+      "code": 6020,
+      "msg": "Given pool token amount results in zero trading tokens",
+      "name": "ZeroTradingTokens"
+    },
+    {
+      "code": 6021,
+      "msg": "Fee calculation failed due to overflow, underflow, or unexpected 0",
+      "name": "FeeCalculationFailure"
+    },
+    {
+      "code": 6022,
+      "msg": "Conversion to u64 failed with an overflow or underflow",
+      "name": "ConversionFailure"
+    },
+    {
+      "code": 6023,
+      "msg": "The provided fee does not match the program owner's constraints",
+      "name": "InvalidFee"
+    },
+    {
+      "code": 6024,
+      "msg": "The provided token program does not match the token program expected by the swap",
+      "name": "IncorrectTokenProgramId"
+    },
+    {
+      "code": 6025,
+      "msg": "Address of the provided oracle account is incorrect",
+      "name": "IncorrectOracleAccount"
+    },
+    {
+      "code": 6026,
+      "msg": "Address of the provided config account is incorrect",
+      "name": "IncorrectConfigAccount"
+    },
+    {
+      "code": 6027,
+      "msg": "The provided curve type is not supported by the program owner",
+      "name": "UnsupportedCurveType"
+    },
+    {
+      "code": 6028,
+      "msg": "The provided curve parameters are invalid",
+      "name": "InvalidCurve"
+    },
+    {
+      "code": 6029,
+      "msg": "The operation cannot be performed on the given curve",
+      "name": "UnsupportedCurveOperation"
+    },
+    {
+      "code": 6030,
+      "msg": "Pyth oracle status is not 'trading'",
+      "name": "InvalidPythStatus"
+    },
+    {
+      "code": 6031,
+      "msg": "Could not retrieve updated price feed from the Pyth oracle",
+      "name": "InvalidPythPrice"
+    },
+    {
+      "code": 6032,
+      "msg": "Address of the provided signer account is incorrect",
+      "name": "IncorrectSigner"
+    },
+    {
+      "code": 6033,
+      "msg": "Swap amount exceeds pool balance",
+      "name": "ExceedPoolBalance"
+    },
+    {
+      "code": 6034,
+      "msg": "Program is frozen",
+      "name": "ProgramIsFrozen"
+    },
+    {
+      "code": 6035,
+      "msg": "Oracle confidence is too high",
+      "name": "OracleConfidence"
+    },
+    {
+      "code": 6036,
+      "msg": "Over Pool Cap Amount",
+      "name": "OverCapAmount"
+    },
+    {
+      "code": 6037,
+      "msg": "Invalid update wallet address",
+      "name": "InvalidUpdateAccount"
+    },
+    {
+      "code": 6038,
+      "msg": "Invalid update param",
+      "name": "InvalidUpdateParam"
+    },
+    {
+      "code": 6039,
+      "msg": "Invalid inner swap account",
+      "name": "InvalidInnerSwapAccount"
+    },
+    {
+      "code": 6040,
+      "msg": "Exception err",
+      "name": "ExceptionErr"
+    }
+  ],
+  "instructions": [
+    {
+      "accounts": [
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "authority"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "amm"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "userTransferAuthority"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "sourceInfo"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "destinationInfo"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "swapSource"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "swapDestination"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "poolMint"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "feeAccount"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "oracleMainAccount"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "oracleSubAccount"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "oraclePcAccount"
+        }
+      ],
+      "args": [
+        {
+          "name": "amountIn",
+          "type": "u64"
+        },
+        {
+          "name": "minimumAmountOut",
+          "type": "u64"
+        }
+      ],
+      "name": "swap"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "amm"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "authority"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "userTransferAuthorityInfo"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "sourceAInfo"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "sourceBInfo"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "poolMint"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "destination"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        }
+      ],
+      "args": [
+        {
+          "name": "poolTokenAmount",
+          "type": "u64"
+        },
+        {
+          "name": "maximumTokenAAmount",
+          "type": "u64"
+        },
+        {
+          "name": "maximumTokenBAmount",
+          "type": "u64"
+        }
+      ],
+      "name": "depositAllTokenTypes"
+    },
+    {
+      "accounts": [
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "amm"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "authority"
+        },
+        {
+          "isMut": false,
+          "isSigner": true,
+          "name": "userTransferAuthorityInfo"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "sourceInfo"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenA"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "tokenB"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "poolMint"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "destTokenAInfo"
+        },
+        {
+          "isMut": true,
+          "isSigner": false,
+          "name": "destTokenBInfo"
+        },
+        {
+          "isMut": false,
+          "isSigner": false,
+          "name": "tokenProgram"
+        }
+      ],
+      "args": [
+        {
+          "name": "poolTokenAmount",
+          "type": "u64"
+        },
+        {
+          "name": "minimumTokenAAmount",
+          "type": "u64"
+        },
+        {
+          "name": "minimumTokenBAmount",
+          "type": "u64"
+        }
+      ],
+      "name": "withdrawAllTokenTypes"
+    }
+  ],
+  "name": "lifinity_amm_v2",
+  "types": [
+    {
+      "docs": [
+        "Encapsulates all fee information and calculations for swap operations"
+      ],
+      "name": "AmmFees",
+      "type": {
+        "fields": [
+          {
+            "name": "tradeFeeNumerator",
+            "type": "u64"
+          },
+          {
+            "name": "tradeFeeDenominator",
+            "type": "u64"
+          },
+          {
+            "name": "ownerTradeFeeNumerator",
+            "type": "u64"
+          },
+          {
+            "name": "ownerTradeFeeDenominator",
+            "type": "u64"
+          },
+          {
+            "name": "ownerWithdrawFeeNumerator",
+            "type": "u64"
+          },
+          {
+            "name": "ownerWithdrawFeeDenominator",
+            "type": "u64"
+          },
+          {
+            "name": "hostFeeNumerator",
+            "type": "u64"
+          },
+          {
+            "name": "hostFeeDenominator",
+            "type": "u64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "AmmCurve",
+      "type": {
+        "fields": [
+          {
+            "name": "curveType",
+            "type": "u8"
+          },
+          {
+            "name": "curveParameters",
+            "type": "u64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "AmmConfig",
+      "type": {
+        "fields": [
+          {
+            "name": "lastPrice",
+            "type": "u64"
+          },
+          {
+            "name": "lastBalancedPrice",
+            "type": "u64"
+          },
+          {
+            "name": "configDenominator",
+            "type": "u64"
+          },
+          {
+            "name": "volumeX",
+            "type": "u64"
+          },
+          {
+            "name": "volumeY",
+            "type": "u64"
+          },
+          {
+            "name": "volumeXInY",
+            "type": "u64"
+          },
+          {
+            "name": "depositCap",
+            "type": "u64"
+          },
+          {
+            "name": "regressionTarget",
+            "type": "u64"
+          },
+          {
+            "name": "oracleType",
+            "type": "u64"
+          },
+          {
+            "name": "oracleStatus",
+            "type": "u64"
+          },
+          {
+            "name": "oracleMainSlotLimit",
+            "type": "u64"
+          },
+          {
+            "name": "oracleSubConfidenceLimit",
+            "type": "u64"
+          },
+          {
+            "name": "oracleSubSlotLimit",
+            "type": "u64"
+          },
+          {
+            "name": "oraclePcConfidenceLimit",
+            "type": "u64"
+          },
+          {
+            "name": "oraclePcSlotLimit",
+            "type": "u64"
+          },
+          {
+            "name": "stdSpread",
+            "type": "u64"
+          },
+          {
+            "name": "stdSpreadBuffer",
+            "type": "u64"
+          },
+          {
+            "name": "spreadCoefficient",
+            "type": "u64"
+          },
+          {
+            "name": "priceBufferCoin",
+            "type": "i64"
+          },
+          {
+            "name": "priceBufferPc",
+            "type": "i64"
+          },
+          {
+            "name": "rebalanceRatio",
+            "type": "u64"
+          },
+          {
+            "name": "feeTrade",
+            "type": "u64"
+          },
+          {
+            "name": "feePlatform",
+            "type": "u64"
+          },
+          {
+            "name": "oracleMainSlotBuffer",
+            "type": "u64"
+          },
+          {
+            "name": "configTemp4",
+            "type": "u64"
+          },
+          {
+            "name": "configTemp5",
+            "type": "u64"
+          },
+          {
+            "name": "configTemp6",
+            "type": "u64"
+          },
+          {
+            "name": "configTemp7",
+            "type": "u64"
+          },
+          {
+            "name": "configTemp8",
+            "type": "u64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "docs": [
+        "Curve types supported by the token-swap program."
+      ],
+      "name": "CurveType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Standard"
+          },
+          {
+            "name": "ConstantProduct"
+          }
+        ]
+      }
+    }
+  ],
+  "version": "0.1.1"
+}

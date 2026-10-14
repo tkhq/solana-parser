@@ -1,0 +1,42 @@
+[package]
+name = "solana_parser-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[workspace]
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = "1"
+
+[dependencies.solana_parser]
+path = ".."
+
+[dependencies.solana-parser-fuzz-core]
+path = "../fuzz-core"
+features = ["arbitrary"]
+
+[[bin]]
+name = "fuzz_idl_json"
+path = "fuzz_targets/fuzz_idl_json.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_instruction_data"
+path = "fuzz_targets/fuzz_instruction_data.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_transaction"
+path = "fuzz_targets/fuzz_transaction.rs"
+test = false
+doc = false
+bench = false
