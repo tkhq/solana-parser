@@ -318,8 +318,14 @@ pub struct IdlRecord {
     pub program_type: Option<ProgramType>,
     /// Custom IDL provided by the caller (already parsed)
     pub custom_idl: Option<Idl>,
-    /// The JSON string for the custom IDL (used for hash computation)
+    /// The JSON string for the custom IDL. Only read to compute the IDL hash
+    /// when `custom_idl_hash` is `None`; a record that carries the hash can
+    /// leave this `None` and not hold the JSON at all.
     pub custom_idl_json: Option<String>,
+    /// [`crate::solana::idl_parser::compute_idl_hash`] of `custom_idl_json`,
+    /// computed once when the record is built. Used instead of re-hashing the
+    /// JSON for every instruction.
+    pub custom_idl_hash: Option<String>,
     /// Whether to override built-in IDL with custom one (if both exist)
     pub override_builtin: bool,
 }
