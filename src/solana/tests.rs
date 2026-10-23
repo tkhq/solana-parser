@@ -2303,3 +2303,18 @@ mod custom_idl_tests {
         assert!(result.is_ok());
     }
 }
+
+/// An IDL array size whose element budget (`size * size_of::<Value>()`)
+/// overflows usize must be rejected as over budget, not panic (debug:
+/// multiply overflow; release: the wrapped product passes the budget check
+/// and `Vec::with_capacity` panics with "capacity overflow").
+#[test]
+fn idl_array_size_overflowing_budget_is_rejected() {
+    let size = usize::MAX / size_of::<Value>() + 2;
+    let json = format!(
+        r#"{{"instructions":[{{"name":"x","discriminator":[1],"accounts":[],"args":[{{"name":"a","type":{{"array":["u8",{size}]}}}}]}}],"types":[]}}"#
+    );
+    let idl = idl_parser::decode_idl_data(&json).unwrap();
+    let err = idl_parser::parse_instruction_with_idl(&[1], "p", &idl).unwrap_err();
+    assert!(err.to_string().contains("maximum allowed budget"), "{err}");
+}

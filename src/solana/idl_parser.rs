@@ -258,7 +258,10 @@ impl SizeGuard {
         &mut self,
         len: usize,
     ) -> Result<Vec<Value>, Box<dyn std::error::Error>> {
-        let amount = len * size_of::<serde_json::Value>();
+        // `len` can come straight from an IDL array size (any usize), so an
+        // unchecked multiply could wrap past the budget check into a
+        // `Vec::with_capacity` panic; saturating keeps it over budget.
+        let amount = len.saturating_mul(size_of::<serde_json::Value>());
 
         if amount > self.remaining_budget {
             return Err(
