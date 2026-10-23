@@ -6,16 +6,14 @@ use super::structs::{
 };
 use crate::solana::idl_parser;
 use hex;
-use solana_sdk::{
-    hash::Hash,
-    instruction::CompiledInstruction,
-    message::{
-        v0::{Message as VersionZeroMessage, MessageAddressTableLookup},
-        Message as LegacyMessage, MessageHeader, VersionedMessage,
-    },
-    pubkey::Pubkey,
-    system_instruction::SystemInstruction,
+use solana_hash::Hash;
+use solana_message::{
+    compiled_instruction::CompiledInstruction,
+    v0::{Message as VersionZeroMessage, MessageAddressTableLookup},
+    Message as LegacyMessage, MessageHeader, VersionedMessage,
 };
+use solana_pubkey::Pubkey;
+use solana_system_interface::instruction::SystemInstruction;
 use std::{collections::HashMap, error::Error};
 
 // Length of a solana signature in bytes (64 bytes long)
@@ -367,7 +365,7 @@ Parse Block Hash
 fn parse_block_hash(tx_body_remainder: &[u8]) -> Result<(Hash, &[u8]), Box<dyn std::error::Error>> {
     validate_length(tx_body_remainder, LEN_SOL_ACCOUNT_KEY_BYTES, "Block Hash")?;
     let hash_bytes: &[u8] = &tx_body_remainder[0..LEN_SOL_ACCOUNT_KEY_BYTES];
-    let block_hash = Hash::new(hash_bytes);
+    let block_hash = Hash::new_from_array(hash_bytes.try_into()?);
     Ok((
         block_hash,
         &tx_body_remainder[LEN_SOL_ACCOUNT_KEY_BYTES..tx_body_remainder.len()],
@@ -736,6 +734,8 @@ impl SolanaTransaction {
                 }
                 Err("versioned transaction instruction account index out of bounds".into())
             }
+            // This parser only builds legacy and v0 messages.
+            VersionedMessage::V1(_) => Err("v1 messages are not supported".into()),
         }
     }
 
@@ -779,7 +779,10 @@ impl SolanaTransaction {
                 let acct = SolanaAccount {
                     account_key,
                     signer: self.message.is_signer(a as usize),
-                    writable: self.message.is_maybe_writable(a as usize, None),
+                    writable: self.message.is_maybe_writable_with_reserved_addresses(
+                        a as usize,
+                        None::<&std::collections::HashSet<Pubkey>>,
+                    ),
                 };
                 // push the parsed static account to both the static account array AND the combined all transaction address array
                 static_accounts.push(acct.clone());
