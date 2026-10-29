@@ -4,7 +4,8 @@ pub mod solana;
 pub use solana::idl_parser::{
     compute_idl_hash, construct_custom_idl_records_map,
     construct_custom_idl_records_map_with_overrides, construct_idl_records_map, decode_idl_data,
-    find_instruction_by_discriminator, parse_instruction_with_idl,
+    find_instruction_by_discriminator, find_instruction_by_discriminator_ref, idl_hash_of,
+    parse_instruction_with_idl, parse_instruction_with_idl_hash, resolve_idl_ref,
 };
 pub use solana::parser::{parse_transaction, parse_transaction_with_idls};
 pub use solana::structs::{

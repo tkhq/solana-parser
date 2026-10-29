@@ -5,7 +5,7 @@ use super::*;
 use crate::solana::idl_parser;
 use crate::solana::parser::{SolanaTransaction, TOKEN_2022_PROGRAM_KEY, TOKEN_PROGRAM_KEY};
 use crate::solana::structs::{
-    IdlSource, ProgramType, SolTransfer, SolanaAccount, SolanaAddressTableLookup,
+    CustomIdlConfig, IdlSource, ProgramType, SolTransfer, SolanaAccount, SolanaAddressTableLookup,
     SolanaInstruction, SolanaSingleAddressTableLookup,
 };
 
@@ -2301,5 +2301,94 @@ mod custom_idl_tests {
 
         let result = parse_transaction(unsigned_payload, false, None);
         assert!(result.is_ok());
+    }
+}
+
+/// The `idl_hash` a parse reports must not change now that it is precomputed
+/// on the record (custom IDLs) or cached per process (built-in IDLs) instead of
+/// computed per instruction. The reference here is the old per-call
+/// expression, `compute_idl_hash` over the same JSON.
+#[test]
+fn precomputed_idl_hash_matches_per_call_hash() {
+    let builtins = idl_parser::construct_custom_idl_records_map().unwrap();
+    assert_eq!(builtins.len(), structs::ProgramType::all().len());
+    for program_type in structs::ProgramType::all() {
+        let program_id = program_type.program_id();
+        let record = &builtins[program_id];
+        let (_, hash, source) = idl_parser::resolve_idl_ref(record, program_id).unwrap();
+        let expected = idl_parser::compute_idl_hash(program_type.idl_json());
+        assert_eq!(hash, expected, "built-in {program_type:?}");
+        assert_eq!(source, structs::IdlSource::BuiltIn(program_type.clone()));
+
+        // The legacy entry point resolves to the same IDL and hash input.
+        let (legacy_idl, legacy_json, _) =
+            idl_parser::resolve_idl_for_record(record, program_id).unwrap();
+        assert_eq!(idl_parser::compute_idl_hash(&legacy_json), expected);
+        let (idl, _, _) = idl_parser::resolve_idl_ref(record, program_id).unwrap();
+        assert_eq!(*idl, legacy_idl);
+    }
+
+    // Every real IDL in the test directory, supplied as a custom IDL both as
+    // JSON and pre-parsed, overriding the built-in where one exists.
+    let mut configs = HashMap::new();
+    let mut expected = HashMap::new();
+    for entry in std::fs::read_dir(TEST_IDL_DIRECTORY).unwrap() {
+        let path = entry.unwrap().path();
+        let json = std::fs::read_to_string(&path).unwrap();
+        let Ok(idl) = idl_parser::decode_idl_data(&json) else {
+            continue; // deliberately malformed fixtures (cyclic, collision)
+        };
+        let stem = path.file_stem().unwrap().to_string_lossy().to_string();
+
+        let json_id = format!("json-{stem}");
+        expected.insert(json_id.clone(), idl_parser::compute_idl_hash(&json));
+        configs.insert(json_id, CustomIdlConfig::from_json(json, true));
+
+        let parsed_id = format!("parsed-{stem}");
+        expected.insert(
+            parsed_id.clone(),
+            idl_parser::compute_idl_hash(&serde_json::to_string(&idl).unwrap()),
+        );
+        configs.insert(parsed_id, CustomIdlConfig::from_idl(idl, true));
+    }
+    assert!(
+        expected.len() >= 20,
+        "expected the real IDL fixtures to load"
+    );
+    let records = idl_parser::construct_idl_records_map(Some(configs)).unwrap();
+    for (program_id, want) in &expected {
+        let record = &records[program_id];
+        let (_, hash, _) = idl_parser::resolve_idl_ref(record, program_id).unwrap();
+        assert_eq!(&hash, want, "custom {program_id}");
+
+        // A record built without the hash falls back to hashing its JSON.
+        let mut unhashed = record.clone();
+        unhashed.custom_idl_hash = None;
+        let (_, hash, _) = idl_parser::resolve_idl_ref(&unhashed, program_id).unwrap();
+        assert_eq!(&hash, want, "custom {program_id} without precomputed hash");
+    }
+}
+
+/// `parse_instruction_with_idl_hash` given `idl_hash_of` reports exactly what
+/// `parse_instruction_with_idl` does.
+#[test]
+fn instruction_hash_entry_point_matches() {
+    let json = std::fs::read_to_string(TEST_IDL_DIRECTORY.to_string() + "kamino.json").unwrap();
+    let idl = idl_parser::decode_idl_data(&json).unwrap();
+    let hash = idl_parser::idl_hash_of(&idl).unwrap();
+    assert_eq!(
+        hash,
+        idl_parser::compute_idl_hash(&serde_json::to_string(&idl).unwrap())
+    );
+    for instruction in &idl.instructions {
+        let mut data = instruction.discriminator.clone().unwrap();
+        data.extend(std::iter::repeat_n(0u8, 256));
+        let old = idl_parser::parse_instruction_with_idl(&data, "p", &idl);
+        let new = idl_parser::parse_instruction_with_idl_hash(&data, "p", &idl, &hash);
+        match (old, new) {
+            (Ok(old), Ok(new)) => assert_eq!(old, new, "{}", instruction.name),
+            (Err(old), Err(new)) => assert_eq!(old.to_string(), new.to_string()),
+            (old, new) => panic!("{}: {old:?} vs {new:?}", instruction.name),
+        }
     }
 }

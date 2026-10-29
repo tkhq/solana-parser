@@ -68,6 +68,7 @@ pub fn construct_custom_idl_records_map(
             program_type: Some(program_type.clone()),
             custom_idl: None,
             custom_idl_json: None,
+            custom_idl_hash: None,
             override_builtin: false,
         };
 
@@ -107,6 +108,7 @@ pub fn construct_idl_records_map(
             program_type: Some(program_type.clone()),
             custom_idl: None,
             custom_idl_json: None,
+            custom_idl_hash: None,
             override_builtin: false,
         };
 
@@ -129,10 +131,12 @@ pub fn construct_idl_records_map(
                 }
             };
 
+            let custom_idl_hash = compute_idl_hash(&custom_idl_json);
             if let Some(existing_record) = idl_map.get_mut(&program_id) {
                 // Update existing record with custom IDL
                 existing_record.custom_idl = Some(custom_idl);
                 existing_record.custom_idl_json = Some(custom_idl_json);
+                existing_record.custom_idl_hash = Some(custom_idl_hash);
                 existing_record.override_builtin = config.override_builtin;
             } else {
                 // Create new record for unknown program
@@ -147,6 +151,7 @@ pub fn construct_idl_records_map(
                     program_type: None,
                     custom_idl: Some(custom_idl),
                     custom_idl_json: Some(custom_idl_json),
+                    custom_idl_hash: Some(custom_idl_hash),
                     override_builtin: true, // Always override for unknown programs
                 };
                 idl_map.insert(program_id, idl_record);
@@ -157,8 +162,90 @@ pub fn construct_idl_records_map(
     Ok(idl_map)
 }
 
+/// A built-in program's IDL, decoded from its embedded JSON once per process,
+/// with that JSON's [`compute_idl_hash`].
+fn builtin_idl(program_type: &ProgramType) -> Result<&'static (Idl, String), String> {
+    type Decoded = std::sync::OnceLock<Result<(Idl, String), String>>;
+    // One slot per built-in, filled the first time that program is resolved.
+    static BUILTIN_IDLS: std::sync::OnceLock<Vec<Decoded>> = std::sync::OnceLock::new();
+    let slots = BUILTIN_IDLS.get_or_init(|| {
+        ProgramType::all()
+            .iter()
+            .map(|_| std::sync::OnceLock::new())
+            .collect()
+    });
+    let index = ProgramType::all()
+        .iter()
+        .position(|t| t == program_type)
+        .ok_or_else(|| format!("no embedded IDL for program type {program_type:?}"))?;
+    let slot = slots
+        .get(index)
+        .ok_or_else(|| format!("no embedded IDL for program type {program_type:?}"))?;
+    slot.get_or_init(|| {
+        let json = program_type.idl_json();
+        decode_idl_data(json)
+            .map(|idl| (idl, compute_idl_hash(json)))
+            .map_err(|e| e.to_string())
+    })
+    .as_ref()
+    .map_err(Clone::clone)
+}
+
+/// The IDL hash a custom record resolves to: its precomputed
+/// `custom_idl_hash`, or the hash of `custom_idl_json` for a record built
+/// without one.
+fn custom_idl_hash(
+    idl_record: &IdlRecord,
+) -> Result<std::borrow::Cow<'_, str>, Box<dyn std::error::Error>> {
+    if let Some(ref hash) = idl_record.custom_idl_hash {
+        return Ok(std::borrow::Cow::Borrowed(hash));
+    }
+    let json = idl_record
+        .custom_idl_json
+        .as_deref()
+        .ok_or("Custom IDL present but neither its hash nor its JSON string is set")?;
+    Ok(std::borrow::Cow::Owned(compute_idl_hash(json)))
+}
+
+/// Resolve which IDL an [`IdlRecord`] uses, without copying it: the IDL, its
+/// hash, and where it came from. Selection matches [`resolve_idl_for_record`];
+/// built-in IDLs are decoded once per process rather than per call.
+pub fn resolve_idl_ref<'a>(
+    idl_record: &'a IdlRecord,
+    program_key: &str,
+) -> Result<
+    (
+        &'a Idl,
+        std::borrow::Cow<'a, str>,
+        crate::solana::structs::IdlSource,
+    ),
+    Box<dyn std::error::Error>,
+> {
+    use crate::solana::structs::IdlSource;
+
+    if let Some(ref custom_idl) = idl_record.custom_idl {
+        if idl_record.override_builtin || idl_record.program_type.is_none() {
+            return Ok((custom_idl, custom_idl_hash(idl_record)?, IdlSource::Custom));
+        }
+    }
+
+    if let Some(ref program_type) = idl_record.program_type {
+        let (idl, hash) = builtin_idl(program_type)?;
+        Ok((
+            idl,
+            std::borrow::Cow::Borrowed(hash.as_str()),
+            IdlSource::BuiltIn(program_type.clone()),
+        ))
+    } else if let Some(ref custom_idl) = idl_record.custom_idl {
+        Ok((custom_idl, custom_idl_hash(idl_record)?, IdlSource::Custom))
+    } else {
+        Err(format!("No IDL available for program: {program_key}").into())
+    }
+}
+
 /// Get the resolved IDL and its JSON string for an IdlRecord.
 /// Returns (Idl, idl_json_str, IdlSource)
+#[allow(dead_code)] // Public API - exported from lib.rs
 pub fn resolve_idl_for_record(
     idl_record: &IdlRecord,
     program_key: &str,
@@ -181,7 +268,7 @@ pub fn resolve_idl_for_record(
     // Use built-in IDL
     if let Some(ref program_type) = idl_record.program_type {
         let builtin_json = program_type.idl_json();
-        let builtin_idl = decode_idl_data(builtin_json)?;
+        let builtin_idl = builtin_idl(program_type)?.0.clone();
         Ok((
             builtin_idl,
             builtin_json.to_string(),
@@ -215,7 +302,7 @@ impl<'a> TypeResolver<'a> {
             }
             type_cache.insert(ty.name.clone(), ty);
         }
-        check_idl_for_cycles(idl.clone(), &type_cache)?;
+        check_idl_for_cycles(idl, &type_cache)?;
         Ok(Self { type_cache })
     }
 
@@ -400,18 +487,28 @@ pub fn create_accounts_map(
 }
 
 // This method compares all instructions in the chosen IDL against the instruction call data to be parsed to find the correct instruction being called, handling error cases appropriately
+#[allow(dead_code)] // Public API - exported from lib.rs
 pub fn find_instruction_by_discriminator(
     instruction_data: &[u8],
     instructions: Vec<IdlInstruction>,
 ) -> Result<IdlInstruction, Box<dyn std::error::Error>> {
+    find_instruction_by_discriminator_ref(instruction_data, &instructions).cloned()
+}
+
+/// [`find_instruction_by_discriminator`] over a borrowed slice, returning the
+/// matching instruction by reference.
+pub fn find_instruction_by_discriminator_ref<'a>(
+    instruction_data: &[u8],
+    instructions: &'a [IdlInstruction],
+) -> Result<&'a IdlInstruction, Box<dyn std::error::Error>> {
     if instruction_data.len() > MAX_CURSOR_LENGTH {
         return Err("instruction call data exceeded max cursor length".into());
     }
 
     for i in instructions {
         let disc = i
-            .clone()
             .discriminator
+            .as_ref()
             .ok_or_else(|| -> Box<dyn std::error::Error> {
                 format!(
                     "no discriminator found for instruction {} found in IDL",
@@ -426,7 +523,7 @@ pub fn find_instruction_by_discriminator(
         }
 
         // Check for matching instruction
-        if instruction_data[..disc.len()] == disc {
+        if instruction_data[..disc.len()] == disc[..] {
             return Ok(i);
         }
     }
@@ -699,14 +796,40 @@ pub fn parse_instruction_with_idl(
     _program_id: &str,
     idl: &Idl,
 ) -> Result<SolanaParsedInstructionData, Box<dyn std::error::Error>> {
+    parse_instruction_with_idl_and(instruction_data, idl, || idl_hash_of(idl))
+}
+
+/// [`parse_instruction_with_idl`] for a caller that already holds the IDL's
+/// hash, as returned by [`idl_hash_of`] for the same `idl`. Skips serializing
+/// and hashing the whole IDL on every call.
+#[allow(dead_code)] // Public API - exported from lib.rs
+pub fn parse_instruction_with_idl_hash(
+    instruction_data: &[u8],
+    _program_id: &str,
+    idl: &Idl,
+    idl_hash: &str,
+) -> Result<SolanaParsedInstructionData, Box<dyn std::error::Error>> {
+    parse_instruction_with_idl_and(instruction_data, idl, || Ok(idl_hash.to_string()))
+}
+
+/// The `idl_hash` [`parse_instruction_with_idl`] reports for `idl`: the
+/// [`compute_idl_hash`] of its serde JSON serialization.
+pub fn idl_hash_of(idl: &Idl) -> Result<String, Box<dyn std::error::Error>> {
+    Ok(compute_idl_hash(&serde_json::to_string(idl)?))
+}
+
+fn parse_instruction_with_idl_and(
+    instruction_data: &[u8],
+    idl: &Idl,
+    idl_hash: impl FnOnce() -> Result<String, Box<dyn std::error::Error>>,
+) -> Result<SolanaParsedInstructionData, Box<dyn std::error::Error>> {
     use crate::solana::structs::IdlSource;
 
     // Find the matching instruction by discriminator
-    let instruction =
-        find_instruction_by_discriminator(instruction_data, idl.instructions.clone())?;
+    let instruction = find_instruction_by_discriminator_ref(instruction_data, &idl.instructions)?;
 
     // Parse the instruction data into arguments
-    let parsed_args = parse_data_into_args(instruction_data, &instruction, idl).map_err(
+    let parsed_args = parse_data_into_args(instruction_data, instruction, idl).map_err(
         |e| -> Box<dyn std::error::Error> {
             format!(
                 "failed to parse instruction data for instruction '{}': {e}",
@@ -719,19 +842,16 @@ pub fn parse_instruction_with_idl(
     // Get the discriminator (we know it exists since find_instruction_by_discriminator succeeded)
     let discriminator_bytes = instruction
         .discriminator
+        .as_ref()
         .ok_or("instruction matched but discriminator is missing")?;
 
-    // Compute IDL hash from serialized IDL
-    let idl_json = serde_json::to_string(idl)?;
-    let idl_hash = compute_idl_hash(&idl_json);
-
     Ok(SolanaParsedInstructionData {
-        instruction_name: instruction.name,
-        discriminator: hex::encode(&discriminator_bytes),
+        instruction_name: instruction.name.clone(),
+        discriminator: hex::encode(discriminator_bytes),
         program_call_args: parsed_args,
         named_accounts: std::collections::HashMap::new(),
         idl_source: IdlSource::Custom,
-        idl_hash,
+        idl_hash: idl_hash()?,
     })
 }
 
@@ -741,10 +861,10 @@ pub fn parse_instruction_with_idl(
 
 // Check IDL for Cycles -- takes in an IDL and checks to see whether the defined types contains any cycles (invalid case)
 fn check_idl_for_cycles(
-    idl: Idl,
+    idl: &Idl,
     type_cache: &HashMap<String, &IdlTypeDefinition>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    for t in idl.types {
+    for t in &idl.types {
         cycle_recursive_check(type_cache.clone(), &t.name, HashSet::new())?;
     }
     Ok(())

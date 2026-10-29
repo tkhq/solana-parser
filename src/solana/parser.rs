@@ -991,21 +991,19 @@ fn parse_idl(
 ) -> Result<(Option<SolanaParsedInstructionData>, Option<IdlParseError>), Box<dyn std::error::Error>>
 {
     if let Some(idl_record) = custom_idls.get(program_key) {
-        // Resolve which IDL to use (built-in or custom) - uses embedded IDLs
-        let (idl, idl_json_str, idl_source) =
-            match idl_parser::resolve_idl_for_record(idl_record, program_key) {
-                Ok(v) => v,
-                Err(e) => {
-                    return Ok((None, Some(IdlParseError::IdlResolutionError(e.to_string()))));
-                }
-            };
+        // Resolve which IDL to use (built-in or custom) - uses embedded IDLs,
+        // borrowed, with the hash precomputed on the record or the cache.
+        let (idl, idl_hash, idl_source) = match idl_parser::resolve_idl_ref(idl_record, program_key)
+        {
+            Ok(v) => v,
+            Err(e) => {
+                return Ok((None, Some(IdlParseError::IdlResolutionError(e.to_string()))));
+            }
+        };
 
-        // Compute IDL hash
-        let idl_hash = idl_parser::compute_idl_hash(&idl_json_str);
-
-        let instruction = match idl_parser::find_instruction_by_discriminator(
+        let instruction = match idl_parser::find_instruction_by_discriminator_ref(
             &inst.data,
-            idl.instructions.clone(),
+            &idl.instructions,
         ) {
             Ok(v) => v,
             Err(e) => {
@@ -1017,13 +1015,13 @@ fn parse_idl(
         };
 
         // Parse data into args map
-        let parsed_args = match idl_parser::parse_data_into_args(&inst.data, &instruction, &idl) {
+        let parsed_args = match idl_parser::parse_data_into_args(&inst.data, instruction, idl) {
             Ok(v) => v,
             Err(e) => {
                 return Ok((
                     None,
                     Some(IdlParseError::DataParseError {
-                        instruction_name: instruction.name,
+                        instruction_name: instruction.name.clone(),
                         error: e.to_string(),
                     }),
                 ));
@@ -1032,28 +1030,28 @@ fn parse_idl(
 
         // Create named accounts map
         let named_accounts =
-            match idl_parser::create_accounts_map(all_transaction_addresses, &instruction) {
+            match idl_parser::create_accounts_map(all_transaction_addresses, instruction) {
                 Ok(v) => v,
                 Err(e) => {
                     return Ok((
                         None,
                         Some(IdlParseError::AccountsMapError {
-                            instruction_name: instruction.name,
+                            instruction_name: instruction.name.clone(),
                             error: e.to_string(),
                         }),
                     ));
                 }
             };
 
-        if let Some(discriminator_bytes) = instruction.discriminator {
+        if let Some(ref discriminator_bytes) = instruction.discriminator {
             return Ok((
                 Some(SolanaParsedInstructionData {
                     program_call_args: parsed_args,
-                    discriminator: hex::encode(&discriminator_bytes),
-                    instruction_name: instruction.name,
+                    discriminator: hex::encode(discriminator_bytes),
+                    instruction_name: instruction.name.clone(),
                     named_accounts,
                     idl_source,
-                    idl_hash,
+                    idl_hash: idl_hash.into_owned(),
                 }),
                 None,
             ));
