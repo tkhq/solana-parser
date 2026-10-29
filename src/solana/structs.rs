@@ -374,6 +374,12 @@ pub struct IdlAccount {
     /// Whether the account is optional or not.
     #[serde(alias = "optional", skip_serializing_if = "is_false", default)]
     pub is_optional: bool,
+
+    /// Member accounts when this entry is a composite account group (an Anchor
+    /// `Accounts` struct used as a field). The transaction carries each member
+    /// inline, in order, rather than an account for the group itself.
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub accounts: Vec<IdlAccount>,
 }
 
 #[allow(clippy::trivially_copy_pass_by_ref)]

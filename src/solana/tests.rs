@@ -1186,6 +1186,80 @@ fn parse_spl_transfer_using_address_table_lookups_owner() {
 #[cfg(test)]
 mod account_validation_tests {
     use super::*;
+    use crate::solana::structs::{AccountAddress, IdlInstruction};
+
+    fn static_accounts(n: usize) -> Vec<AccountAddress> {
+        (0..n)
+            .map(|i| {
+                AccountAddress::Static(SolanaAccount {
+                    account_key: format!("key{i}"),
+                    signer: false,
+                    writable: false,
+                })
+            })
+            .collect()
+    }
+
+    #[test]
+    fn nested_idl_account_groups_map_each_leaf_account() {
+        // Anchor composite accounts (`#[derive(Accounts)]` structs used as a
+        // field) appear in the IDL as a group with its own `accounts` list;
+        // the transaction carries the group's accounts inline, in order.
+        // Jupiter's `serumSwap` nests a `market` group whose first account is
+        // also named `market`, so the group name prefixes its members.
+        let instruction: IdlInstruction = serde_json::from_value(serde_json::json!({
+            "name": "serumSwap",
+            "accounts": [
+                {"name": "market", "accounts": [
+                    {"name": "market", "isMut": true, "isSigner": false},
+                    {"name": "openOrders", "isMut": true, "isSigner": false}
+                ]},
+                {"name": "authority", "isMut": false, "isSigner": true},
+                {"name": "owner_only", "accounts": [
+                    {"name": "owner", "signer": true},
+                    {"name": "inner", "accounts": [{"name": "pool", "writable": true}]}
+                ]}
+            ],
+            "args": []
+        }))
+        .unwrap();
+
+        let map = idl_parser::create_accounts_map(&static_accounts(5), &instruction).unwrap();
+        let expected: HashMap<String, String> = [
+            ("market.market", "key0"),
+            ("market.openOrders", "key1"),
+            ("authority", "key2"),
+            ("owner_only.owner", "key3"),
+            ("owner_only.inner.pool", "key4"),
+        ]
+        .into_iter()
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .collect();
+        assert_eq!(map, expected);
+
+        // The group's leaf accounts all count towards the required total.
+        let err = idl_parser::create_accounts_map(&static_accounts(4), &instruction).unwrap_err();
+        assert!(err.to_string().contains("too few accounts"), "{err}");
+    }
+
+    #[test]
+    fn embedded_jupiter_serum_swap_names_nested_market_accounts() {
+        let idl = idl_parser::decode_idl_data(
+            &std::fs::read_to_string(format!("{TEST_IDL_DIRECTORY}jupiter.json")).unwrap(),
+        )
+        .unwrap();
+        let instruction = idl
+            .instructions
+            .iter()
+            .find(|i| i.name == "serumSwap")
+            .unwrap();
+        let map = idl_parser::create_accounts_map(&static_accounts(16), instruction).unwrap();
+        assert_eq!(map.len(), 16);
+        assert_eq!(map["market.vaultSigner"], "key8");
+        assert_eq!(map["authority"], "key9");
+        assert_eq!(map["tokenProgram"], "key14");
+        assert_eq!(map["rent"], "key15");
+    }
 
     #[test]
     fn parses_system_transfer_with_extra_accounts() {

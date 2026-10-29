@@ -1,6 +1,6 @@
 use crate::solana::structs::{
-    AccountAddress, CustomIdl, CustomIdlConfig, Defined, EnumFields, Idl, IdlInstruction,
-    IdlRecord, IdlType, IdlTypeDefinition, IdlTypeDefinitionType, ProgramType,
+    AccountAddress, CustomIdl, CustomIdlConfig, Defined, EnumFields, Idl, IdlAccount,
+    IdlInstruction, IdlRecord, IdlType, IdlTypeDefinition, IdlTypeDefinitionType, ProgramType,
     SolanaParsedInstructionData,
 };
 use bs58;
@@ -384,7 +384,11 @@ pub fn create_accounts_map(
     accounts: &[AccountAddress],
     instruction_spec: &IdlInstruction,
 ) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
-    if accounts.len() < instruction_spec.accounts.len() {
+    // Composite account groups contribute their members, not an account of
+    // their own, so flatten to the leaf accounts before pairing with keys.
+    let mut leaf_names = Vec::new();
+    flatten_account_names(&instruction_spec.accounts, "", &mut leaf_names);
+    if accounts.len() < leaf_names.len() {
         return Err(format!(
             "too few accounts provided in transaction payload for instruction {}",
             instruction_spec.name
@@ -393,10 +397,23 @@ pub fn create_accounts_map(
     }
 
     let mut acct_map: HashMap<String, String> = HashMap::new();
-    for (account_spec, account) in instruction_spec.accounts.iter().zip(accounts.iter()) {
-        acct_map.insert(account_spec.name.clone(), account.to_string());
+    for (name, account) in leaf_names.into_iter().zip(accounts.iter()) {
+        acct_map.insert(name, account.to_string());
     }
     Ok(acct_map)
+}
+
+// Collects leaf account names in transaction order, prefixing members of a
+// group with the group's name (`group.member`) so they stay distinct.
+fn flatten_account_names(specs: &[IdlAccount], prefix: &str, out: &mut Vec<String>) {
+    for spec in specs {
+        let name = format!("{prefix}{}", spec.name);
+        if spec.accounts.is_empty() {
+            out.push(name);
+        } else {
+            flatten_account_names(&spec.accounts, &format!("{name}."), out);
+        }
+    }
 }
 
 // This method compares all instructions in the chosen IDL against the instruction call data to be parsed to find the correct instruction being called, handling error cases appropriately
